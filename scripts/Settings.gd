@@ -6,9 +6,9 @@ const ACTIONS: Array = [
 	{"id": "move_left",  "name": "이동 (왼쪽)"},
 	{"id": "move_right", "name": "이동 (오른쪽)"},
 	{"id": "jump",       "name": "점프"},
-	{"id": "attack",     "name": "공격"},
+	{"id": "attack",     "name": "사격"},
 	{"id": "dash",       "name": "대시"},
-	{"id": "pause",      "name": "설정 열기"},
+	{"id": "pause",      "name": "일시정지 / 메뉴"},
 ]
 
 const MAX_KEYS_PER_ACTION: int = 2
@@ -40,119 +40,164 @@ func _ready() -> void:
 	add_child(center)
 
 	panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(720, 520)
+	panel.custom_minimum_size = Vector2(760, 580)
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.07, 0.08, 0.10, 0.98)
+	panel_style.border_color = Color(0.55, 0.62, 0.78, 0.55)
+	panel_style.set_border_width_all(1)
+	panel_style.content_margin_left = 36
+	panel_style.content_margin_right = 36
+	panel_style.content_margin_top = 32
+	panel_style.content_margin_bottom = 32
+	panel_style.corner_radius_top_left = 6
+	panel_style.corner_radius_top_right = 6
+	panel_style.corner_radius_bottom_left = 6
+	panel_style.corner_radius_bottom_right = 6
+	panel.add_theme_stylebox_override("panel", panel_style)
 	center.add_child(panel)
 
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 24)
-	margin.add_theme_constant_override("margin_bottom", 24)
-	panel.add_child(margin)
-
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 16)
-	margin.add_child(v)
+	v.add_theme_constant_override("separation", 22)
+	panel.add_child(v)
 
 	var title := Label.new()
 	title.text = "설정"
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
 	v.add_child(title)
 
+	var divider := ColorRect.new()
+	divider.color = Color(0.55, 0.62, 0.78, 0.30)
+	divider.custom_minimum_size = Vector2(0, 1)
+	v.add_child(divider)
+
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tabs.custom_minimum_size = Vector2(0, 380)
 	v.add_child(tabs)
 
 	tabs.add_child(_build_keybind_tab())
 	tabs.add_child(_build_av_tab())
 
+	var divider2 := ColorRect.new()
+	divider2.color = Color(0.55, 0.62, 0.78, 0.30)
+	divider2.custom_minimum_size = Vector2(0, 1)
+	v.add_child(divider2)
+
 	var bottom_hb := HBoxContainer.new()
 	bottom_hb.alignment = BoxContainer.ALIGNMENT_END
+	bottom_hb.add_theme_constant_override("separation", 12)
 	v.add_child(bottom_hb)
-	var btn_reset := Button.new()
-	btn_reset.text = "기본값으로"
-	btn_reset.add_theme_font_size_override("font_size", 14)
+	var btn_reset := _make_secondary_button("기본값으로")
 	btn_reset.pressed.connect(_on_reset_pressed)
 	bottom_hb.add_child(btn_reset)
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(12, 0)
-	bottom_hb.add_child(spacer)
-	var btn_close := Button.new()
-	btn_close.text = "닫기"
-	btn_close.add_theme_font_size_override("font_size", 14)
+	var btn_close := _make_primary_button("닫기")
 	btn_close.pressed.connect(_on_close_pressed)
 	bottom_hb.add_child(btn_close)
 
 	_refresh_all_keybind_buttons()
 
 func _build_keybind_tab() -> Control:
+	var outer := MarginContainer.new()
+	outer.name = "조작법"
+	outer.add_theme_constant_override("margin_left", 16)
+	outer.add_theme_constant_override("margin_right", 16)
+	outer.add_theme_constant_override("margin_top", 18)
+	outer.add_theme_constant_override("margin_bottom", 18)
+
 	var v := VBoxContainer.new()
-	v.name = "조작법"
-	v.add_theme_constant_override("separation", 8)
+	v.add_theme_constant_override("separation", 14)
+	outer.add_child(v)
 
 	var hint := Label.new()
-	hint.text = "키를 변경하려면 버튼을 클릭한 뒤 새 키를 누르세요. (각 액션당 최대 2개)"
+	hint.text = "키를 변경하려면 버튼을 클릭한 뒤 새 키를 누르세요. 각 액션당 최대 2개까지 등록할 수 있어요."
 	hint.add_theme_font_size_override("font_size", 13)
-	hint.add_theme_color_override("font_color", Color(0.6, 0.7, 0.85))
+	hint.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(hint)
 
 	var grid := GridContainer.new()
 	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 12)
-	grid.add_theme_constant_override("v_separation", 6)
+	grid.add_theme_constant_override("h_separation", 18)
+	grid.add_theme_constant_override("v_separation", 10)
 	v.add_child(grid)
 
 	for entry in ACTIONS:
 		var action_id: String = str(entry["id"])
 		var label := Label.new()
 		label.text = str(entry["name"])
-		label.custom_minimum_size = Vector2(180, 32)
+		label.custom_minimum_size = Vector2(180, 36)
 		label.add_theme_font_size_override("font_size", 15)
 		label.add_theme_color_override("font_color", Color(0.92, 0.92, 0.92))
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		grid.add_child(label)
 
 		var btns: Array = []
 		for i in MAX_KEYS_PER_ACTION:
 			var btn := Button.new()
-			btn.custom_minimum_size = Vector2(160, 32)
+			btn.custom_minimum_size = Vector2(160, 36)
 			btn.add_theme_font_size_override("font_size", 13)
 			btn.pressed.connect(_on_key_button_pressed.bind(action_id, i, btn))
 			grid.add_child(btn)
 			btns.append(btn)
 		key_buttons[action_id] = btns
-	return v
+	return outer
 
 func _build_av_tab() -> Control:
+	var outer := MarginContainer.new()
+	outer.name = "그래픽 / 사운드"
+	outer.add_theme_constant_override("margin_left", 16)
+	outer.add_theme_constant_override("margin_right", 16)
+	outer.add_theme_constant_override("margin_top", 18)
+	outer.add_theme_constant_override("margin_bottom", 18)
+
 	var v := VBoxContainer.new()
-	v.name = "그래픽/사운드"
-	v.add_theme_constant_override("separation", 14)
+	v.add_theme_constant_override("separation", 22)
+	outer.add_child(v)
 
-	var res_label := Label.new()
-	res_label.text = "화면 해상도 — 1280×720 (Web Export 기준)"
-	res_label.add_theme_font_size_override("font_size", 14)
-	res_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
-	v.add_child(res_label)
+	var section_a := _make_section("화면", "1280 × 720 고정 — Web Export 기준")
+	v.add_child(section_a)
 
-	v.add_child(_make_volume_row("마스터 볼륨", "master"))
-	v.add_child(_make_volume_row("효과음 볼륨", "sfx"))
-
+	var section_b := VBoxContainer.new()
+	section_b.add_theme_constant_override("separation", 10)
+	v.add_child(section_b)
+	section_b.add_child(_make_section_header("사운드"))
+	section_b.add_child(_make_volume_row("마스터 볼륨", "master"))
+	section_b.add_child(_make_volume_row("효과음 볼륨", "sfx"))
 	var note := Label.new()
-	note.text = "사운드는 추후 추가 예정 — UI는 미리 노출."
+	note.text = "사운드는 추후 추가 예정 — 슬라이더는 미리 노출."
 	note.add_theme_font_size_override("font_size", 12)
 	note.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
-	v.add_child(note)
+	section_b.add_child(note)
+	return outer
+
+func _make_section_header(text: String) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95))
+	return l
+
+func _make_section(header: String, body: String) -> Control:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	v.add_child(_make_section_header(header))
+	var b := Label.new()
+	b.text = body
+	b.add_theme_font_size_override("font_size", 14)
+	b.add_theme_color_override("font_color", Color(0.78, 0.80, 0.84))
+	v.add_child(b)
 	return v
 
 func _make_volume_row(label_text: String, kind: String) -> Control:
 	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 12)
+	hb.add_theme_constant_override("separation", 14)
 	var l := Label.new()
 	l.text = label_text
 	l.custom_minimum_size = Vector2(140, 28)
 	l.add_theme_font_size_override("font_size", 14)
 	l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hb.add_child(l)
 	var slider := HSlider.new()
 	slider.min_value = 0.0
@@ -163,6 +208,20 @@ func _make_volume_row(label_text: String, kind: String) -> Control:
 	slider.value_changed.connect(_on_volume_changed.bind(kind))
 	hb.add_child(slider)
 	return hb
+
+func _make_primary_button(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size = Vector2(120, 36)
+	b.add_theme_font_size_override("font_size", 14)
+	return b
+
+func _make_secondary_button(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size = Vector2(140, 36)
+	b.add_theme_font_size_override("font_size", 13)
+	return b
 
 func _on_volume_changed(value: float, kind: String) -> void:
 	if kind == "master":

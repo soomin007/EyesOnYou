@@ -217,6 +217,7 @@ func _make_platform(x: float, y: float, w: float) -> void:
 	body.collision_layer = 1
 	add_child(body)
 	var col := CollisionShape2D.new()
+	col.one_way_collision = true
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(w, 24.0)
 	col.shape = shape

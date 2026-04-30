@@ -16,9 +16,11 @@ const DASH_COOLDOWN: float = 0.7
 const INVULN_AFTER_HIT: float = 0.8
 
 # 콜리전 28×56 (centered y=-28). 시각도 정확히 같은 박스 안에 그려짐.
+# 공격 사거리: 가슴 높이부터 발끝까지 덮어 모든 지상 적이 자연스럽게 맞도록.
 const ATTACK_WIDTH: float = 220.0
-const ATTACK_HEIGHT: float = 36.0
-const ATTACK_OFFSET_Y: float = -38.0
+const ATTACK_HEIGHT: float = 56.0
+const ATTACK_TOP_Y: float = -50.0    # 데미지 박스 상단 (가슴)
+const ATTACK_VISUAL_Y: float = -38.0  # 트레이서 라인 (총구 높이)
 const ATTACK_MUZZLE_X: float = 14.0
 
 var facing: int = 1
@@ -35,6 +37,7 @@ var muzzle_flash: ColorRect
 
 func _ready() -> void:
 	add_to_group("player")
+	z_index = 2
 	visual = CharacterArt.build_player(self)
 	_setup_attack_visuals()
 
@@ -43,7 +46,7 @@ func _setup_attack_visuals() -> void:
 	attack_visual.name = "AttackVisual"
 	attack_visual.color = Color(1.0, 0.95, 0.55, 0.90)
 	attack_visual.size = Vector2(ATTACK_WIDTH, 4.0)
-	attack_visual.position = Vector2(ATTACK_MUZZLE_X, ATTACK_OFFSET_Y)
+	attack_visual.position = Vector2(ATTACK_MUZZLE_X, ATTACK_VISUAL_Y)
 	attack_visual.visible = false
 	add_child(attack_visual)
 
@@ -51,7 +54,7 @@ func _setup_attack_visuals() -> void:
 	muzzle_flash.name = "MuzzleFlash"
 	muzzle_flash.color = Color(1.0, 0.92, 0.45, 1.0)
 	muzzle_flash.size = Vector2(10.0, 10.0)
-	muzzle_flash.position = Vector2(ATTACK_MUZZLE_X, ATTACK_OFFSET_Y - 3.0)
+	muzzle_flash.position = Vector2(ATTACK_MUZZLE_X, ATTACK_VISUAL_Y - 3.0)
 	muzzle_flash.visible = false
 	add_child(muzzle_flash)
 
@@ -121,17 +124,17 @@ func _try_attack() -> void:
 	attack_cd = ATTACK_COOLDOWN
 	var rx: float = ATTACK_MUZZLE_X if facing > 0 else -(ATTACK_MUZZLE_X + ATTACK_WIDTH)
 	if attack_visual != null:
-		attack_visual.position = Vector2(rx, ATTACK_OFFSET_Y - 2.0)
+		attack_visual.position = Vector2(rx, ATTACK_VISUAL_Y - 2.0)
 		attack_visual.size = Vector2(ATTACK_WIDTH, 4.0)
 		attack_visual.modulate.a = 1.0
 		attack_visual.visible = true
 	if muzzle_flash != null:
 		var mx: float = ATTACK_MUZZLE_X if facing > 0 else -(ATTACK_MUZZLE_X + 10.0)
-		muzzle_flash.position = Vector2(mx, ATTACK_OFFSET_Y - 5.0)
+		muzzle_flash.position = Vector2(mx, ATTACK_VISUAL_Y - 5.0)
 		muzzle_flash.modulate.a = 1.0
 		muzzle_flash.visible = true
 	var damage: int = 2 if GameState.has_skill("melee_boost") else 1
-	var rect_global := Rect2(global_position + Vector2(rx, ATTACK_OFFSET_Y - 16.0), Vector2(ATTACK_WIDTH, ATTACK_HEIGHT))
+	var rect_global := Rect2(global_position + Vector2(rx, ATTACK_TOP_Y), Vector2(ATTACK_WIDTH, ATTACK_HEIGHT))
 	emit_signal("attacked", rect_global)
 	_apply_damage_in_rect(rect_global, damage)
 

@@ -143,6 +143,7 @@ func _build_platform(x: float, y: float, w: float) -> void:
 	body.collision_layer = 1
 	add_child(body)
 	var col := CollisionShape2D.new()
+	col.one_way_collision = true  # 위에서만 착지 가능 — 아래에서 점프 시 통과
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(w, 24.0)
 	col.shape = shape

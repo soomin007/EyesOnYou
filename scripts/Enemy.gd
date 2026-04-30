@@ -14,13 +14,15 @@ const GRAVITY: float = 1400.0
 const TOUCH_DAMAGE: int = 1
 const TOUCH_COOLDOWN: float = 0.6
 const DRONE_SPEED: float = 110.0
-const SNIPER_FIRE_INTERVAL: float = 2.4
+const SNIPER_FIRE_INTERVAL: float = 2.6
+const SNIPER_AIM_TIME: float = 0.7  # 발사 전 조준 라인 노출 시간
 
 var origin_x: float = 0.0
 var dir: int = 1
 var touch_cd: float = 0.0
 var dead: bool = false
 var fire_timer: float = 0.0
+var aim_line: Line2D
 
 var visual: Node2D
 
@@ -74,9 +76,36 @@ func _tick_patrol(delta: float) -> void:
 func _tick_sniper(delta: float) -> void:
 	velocity = Vector2.ZERO
 	fire_timer -= delta
+	if fire_timer < SNIPER_AIM_TIME and aim_line == null:
+		_start_aim()
+	if aim_line != null:
+		_update_aim()
 	if fire_timer <= 0.0:
 		fire_timer = SNIPER_FIRE_INTERVAL
 		_fire_at_player()
+		_clear_aim()
+
+func _start_aim() -> void:
+	aim_line = Line2D.new()
+	aim_line.width = 1.0
+	aim_line.default_color = Color(1.0, 0.30, 0.30, 0.55)
+	aim_line.z_index = 1
+	get_parent().add_child(aim_line)
+
+func _update_aim() -> void:
+	if aim_line == null:
+		return
+	var p := _find_player()
+	if p == null:
+		return
+	aim_line.clear_points()
+	aim_line.add_point(global_position + Vector2(0, -20))
+	aim_line.add_point(p.global_position + Vector2(0, -28))
+
+func _clear_aim() -> void:
+	if aim_line != null:
+		aim_line.queue_free()
+		aim_line = null
 
 func _tick_drone(delta: float) -> void:
 	var player := _find_player()
@@ -105,8 +134,22 @@ func _fire_at_player() -> void:
 	var dist: float = global_position.distance_to(player.global_position)
 	if dist > 520.0:
 		return
+	# 가시 트레이서 — 어디서 맞았는지 알 수 있도록
+	var tracer := Line2D.new()
+	tracer.width = 2.5
+	tracer.default_color = Color(1.0, 0.55, 0.30, 1.0)
+	tracer.z_index = 2
+	tracer.add_point(global_position + Vector2(0, -20))
+	tracer.add_point(player.global_position + Vector2(0, -28))
+	get_parent().add_child(tracer)
+	var tw := tracer.create_tween()
+	tw.tween_property(tracer, "default_color", Color(1.0, 0.55, 0.30, 0.0), 0.30)
+	tw.tween_callback(tracer.queue_free)
 	if player.has_method("take_hit"):
 		player.take_hit(1)
+
+func _exit_tree() -> void:
+	_clear_aim()
 
 func _check_touch_player() -> void:
 	if harmless:
