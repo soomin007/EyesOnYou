@@ -23,12 +23,31 @@ var dash_timer: float = 0.0
 var dash_cd: float = 0.0
 var invuln: float = 0.0
 
-@onready var sprite: ColorRect = $Sprite
+var sprite: Sprite2D
 @onready var attack_visual: ColorRect = $AttackVisual
 
 func _ready() -> void:
 	add_to_group("player")
 	attack_visual.visible = false
+	_setup_visual()
+
+func _setup_visual() -> void:
+	sprite = Sprite2D.new()
+	sprite.name = "Visual"
+	var tex: Texture2D = load("res://assets/sprites/player.png") as Texture2D
+	if tex != null:
+		sprite.texture = tex
+		sprite.scale = Vector2(0.12, 0.12)
+		var mat := ShaderMaterial.new()
+		mat.shader = load("res://assets/shaders/remove_white.gdshader")
+		sprite.material = mat
+	else:
+		var fallback := PlaceholderTexture2D.new()
+		fallback.size = Vector2(28, 56)
+		sprite.texture = fallback
+		sprite.modulate = Color(0.92, 0.92, 0.92)
+	sprite.position = Vector2(0, -28.0)
+	add_child(sprite)
 
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
@@ -129,7 +148,10 @@ func take_hit(amount: int) -> void:
 		emit_signal("died")
 
 func _update_visual() -> void:
+	if sprite == null:
+		return
 	if invuln > 0.0:
 		sprite.modulate.a = 0.4 if int(invuln * 20.0) % 2 == 0 else 1.0
 	else:
 		sprite.modulate.a = 1.0
+	sprite.flip_h = (facing < 0)

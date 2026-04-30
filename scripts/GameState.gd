@@ -2,6 +2,8 @@ extends Node
 
 const TOTAL_STAGES: int = 5
 const SCORE_THRESHOLD: int = 3
+const SETTINGS_PATH: String = "user://settings.cfg"
+const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "pause"]
 
 var current_stage: int = 0
 var death_count: int = 0
@@ -21,6 +23,10 @@ var player_hp: int = 5
 var player_xp: int = 0
 var player_level: int = 1
 const XP_PER_LEVEL: int = 5
+
+var tutorial_done: bool = false
+var master_volume: float = 1.0
+var sfx_volume: float = 1.0
 
 func reset() -> void:
 	current_stage = 0
@@ -87,3 +93,40 @@ func on_stage_clear() -> void:
 
 func is_final_stage_done() -> bool:
 	return current_stage >= TOTAL_STAGES
+
+# --- 설정 영속화 ---
+
+func load_settings() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(SETTINGS_PATH) != OK:
+		return
+	tutorial_done = bool(cf.get_value("flags", "tutorial_done", false))
+	master_volume = float(cf.get_value("audio", "master", 1.0))
+	sfx_volume = float(cf.get_value("audio", "sfx", 1.0))
+	for action in KEYBIND_ACTIONS:
+		if not InputMap.has_action(action):
+			continue
+		var stored: Array = cf.get_value("input", action, [])
+		if stored.size() == 0:
+			continue
+		InputMap.action_erase_events(action)
+		for kc in stored:
+			var ev := InputEventKey.new()
+			ev.physical_keycode = int(kc)
+			InputMap.action_add_event(action, ev)
+
+func save_settings() -> void:
+	var cf := ConfigFile.new()
+	cf.set_value("flags", "tutorial_done", tutorial_done)
+	cf.set_value("audio", "master", master_volume)
+	cf.set_value("audio", "sfx", sfx_volume)
+	for action in KEYBIND_ACTIONS:
+		if not InputMap.has_action(action):
+			continue
+		var keys: Array = []
+		for ev in InputMap.action_get_events(action):
+			if ev is InputEventKey:
+				var k := ev as InputEventKey
+				keys.append(int(k.physical_keycode))
+		cf.set_value("input", action, keys)
+	cf.save(SETTINGS_PATH)

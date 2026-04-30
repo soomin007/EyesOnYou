@@ -15,6 +15,9 @@ var levelup_overlay: CanvasLayer
 var goal_reached: bool = false
 var pending_levelup: bool = false
 
+var pause_overlay: CanvasLayer
+var settings_overlay: Control
+
 func _ready() -> void:
 	add_to_group("stage")
 	GameState.player_hp = GameState.player_max_hp
@@ -109,12 +112,6 @@ func _build_player() -> void:
 	col.shape = shape
 	col.position = Vector2(0, -28.0)
 	player.add_child(col)
-	var sprite := ColorRect.new()
-	sprite.name = "Sprite"
-	sprite.color = Color(0.92, 0.92, 0.92)
-	sprite.position = Vector2(-14.0, -56.0)
-	sprite.size = Vector2(28.0, 56.0)
-	player.add_child(sprite)
 	var atk := ColorRect.new()
 	atk.name = "AttackVisual"
 	atk.color = Color(1.0, 0.95, 0.3, 0.55)
@@ -225,15 +222,6 @@ func _spawn_enemy(kind: int, pos: Vector2) -> void:
 	col.shape = shape
 	col.position = Vector2(0, -20.0) if kind != 2 else Vector2(0, 0)
 	e.add_child(col)
-	var sprite := ColorRect.new()
-	sprite.name = "Sprite"
-	if kind == 2:
-		sprite.position = Vector2(-16.0, -12.0)
-		sprite.size = Vector2(32.0, 24.0)
-	else:
-		sprite.position = Vector2(-14.0, -40.0)
-		sprite.size = Vector2(28.0, 40.0)
-	e.add_child(sprite)
 	add_child(e)
 	e.global_position = pos
 	e.killed.connect(_on_enemy_killed)
@@ -353,3 +341,49 @@ func _close_levelup() -> void:
 		levelup_overlay = null
 	pending_levelup = false
 	get_tree().paused = false
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause") and levelup_overlay == null:
+		if pause_overlay == null:
+			_show_pause()
+		else:
+			_hide_pause()
+
+func _show_pause() -> void:
+	get_tree().paused = true
+	pause_overlay = PauseHelper.build(self, _on_pause_resume, _on_pause_settings, _on_pause_to_title)
+	add_child(pause_overlay)
+
+func _hide_pause() -> void:
+	if pause_overlay != null:
+		pause_overlay.queue_free()
+		pause_overlay = null
+	get_tree().paused = false
+
+func _on_pause_resume() -> void:
+	_hide_pause()
+
+func _on_pause_settings() -> void:
+	if settings_overlay != null:
+		return
+	var packed := load(SceneRouter.SETTINGS) as PackedScene
+	if packed == null:
+		return
+	settings_overlay = packed.instantiate()
+	settings_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	if pause_overlay != null:
+		pause_overlay.add_child(settings_overlay)
+	else:
+		add_child(settings_overlay)
+	if settings_overlay.has_signal("closed"):
+		settings_overlay.closed.connect(_on_settings_closed)
+
+func _on_settings_closed() -> void:
+	if settings_overlay != null:
+		settings_overlay.queue_free()
+		settings_overlay = null
+
+func _on_pause_to_title() -> void:
+	get_tree().paused = false
+	GameState.reset()
+	get_tree().change_scene_to_file(SceneRouter.TITLE)
