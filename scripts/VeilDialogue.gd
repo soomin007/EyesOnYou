@@ -35,8 +35,8 @@ static func get_levelup_advice(player_skills: Array, route_tags: Array) -> Strin
 		return "대시가 있으면 함정을 건너뛸 수 있어요."
 	if "드론" in route_tags and not ("ranged" in player_skills):
 		return "드론은 위에서 와요. 원거리가 도움이 될 거예요."
-	if "노출" in route_tags and not ("stealth" in player_skills):
-		return "은폐가 있으면 — 좀 더 편할 텐데요."
+	if "노출" in route_tags and not ("wall_slide" in player_skills):
+		return "노출 구역이에요. 벽에 붙어 시야를 끊는 게 도움될 거예요."
 	var idx: int = randi() % SKILL_GENERIC_COMMENTS.size()
 	return SKILL_GENERIC_COMMENTS[idx]
 

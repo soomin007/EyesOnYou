@@ -68,13 +68,9 @@ var settings_overlay: Control
 
 func _ready() -> void:
 	add_to_group("stage")
+	# dash, double_jump는 GameState.STARTING_SKILLS로 이미 보유 (Title.reset에서 부여됨)
 	GameState.player_hp = GameState.player_max_hp
-	# 튜토리얼 동안만 임시로 부여하는 스킬
-	if not GameState.has_skill("dash"):
-		GameState.skills.append("dash")
-	if not GameState.has_skill("double_jump"):
-		GameState.skills.append("double_jump")
-	# 레벨업이 첫 처치 직후 트리거되도록 XP 직전치까지 채워둠
+	# 레벨업이 둘째 처치 직후 트리거되도록 XP 직전치까지 채워둠
 	GameState.player_xp = GameState.XP_PER_LEVEL - 2
 
 	_build_background()
@@ -517,10 +513,38 @@ func _show_levelup() -> void:
 	get_tree().paused = true
 	levelup_overlay = LevelUpOverlay.show(self, "원하는 능력을 골라요. 한 번 고른 스킬은 남은 게임 동안 유지돼요.", _on_levelup_picked)
 
-func _on_levelup_picked(_picked_id: String) -> void:
+func _on_levelup_picked(picked_id: String) -> void:
 	levelup_overlay = null
 	get_tree().paused = false
+	_update_levelup_sign(picked_id)
 	_advance_to(Step.DASH)
+
+func _update_levelup_sign(picked_id: String) -> void:
+	if picked_id == "":
+		return
+	var skill: Dictionary = SkillSystem.find_by_id(picked_id)
+	var sname: String = str(skill.get("name", picked_id))
+	var hint: String = ""
+	if bool(skill.get("active", false)):
+		var key_action: String = str(skill.get("key", ""))
+		hint = "[%s] 키로 사용" % _key_label_for(key_action)
+	else:
+		hint = "자동 적용 — 키 입력 불필요"
+	sign_levelup.text = "[%s 획득]\n%s" % [sname, hint]
+
+func _key_label_for(action: String) -> String:
+	if not InputMap.has_action(action):
+		return "?"
+	for ev in InputMap.action_get_events(action):
+		if ev is InputEventKey:
+			var k := ev as InputEventKey
+			var kc: int = k.physical_keycode
+			if kc == 0:
+				kc = k.keycode
+			var s: String = OS.get_keycode_string(kc)
+			if s != "":
+				return s
+	return "?"
 
 func _on_goal_reached(body: Node) -> void:
 	if goal_reached:
@@ -535,7 +559,8 @@ func _on_goal_reached(body: Node) -> void:
 func _finish_tutorial() -> void:
 	GameState.tutorial_done = true
 	GameState.save_settings()
-	GameState.reset()
+	# reset()이 아니라 start_main_game() — 튜토리얼에서 고른 스킬 보존
+	GameState.start_main_game()
 	get_tree().change_scene_to_file(SceneRouter.BRIEFING)
 
 # ─── 일시정지 / 설정 ──────────────────────────────────────────

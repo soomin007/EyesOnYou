@@ -8,6 +8,7 @@ const ACTIONS: Array = [
 	{"id": "jump",       "name": "점프"},
 	{"id": "attack",     "name": "사격"},
 	{"id": "dash",       "name": "대시"},
+	{"id": "skill",      "name": "액티브 스킬 (폭발물 등)"},
 	{"id": "pause",      "name": "일시정지 / 메뉴"},
 ]
 
@@ -327,6 +328,7 @@ func _apply_default_keybindings() -> void:
 		"jump":       [KEY_SPACE, KEY_W],
 		"attack":     [KEY_J],
 		"dash":       [KEY_SHIFT, KEY_K],
+		"skill":      [KEY_Q],
 		"pause":      [KEY_ESCAPE],
 	}
 	for action_id in defaults.keys():

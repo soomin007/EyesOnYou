@@ -1,17 +1,22 @@
 class_name SkillSystem
 extends RefCounted
 
+# 베이스라인: 모든 플레이어가 시작부터 보유 (GameState.STARTING_SKILLS)
+#   dash         — Shift 키, 0.18s 무적 이동
+#   double_jump  — 공중에서 한 번 더 점프 (자동)
+#
+# 레벨업 풀: 본편 진행 중 처치 → 경험치 → 레벨업 시 3개 중 1개 선택.
+# active=true 인 스킬만 키 입력 필요. 나머지는 자동 적용.
+
 const ALL_SKILLS: Array = [
-	{"id": "dash",         "name": "대시",        "desc": "짧은 무적 이동",          "tag": "이동"},
-	{"id": "double_jump",  "name": "이중점프",    "desc": "공중에서 한 번 더 점프",   "tag": "이동"},
-	{"id": "wall_slide",   "name": "벽타기",      "desc": "벽에 붙어 천천히 낙하",    "tag": "이동"},
-	{"id": "roll",         "name": "구르기",      "desc": "구르기로 피격 회피",       "tag": "이동"},
-	{"id": "ranged",       "name": "원거리",      "desc": "원거리 투사체 공격",       "tag": "전투"},
-	{"id": "melee_boost",  "name": "근접 강화",   "desc": "근접 데미지 +50%",         "tag": "전투"},
-	{"id": "explosive",    "name": "폭발물",      "desc": "쿨다운 있는 광역 공격",    "tag": "전투"},
-	{"id": "stealth",      "name": "은폐",        "desc": "3초간 적 인식 차단",       "tag": "전투"},
-	{"id": "regen",        "name": "회복",        "desc": "스테이지 클리어 시 HP +1", "tag": "생존"},
-	{"id": "shield",       "name": "방어막",      "desc": "치명타 1회 무효화",        "tag": "생존"},
+	{"id": "melee_boost", "name": "사격 강화", "desc": "사격 데미지 +1",                    "tag": "전투", "active": false},
+	{"id": "ranged",      "name": "장거리 사격", "desc": "총알 속도/사거리 +50%, 쿨다운 -25%", "tag": "전투", "active": false},
+	{"id": "piercing",    "name": "관통탄",     "desc": "총알이 모든 적을 관통",            "tag": "전투", "active": false},
+	{"id": "multishot",   "name": "삼연사",     "desc": "한 번에 위/중/아래 3발 발사",       "tag": "전투", "active": false},
+	{"id": "explosive",   "name": "폭발물",     "desc": "주위 적을 광역 처치 (3s 쿨다운)",    "tag": "전투", "active": true,  "key": "skill"},
+	{"id": "wall_slide",  "name": "벽타기",     "desc": "벽에 붙어 있을 때 천천히 낙하",      "tag": "이동", "active": false},
+	{"id": "regen",       "name": "회복",       "desc": "스테이지 클리어 시 HP +1",           "tag": "생존", "active": false},
+	{"id": "shield",      "name": "방어막",     "desc": "다음 피격 1회를 무효화",            "tag": "생존", "active": false},
 ]
 
 static func roll_choices(owned: Array, count: int = 3) -> Array:
@@ -33,4 +38,9 @@ static func find_by_id(id: String) -> Dictionary:
 		var skill: Dictionary = s
 		if skill.get("id", "") == id:
 			return skill
+	# 베이스라인 스킬 메타데이터 (풀에는 없지만 정보 조회 가능)
+	if id == "dash":
+		return {"id": "dash", "name": "대시", "desc": "짧은 무적 이동", "tag": "이동", "active": true, "key": "dash"}
+	if id == "double_jump":
+		return {"id": "double_jump", "name": "이중점프", "desc": "공중에서 한 번 더 점프", "tag": "이동", "active": false}
 	return {}

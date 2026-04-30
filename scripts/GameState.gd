@@ -3,7 +3,9 @@ extends Node
 const TOTAL_STAGES: int = 5
 const SCORE_THRESHOLD: int = 3
 const SETTINGS_PATH: String = "user://settings.cfg"
-const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "pause"]
+const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
+# 모든 플레이어가 기본 보유하는 베이스라인 스킬
+const STARTING_SKILLS: Array = ["dash", "double_jump"]
 
 var current_stage: int = 0
 var death_count: int = 0
@@ -37,12 +39,29 @@ func reset() -> void:
 	route_history = []
 	last_veil_recommended_route = ""
 	followed_veil_last_choice = false
-	skills = []
+	skills = STARTING_SKILLS.duplicate()
 	current_route_tags = []
 	player_max_hp = 5
 	player_hp = 5
 	player_xp = 0
 	player_level = 1
+
+# 튜토리얼 종료 후 본편 시작 시 호출. 진행 상태는 초기화하되
+# 튜토리얼에서 고른 스킬은 그대로 들고감.
+func start_main_game() -> void:
+	current_stage = 0
+	death_count = 0
+	score = 0
+	trust_score = 0
+	aggression_score = 0
+	route_history = []
+	last_veil_recommended_route = ""
+	followed_veil_last_choice = false
+	current_route_tags = []
+	player_hp = player_max_hp
+	player_xp = 0
+	player_level = 1
+	# skills 보존
 
 func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	var rid: String = route.get("id", "")
