@@ -43,6 +43,8 @@ func _ready() -> void:
 	GameState.player_hp = GameState.player_max_hp
 	if not GameState.has_skill("dash"):
 		GameState.skills.append("dash")
+	if not GameState.has_skill("double_jump"):
+		GameState.skills.append("double_jump")
 	_build_world()
 	_build_player()
 	_build_camera()
@@ -121,12 +123,6 @@ func _build_player() -> void:
 	col.shape = shape
 	col.position = Vector2(0, -28.0)
 	player.add_child(col)
-	var atk := ColorRect.new()
-	atk.name = "AttackVisual"
-	atk.color = Color(1.0, 0.95, 0.3, 0.55)
-	atk.position = Vector2(8.0, -36.0)
-	atk.size = Vector2(56.0, 40.0)
-	player.add_child(atk)
 	add_child(player)
 	player.global_position = PLAYER_START
 

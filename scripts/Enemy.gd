@@ -45,11 +45,11 @@ func _setup_visual(enemy_type_name: String) -> void:
 	sprite.name = "Visual"
 	var tex_path: String = "res://assets/sprites/%s.png" % enemy_type_name
 	var tex: Texture2D = load(tex_path) as Texture2D
-	var scl: Vector2 = Vector2(0.10, 0.10)
+	var scl: Vector2 = Vector2(0.36, 0.36)
 	match enemy_type_name:
-		"patrol": scl = Vector2(0.10, 0.10)
-		"sniper": scl = Vector2(0.11, 0.11)
-		"drone":  scl = Vector2(0.09, 0.09)
+		"patrol": scl = Vector2(0.36, 0.36)
+		"sniper": scl = Vector2(0.38, 0.38)
+		"drone":  scl = Vector2(0.32, 0.32)
 	if tex != null:
 		sprite.texture = tex
 		sprite.scale = scl
@@ -67,7 +67,7 @@ func _setup_visual(enemy_type_name: String) -> void:
 	if enemy_type_name == "drone":
 		sprite.position = Vector2(0, 0)
 	else:
-		sprite.position = Vector2(0, -20.0)
+		sprite.position = Vector2(0, -72.0)
 	add_child(sprite)
 
 func _flip_sprite(facing_left: bool) -> void:

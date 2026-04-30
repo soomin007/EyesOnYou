@@ -112,12 +112,6 @@ func _build_player() -> void:
 	col.shape = shape
 	col.position = Vector2(0, -28.0)
 	player.add_child(col)
-	var atk := ColorRect.new()
-	atk.name = "AttackVisual"
-	atk.color = Color(1.0, 0.95, 0.3, 0.55)
-	atk.position = Vector2(8.0, -36.0)
-	atk.size = Vector2(56.0, 40.0)
-	player.add_child(atk)
 	add_child(player)
 	player.global_position = PLAYER_START
 	player.died.connect(_on_player_died)

@@ -12,16 +12,16 @@ func _ready() -> void:
 	var tex: Texture2D = load("res://assets/sprites/patrol.png") as Texture2D
 	if tex != null:
 		sprite.texture = tex
-		sprite.scale = Vector2(0.10, 0.10)
+		sprite.scale = Vector2(0.36, 0.36)
 		var mat := ShaderMaterial.new()
 		mat.shader = load("res://assets/shaders/remove_white.gdshader")
 		sprite.material = mat
 	else:
 		var fallback := PlaceholderTexture2D.new()
-		fallback.size = Vector2(28, 40)
+		fallback.size = Vector2(56, 160)
 		sprite.texture = fallback
 		sprite.modulate = Color(0.85, 0.30, 0.30)
-	sprite.position = Vector2(0, -20.0)
+	sprite.position = Vector2(0, -72.0)
 	add_child(sprite)
 
 func take_damage(amount: int) -> void:
