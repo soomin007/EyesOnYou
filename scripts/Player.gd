@@ -15,15 +15,11 @@ const DASH_DURATION: float = 0.18
 const DASH_COOLDOWN: float = 0.7
 const INVULN_AFTER_HIT: float = 0.8
 
-const SPRITE_SCALE: Vector2 = Vector2(0.42, 0.42)
-const SPRITE_OFFSET_Y: float = -98.0
-
+# 콜리전 28×56 (centered y=-28). 시각도 정확히 같은 박스 안에 그려짐.
 const ATTACK_WIDTH: float = 220.0
-const ATTACK_VISUAL_HEIGHT: float = 8.0
-const ATTACK_DAMAGE_HEIGHT: float = 100.0
-const ATTACK_VISUAL_Y: float = -100.0
-const ATTACK_DAMAGE_Y: float = -90.0
-const ATTACK_MUZZLE_OFFSET: float = 24.0
+const ATTACK_HEIGHT: float = 36.0
+const ATTACK_OFFSET_Y: float = -38.0
+const ATTACK_MUZZLE_X: float = 14.0
 
 var facing: int = 1
 var attack_timer: float = 0.0
@@ -33,45 +29,29 @@ var dash_timer: float = 0.0
 var dash_cd: float = 0.0
 var invuln: float = 0.0
 
-var sprite: Sprite2D
+var visual: Node2D
 var attack_visual: ColorRect
 var muzzle_flash: ColorRect
 
 func _ready() -> void:
 	add_to_group("player")
-	_setup_visual()
+	visual = CharacterArt.build_player(self)
+	_setup_attack_visuals()
 
-func _setup_visual() -> void:
-	sprite = Sprite2D.new()
-	sprite.name = "Visual"
-	var tex: Texture2D = load("res://assets/sprites/player.png") as Texture2D
-	if tex != null:
-		sprite.texture = tex
-		sprite.scale = SPRITE_SCALE
-		var mat := ShaderMaterial.new()
-		mat.shader = load("res://assets/shaders/remove_white.gdshader")
-		sprite.material = mat
-	else:
-		var fallback := PlaceholderTexture2D.new()
-		fallback.size = Vector2(56, 200)
-		sprite.texture = fallback
-		sprite.modulate = Color(0.92, 0.92, 0.92)
-	sprite.position = Vector2(0, SPRITE_OFFSET_Y)
-	add_child(sprite)
-
+func _setup_attack_visuals() -> void:
 	attack_visual = ColorRect.new()
 	attack_visual.name = "AttackVisual"
-	attack_visual.color = Color(1.0, 0.95, 0.5, 0.9)
-	attack_visual.size = Vector2(ATTACK_WIDTH, ATTACK_VISUAL_HEIGHT)
-	attack_visual.position = Vector2(ATTACK_MUZZLE_OFFSET, ATTACK_VISUAL_Y)
+	attack_visual.color = Color(1.0, 0.95, 0.55, 0.90)
+	attack_visual.size = Vector2(ATTACK_WIDTH, 4.0)
+	attack_visual.position = Vector2(ATTACK_MUZZLE_X, ATTACK_OFFSET_Y)
 	attack_visual.visible = false
 	add_child(attack_visual)
 
 	muzzle_flash = ColorRect.new()
 	muzzle_flash.name = "MuzzleFlash"
 	muzzle_flash.color = Color(1.0, 0.92, 0.45, 1.0)
-	muzzle_flash.size = Vector2(18.0, 18.0)
-	muzzle_flash.position = Vector2(ATTACK_MUZZLE_OFFSET - 4.0, ATTACK_VISUAL_Y - 5.0)
+	muzzle_flash.size = Vector2(10.0, 10.0)
+	muzzle_flash.position = Vector2(ATTACK_MUZZLE_X, ATTACK_OFFSET_Y - 3.0)
 	muzzle_flash.visible = false
 	add_child(muzzle_flash)
 
@@ -139,19 +119,19 @@ func _try_attack() -> void:
 		return
 	attack_timer = ATTACK_DURATION
 	attack_cd = ATTACK_COOLDOWN
-	var rx: float = ATTACK_MUZZLE_OFFSET if facing > 0 else -(ATTACK_MUZZLE_OFFSET + ATTACK_WIDTH)
+	var rx: float = ATTACK_MUZZLE_X if facing > 0 else -(ATTACK_MUZZLE_X + ATTACK_WIDTH)
 	if attack_visual != null:
-		attack_visual.position = Vector2(rx, ATTACK_VISUAL_Y)
-		attack_visual.size = Vector2(ATTACK_WIDTH, ATTACK_VISUAL_HEIGHT)
+		attack_visual.position = Vector2(rx, ATTACK_OFFSET_Y - 2.0)
+		attack_visual.size = Vector2(ATTACK_WIDTH, 4.0)
 		attack_visual.modulate.a = 1.0
 		attack_visual.visible = true
 	if muzzle_flash != null:
-		var mx: float = (ATTACK_MUZZLE_OFFSET - 4.0) if facing > 0 else -(ATTACK_MUZZLE_OFFSET + 14.0)
-		muzzle_flash.position = Vector2(mx, ATTACK_VISUAL_Y - 5.0)
+		var mx: float = ATTACK_MUZZLE_X if facing > 0 else -(ATTACK_MUZZLE_X + 10.0)
+		muzzle_flash.position = Vector2(mx, ATTACK_OFFSET_Y - 5.0)
 		muzzle_flash.modulate.a = 1.0
 		muzzle_flash.visible = true
 	var damage: int = 2 if GameState.has_skill("melee_boost") else 1
-	var rect_global := Rect2(global_position + Vector2(rx, ATTACK_DAMAGE_Y), Vector2(ATTACK_WIDTH, ATTACK_DAMAGE_HEIGHT))
+	var rect_global := Rect2(global_position + Vector2(rx, ATTACK_OFFSET_Y - 16.0), Vector2(ATTACK_WIDTH, ATTACK_HEIGHT))
 	emit_signal("attacked", rect_global)
 	_apply_damage_in_rect(rect_global, damage)
 
@@ -190,10 +170,10 @@ func take_hit(amount: int) -> void:
 		emit_signal("died")
 
 func _update_visual() -> void:
-	if sprite == null:
+	if visual == null:
 		return
 	if invuln > 0.0:
-		sprite.modulate.a = 0.4 if int(invuln * 20.0) % 2 == 0 else 1.0
+		visual.modulate.a = 0.4 if int(invuln * 20.0) % 2 == 0 else 1.0
 	else:
-		sprite.modulate.a = 1.0
-	sprite.flip_h = (facing < 0)
+		visual.modulate.a = 1.0
+	visual.scale.x = -1.0 if facing < 0 else 1.0

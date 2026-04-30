@@ -22,57 +22,25 @@ var touch_cd: float = 0.0
 var dead: bool = false
 var fire_timer: float = 0.0
 
-var sprite: Sprite2D
+var visual: Node2D
 
 func _ready() -> void:
 	add_to_group("enemy")
 	origin_x = global_position.x
-	var type_str: String = ""
 	match enemy_type:
 		EnemyType.PATROL:
-			type_str = "patrol"
 			hp = 2
+			visual = CharacterArt.build_patrol(self)
 		EnemyType.SNIPER:
-			type_str = "sniper"
 			hp = 1
+			visual = CharacterArt.build_sniper(self)
 		EnemyType.DRONE:
-			type_str = "drone"
 			hp = 1
-	_setup_visual(type_str)
+			visual = CharacterArt.build_drone(self)
 
-func _setup_visual(enemy_type_name: String) -> void:
-	sprite = Sprite2D.new()
-	sprite.name = "Visual"
-	var tex_path: String = "res://assets/sprites/%s.png" % enemy_type_name
-	var tex: Texture2D = load(tex_path) as Texture2D
-	var scl: Vector2 = Vector2(0.36, 0.36)
-	match enemy_type_name:
-		"patrol": scl = Vector2(0.36, 0.36)
-		"sniper": scl = Vector2(0.38, 0.38)
-		"drone":  scl = Vector2(0.32, 0.32)
-	if tex != null:
-		sprite.texture = tex
-		sprite.scale = scl
-		var mat := ShaderMaterial.new()
-		mat.shader = load("res://assets/shaders/remove_white.gdshader")
-		sprite.material = mat
-	else:
-		var fallback := PlaceholderTexture2D.new()
-		fallback.size = Vector2(28, 40)
-		sprite.texture = fallback
-		match enemy_type_name:
-			"patrol": sprite.modulate = Color(0.85, 0.30, 0.30)
-			"sniper": sprite.modulate = Color(0.85, 0.70, 0.20)
-			"drone":  sprite.modulate = Color(0.55, 0.55, 0.95)
-	if enemy_type_name == "drone":
-		sprite.position = Vector2(0, 0)
-	else:
-		sprite.position = Vector2(0, -72.0)
-	add_child(sprite)
-
-func _flip_sprite(facing_left: bool) -> void:
-	if sprite != null:
-		sprite.flip_h = facing_left
+func _flip_visual(facing_left: bool) -> void:
+	if visual != null:
+		visual.scale.x = -1.0 if facing_left else 1.0
 
 func _physics_process(delta: float) -> void:
 	if dead:
@@ -100,7 +68,7 @@ func _tick_patrol(delta: float) -> void:
 		dir = 1
 	if is_on_wall():
 		dir = -dir
-	_flip_sprite(dir < 0)
+	_flip_visual(dir < 0)
 	move_and_slide()
 
 func _tick_sniper(delta: float) -> void:
@@ -117,7 +85,7 @@ func _tick_drone(delta: float) -> void:
 	var to: Vector2 = player.global_position - global_position
 	if to.length() > 4.0:
 		velocity = to.normalized() * DRONE_SPEED
-		_flip_sprite(to.x < 0.0)
+		_flip_visual(to.x < 0.0)
 	else:
 		velocity = Vector2.ZERO
 	move_and_slide()
@@ -157,7 +125,7 @@ func take_damage(amount: int) -> void:
 	if dead:
 		return
 	hp -= amount
-	modulate = Color(1.5, 1.5, 1.5)
+	modulate = Color(1.6, 1.6, 1.6)
 	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.15)
 	if hp <= 0:
 		_die()

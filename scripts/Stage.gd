@@ -2,7 +2,7 @@ extends Node2D
 
 const STAGE_LENGTH: float = 4400.0
 const GROUND_Y: float = 600.0
-const PLAYER_START: Vector2 = Vector2(120.0, 480.0)
+const PLAYER_START: Vector2 = Vector2(140.0, 540.0)
 
 var player: CharacterBody2D
 var camera: Camera2D
@@ -29,14 +29,45 @@ func _ready() -> void:
 	_build_goal()
 
 func _build_world() -> void:
+	_build_background()
+	_build_ground()
+	_build_platforms()
+	_build_decorations()
+	_build_wall(-50.0)
+	_build_wall(STAGE_LENGTH + 50.0)
+
+func _build_background() -> void:
 	var bg := ColorRect.new()
 	bg.color = _stage_color()
-	bg.position = Vector2(-200, -200)
-	bg.size = Vector2(STAGE_LENGTH + 400.0, 1100.0)
-	bg.z_index = -10
+	bg.position = Vector2(-200, -300)
+	bg.size = Vector2(STAGE_LENGTH + 400.0, 1200.0)
+	bg.z_index = -20
 	add_child(bg)
 
-	# 단순 지면 (StaticBody2D)
+	# 위쪽 그라디언트 (어두운 천장)
+	var top_grad := ColorRect.new()
+	top_grad.color = Color(0, 0, 0, 0.55)
+	top_grad.position = Vector2(-200, -300)
+	top_grad.size = Vector2(STAGE_LENGTH + 400.0, 320.0)
+	top_grad.z_index = -19
+	add_child(top_grad)
+
+	# 멀리 있는 실루엣 기둥 (parallax 느낌)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 7919 + 13
+	var x: float = -100.0
+	while x < STAGE_LENGTH + 200.0:
+		var w: float = rng.randf_range(40.0, 90.0)
+		var h: float = rng.randf_range(180.0, 380.0)
+		var pillar := ColorRect.new()
+		pillar.color = Color(0.02, 0.025, 0.035, 0.85)
+		pillar.position = Vector2(x, GROUND_Y - h)
+		pillar.size = Vector2(w, h + 20.0)
+		pillar.z_index = -15
+		add_child(pillar)
+		x += w + rng.randf_range(80.0, 220.0)
+
+func _build_ground() -> void:
 	var ground := StaticBody2D.new()
 	ground.collision_layer = 1
 	ground.collision_mask = 0
@@ -47,31 +78,65 @@ func _build_world() -> void:
 	col.shape = shape
 	col.position = Vector2(STAGE_LENGTH * 0.5, GROUND_Y + 100.0)
 	ground.add_child(col)
-	var ground_visual := ColorRect.new()
-	ground_visual.color = Color(0.05, 0.05, 0.07)
-	ground_visual.position = Vector2(-200, GROUND_Y)
-	ground_visual.size = Vector2(STAGE_LENGTH + 400.0, 300.0)
-	add_child(ground_visual)
 
-	_build_platform(900.0, GROUND_Y - 140.0, 220.0)
-	_build_platform(1500.0, GROUND_Y - 220.0, 180.0)
-	_build_platform(2200.0, GROUND_Y - 160.0, 260.0)
-	_build_platform(3100.0, GROUND_Y - 240.0, 200.0)
-	_build_platform(3700.0, GROUND_Y - 140.0, 240.0)
+	var floor_visual := ColorRect.new()
+	floor_visual.color = Color(0.04, 0.045, 0.06)
+	floor_visual.position = Vector2(-200, GROUND_Y)
+	floor_visual.size = Vector2(STAGE_LENGTH + 400.0, 300.0)
+	add_child(floor_visual)
 
-	# 좌/우 벽
-	_build_wall(-50.0)
-	_build_wall(STAGE_LENGTH + 50.0)
+	# 바닥 위 가는 라이트 라인 (지평선 강조)
+	var line := ColorRect.new()
+	line.color = Color(0.55, 0.62, 0.78, 0.35)
+	line.position = Vector2(-200, GROUND_Y - 1.0)
+	line.size = Vector2(STAGE_LENGTH + 400.0, 1.0)
+	add_child(line)
+
+func _build_platforms() -> void:
+	# 스테이지 진행도에 따라 플랫폼 배치를 다양화
+	var stage_idx: int = GameState.current_stage
+	# 단일점프 상승 ~104px. 첫 플랫폼 y=510 (top 498), 이후 단계마다 80~90px 상승.
+	# 모든 레이아웃은 단일점프 계단으로 도달 가능하도록 설계.
+	var layouts: Array = [
+		# 0: 안정적 진행
+		[Vector2(700, 510), Vector2(1100, 480), Vector2(1500, 440), Vector2(1900, 480), Vector2(2400, 510), Vector2(2900, 470), Vector2(3400, 440), Vector2(3900, 480)],
+		# 1: 위로 솟는 — 점프 강조
+		[Vector2(800, 510), Vector2(1300, 430), Vector2(1700, 350), Vector2(2200, 510), Vector2(2700, 400), Vector2(3200, 320), Vector2(3700, 460), Vector2(4100, 380)],
+		# 2: 협곡 — 우회 / 깊은 골
+		[Vector2(700, 530), Vector2(1200, 460), Vector2(1500, 380), Vector2(1800, 460), Vector2(2400, 530), Vector2(2900, 460), Vector2(3400, 380), Vector2(3900, 460)],
+		# 3: 전투 아레나 — 평탄
+		[Vector2(800, 510), Vector2(1500, 510), Vector2(2200, 510), Vector2(2900, 510), Vector2(3600, 510)],
+		# 4: 최종 — 가장 높이차
+		[Vector2(700, 510), Vector2(1100, 420), Vector2(1500, 330), Vector2(2000, 250), Vector2(2500, 330), Vector2(3000, 250), Vector2(3500, 330), Vector2(4000, 420)],
+	]
+	var layout: Array = layouts[stage_idx % layouts.size()]
+	for pos in layout:
+		var p: Vector2 = pos
+		_build_platform(p.x, p.y, 220.0)
+
+func _build_decorations() -> void:
+	# 천장 라이트 (드문드문)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 31 + 5
+	var x: float = 200.0
+	while x < STAGE_LENGTH:
+		var beam := ColorRect.new()
+		beam.color = Color(0.92, 0.88, 0.55, 0.06)
+		beam.position = Vector2(x - 30.0, -200.0)
+		beam.size = Vector2(60.0, 700.0)
+		beam.z_index = -8
+		add_child(beam)
+		x += rng.randf_range(420.0, 720.0)
 
 func _stage_color() -> Color:
 	var tags: Array = GameState.current_route_tags
 	if "어두운_환경" in tags:
-		return Color(0.04, 0.05, 0.07)
+		return Color(0.03, 0.04, 0.06)
 	if "밝은_환경" in tags:
-		return Color(0.16, 0.16, 0.20)
+		return Color(0.13, 0.14, 0.18)
 	if "노출" in tags:
-		return Color(0.10, 0.13, 0.20)
-	return Color(0.07, 0.08, 0.10)
+		return Color(0.08, 0.11, 0.18)
+	return Color(0.06, 0.07, 0.09)
 
 func _build_platform(x: float, y: float, w: float) -> void:
 	var body := StaticBody2D.new()
@@ -83,11 +148,18 @@ func _build_platform(x: float, y: float, w: float) -> void:
 	col.shape = shape
 	col.position = Vector2(x, y)
 	body.add_child(col)
+
 	var visual := ColorRect.new()
-	visual.color = Color(0.18, 0.18, 0.22)
+	visual.color = Color(0.16, 0.18, 0.22)
 	visual.position = Vector2(x - w * 0.5, y - 12.0)
 	visual.size = Vector2(w, 24.0)
 	add_child(visual)
+	# 플랫폼 위 가는 라이트
+	var top := ColorRect.new()
+	top.color = Color(0.55, 0.62, 0.78, 0.55)
+	top.position = Vector2(x - w * 0.5, y - 12.0)
+	top.size = Vector2(w, 1.0)
+	add_child(top)
 
 func _build_wall(x: float) -> void:
 	var body := StaticBody2D.new()
@@ -158,7 +230,7 @@ func _build_hud() -> void:
 	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	hud.add_child(bottom)
 	var keys := Label.new()
-	keys.text = "A/D 이동   SPACE 점프   J 공격   SHIFT 대시"
+	keys.text = "A/D 이동   SPACE 점프   J 사격   SHIFT 대시   ESC 일시정지"
 	keys.add_theme_font_size_override("font_size", 13)
 	keys.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
 	bottom.add_child(keys)
@@ -251,6 +323,12 @@ func _build_goal() -> void:
 	visual.position = Vector2(-30.0, -100.0)
 	visual.size = Vector2(60.0, 200.0)
 	goal.add_child(visual)
+	# 골 빛기둥
+	var beam := ColorRect.new()
+	beam.color = Color(0.95, 0.85, 0.3, 0.18)
+	beam.position = Vector2(-90.0, -300.0)
+	beam.size = Vector2(180.0, 600.0)
+	goal.add_child(beam)
 	goal.body_entered.connect(_on_goal_reached)
 
 func _on_goal_reached(body: Node) -> void:
@@ -279,60 +357,11 @@ func _on_xp_collected(leveled_up: bool) -> void:
 
 func _show_levelup() -> void:
 	get_tree().paused = true
-	levelup_overlay = CanvasLayer.new()
-	levelup_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(levelup_overlay)
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.78)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.process_mode = Node.PROCESS_MODE_ALWAYS
-	levelup_overlay.add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.process_mode = Node.PROCESS_MODE_ALWAYS
-	levelup_overlay.add_child(center)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 18)
-	center.add_child(v)
-	var title := Label.new()
-	title.text = "LEVEL UP  —  스킬을 선택해요"
-	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(title)
-	var advice := Label.new()
-	advice.text = "VEIL  —  " + VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags)
-	advice.add_theme_font_size_override("font_size", 15)
-	advice.add_theme_color_override("font_color", Color(0.6, 0.85, 0.95))
-	advice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(advice)
-	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 18)
-	v.add_child(hb)
-	var picks: Array = SkillSystem.roll_choices(GameState.skills, 3)
-	if picks.size() == 0:
-		_close_levelup()
-		return
-	for p in picks:
-		var skill: Dictionary = p
-		var b := Button.new()
-		b.custom_minimum_size = Vector2(220, 130)
-		b.text = "%s\n[%s]\n\n%s" % [str(skill.get("name", "")), str(skill.get("tag", "")), str(skill.get("desc", ""))]
-		b.add_theme_font_size_override("font_size", 15)
-		b.process_mode = Node.PROCESS_MODE_ALWAYS
-		b.pressed.connect(_on_skill_picked.bind(str(skill.get("id", ""))))
-		hb.add_child(b)
-	if hb.get_child_count() > 0:
-		(hb.get_child(0) as Control).grab_focus()
+	var advice: String = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags)
+	levelup_overlay = LevelUpOverlay.show(self, advice, _on_levelup_picked)
 
-func _on_skill_picked(id: String) -> void:
-	GameState.add_skill(id)
-	_close_levelup()
-
-func _close_levelup() -> void:
-	if levelup_overlay != null:
-		levelup_overlay.queue_free()
-		levelup_overlay = null
+func _on_levelup_picked(_picked_id: String) -> void:
+	levelup_overlay = null
 	pending_levelup = false
 	get_tree().paused = false
 
