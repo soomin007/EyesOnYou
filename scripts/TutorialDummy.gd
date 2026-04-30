@@ -1,3 +1,4 @@
+class_name TutorialDummy
 extends StaticBody2D
 
 signal killed(at_position: Vector2)

@@ -51,7 +51,7 @@ var sign_levelup: Label
 var sign_dash: Label
 
 var jump_pickup: Area2D
-var attack_dummy: Node2D
+var attack_dummy: TutorialDummy
 var levelup_dummies: Array = []
 var levelup_kills: int = 0
 var levelup_triggered: bool = false
@@ -234,9 +234,9 @@ func _make_platform(x: float, y: float, w: float) -> void:
 # ─── 표지판 / HUD ──────────────────────────────────────────────
 
 func _build_signs() -> void:
-	sign_move = _make_sign("←  →  또는  A  D 키로 이동", Vector2(280.0, GROUND_Y - 200.0))
-	sign_jump = _make_sign("SPACE 점프\n공중에서 한 번 더 누르면 이중 점프", Vector2(950.0, GROUND_Y - 280.0))
-	sign_attack = _make_sign("J — 사격\n전방의 적을 처치", Vector2(1750.0, GROUND_Y - 200.0))
+	sign_move = _make_sign("A  D 키로 이동\n(또는 ← → 화살표)", Vector2(280.0, GROUND_Y - 200.0))
+	sign_jump = _make_sign("W 키로 점프\n공중에서 한 번 더 누르면 이중 점프", Vector2(950.0, GROUND_Y - 280.0))
+	sign_attack = _make_sign("마우스 좌클릭으로 사격\n(또는 J 키)", Vector2(1750.0, GROUND_Y - 200.0))
 	sign_levelup = _make_sign("적 처치 → 경험치 → 레벨업\n3개 중 1개의 스킬을 골라요", Vector2(2480.0, GROUND_Y - 280.0))
 	sign_dash = _make_sign("SHIFT — 대시\n무적 상태로 가시 구간 통과", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	sign_jump.visible = false
@@ -360,11 +360,10 @@ func _on_pickup_taken(body: Node) -> void:
 	_advance_to(Step.ATTACK)
 
 func _build_attack_dummy() -> void:
-	attack_dummy = Node2D.new()
-	attack_dummy.set_script(load("res://scripts/TutorialDummy.gd"))
+	attack_dummy = TutorialDummy.new()
 	add_child(attack_dummy)
 	attack_dummy.global_position = ATTACK_DUMMY
-	attack_dummy.connect("killed", _on_attack_dummy_killed)
+	attack_dummy.killed.connect(_on_attack_dummy_killed)
 
 func _on_attack_dummy_killed(_pos: Vector2) -> void:
 	if step != Step.ATTACK:
@@ -374,11 +373,10 @@ func _on_attack_dummy_killed(_pos: Vector2) -> void:
 func _spawn_levelup_dummies() -> void:
 	# LEVELUP 단계 진입 시점에서야 생성 → 이전 단계에서 사격으로 미리 죽이는 사고 방지
 	for pos in [LEVELUP_DUMMY_A, LEVELUP_DUMMY_B]:
-		var d := Node2D.new()
-		d.set_script(load("res://scripts/TutorialDummy.gd"))
+		var d := TutorialDummy.new()
 		add_child(d)
 		d.global_position = pos
-		d.connect("killed", _on_levelup_dummy_killed)
+		d.killed.connect(_on_levelup_dummy_killed)
 		levelup_dummies.append(d)
 
 func _on_levelup_dummy_killed(pos: Vector2) -> void:
@@ -527,12 +525,12 @@ func _update_levelup_sign(picked_id: String) -> void:
 	var hint: String = ""
 	if bool(skill.get("active", false)):
 		var key_action: String = str(skill.get("key", ""))
-		hint = "[%s] 키로 사용" % _key_label_for(key_action)
+		hint = "사용: %s" % _label_for_action(key_action)
 	else:
 		hint = "자동 적용 — 키 입력 불필요"
 	sign_levelup.text = "[%s 획득]\n%s" % [sname, hint]
 
-func _key_label_for(action: String) -> String:
+func _label_for_action(action: String) -> String:
 	if not InputMap.has_action(action):
 		return "?"
 	for ev in InputMap.action_get_events(action):
@@ -544,6 +542,12 @@ func _key_label_for(action: String) -> String:
 			var s: String = OS.get_keycode_string(kc)
 			if s != "":
 				return s
+		elif ev is InputEventMouseButton:
+			var mb := ev as InputEventMouseButton
+			match mb.button_index:
+				MOUSE_BUTTON_LEFT:   return "마우스 좌클릭"
+				MOUSE_BUTTON_RIGHT:  return "마우스 우클릭"
+				MOUSE_BUTTON_MIDDLE: return "마우스 가운데"
 	return "?"
 
 func _on_goal_reached(body: Node) -> void:

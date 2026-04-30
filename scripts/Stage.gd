@@ -231,7 +231,7 @@ func _build_hud() -> void:
 	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	hud.add_child(bottom)
 	var keys := Label.new()
-	keys.text = "A/D 이동   SPACE 점프   J 사격   SHIFT 대시   Q 스킬   ESC 일시정지"
+	keys.text = "A/D 이동   W 점프   마우스 좌클릭 사격   SHIFT 대시   마우스 우클릭 스킬   ESC 일시정지"
 	keys.add_theme_font_size_override("font_size", 13)
 	keys.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
 	bottom.add_child(keys)

@@ -111,7 +111,7 @@ func _build_keybind_tab() -> Control:
 	outer.add_child(v)
 
 	var hint := Label.new()
-	hint.text = "키를 변경하려면 버튼을 클릭한 뒤 새 키를 누르세요. 각 액션당 최대 2개까지 등록할 수 있어요."
+	hint.text = "키 또는 마우스 버튼을 변경하려면 슬롯을 클릭한 뒤 새 입력을 누르세요. 각 액션당 최대 2개까지 등록할 수 있어요."
 	hint.add_theme_font_size_override("font_size", 13)
 	hint.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -240,20 +240,32 @@ func _refresh_all_keybind_buttons() -> void:
 			events = InputMap.action_get_events(action_id)
 		for i in btns.size():
 			var btn: Button = btns[i]
-			if i < events.size() and events[i] is InputEventKey:
-				btn.text = _key_label(events[i] as InputEventKey)
+			if i < events.size():
+				btn.text = _event_label(events[i])
 			else:
 				btn.text = "—"
 			btn.disabled = false
 
-func _key_label(ev: InputEventKey) -> String:
-	var kc: int = ev.physical_keycode
-	if kc == 0:
-		kc = ev.keycode
-	var name := OS.get_keycode_string(kc)
-	if name == "":
-		name = "Key %d" % kc
-	return name
+func _event_label(ev: InputEvent) -> String:
+	if ev is InputEventKey:
+		var ke := ev as InputEventKey
+		var kc: int = ke.physical_keycode
+		if kc == 0:
+			kc = ke.keycode
+		var n := OS.get_keycode_string(kc)
+		if n == "":
+			n = "Key %d" % kc
+		return n
+	elif ev is InputEventMouseButton:
+		var mb := ev as InputEventMouseButton
+		match mb.button_index:
+			MOUSE_BUTTON_LEFT:   return "마우스 왼쪽"
+			MOUSE_BUTTON_RIGHT:  return "마우스 오른쪽"
+			MOUSE_BUTTON_MIDDLE: return "마우스 가운데"
+			MOUSE_BUTTON_XBUTTON1: return "마우스 X1"
+			MOUSE_BUTTON_XBUTTON2: return "마우스 X2"
+			_: return "마우스 버튼 %d" % mb.button_index
+	return "—"
 
 func _on_key_button_pressed(action_id: String, index: int, btn: Button) -> void:
 	if capturing_action != "":
@@ -273,14 +285,32 @@ func _set_all_buttons_disabled(value: bool) -> void:
 func _input(event: InputEvent) -> void:
 	if capturing_action == "":
 		return
-	if not (event is InputEventKey):
-		return
-	var ke := event as InputEventKey
-	if not ke.pressed or ke.echo:
-		return
-	get_viewport().set_input_as_handled()
-	if ke.physical_keycode == KEY_ESCAPE and capturing_action != "pause":
-		_cancel_capture()
+	var new_ev: InputEvent = null
+	if event is InputEventKey:
+		var ke := event as InputEventKey
+		if not ke.pressed or ke.echo:
+			return
+		get_viewport().set_input_as_handled()
+		if ke.physical_keycode == KEY_ESCAPE and capturing_action != "pause":
+			_cancel_capture()
+			return
+		var key_ev := InputEventKey.new()
+		key_ev.physical_keycode = ke.physical_keycode
+		new_ev = key_ev
+	elif event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if not mb.pressed or mb.canceled:
+			return
+		# 휠/드래그는 무시
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			return
+		if mb.button_index == MOUSE_BUTTON_WHEEL_LEFT or mb.button_index == MOUSE_BUTTON_WHEEL_RIGHT:
+			return
+		get_viewport().set_input_as_handled()
+		var mouse_ev := InputEventMouseButton.new()
+		mouse_ev.button_index = mb.button_index
+		new_ev = mouse_ev
+	else:
 		return
 
 	var action_id: String = capturing_action
@@ -293,13 +323,11 @@ func _input(event: InputEvent) -> void:
 		new_events.append(e)
 	while new_events.size() <= index:
 		new_events.append(null)
-	var new_ev := InputEventKey.new()
-	new_ev.physical_keycode = ke.physical_keycode
 	new_events[index] = new_ev
 
 	InputMap.action_erase_events(action_id)
 	for e in new_events:
-		if e is InputEventKey:
+		if e is InputEventKey or e is InputEventMouseButton:
 			InputMap.action_add_event(action_id, e)
 
 	capturing_action = ""
@@ -322,23 +350,31 @@ func _on_reset_pressed() -> void:
 	GameState.save_settings()
 
 func _apply_default_keybindings() -> void:
+	# 각 entry는 ["key", keycode] 또는 ["mouse", button_index]
 	var defaults := {
-		"move_left":  [KEY_A, KEY_LEFT],
-		"move_right": [KEY_D, KEY_RIGHT],
-		"jump":       [KEY_SPACE, KEY_W],
-		"attack":     [KEY_J],
-		"dash":       [KEY_SHIFT, KEY_K],
-		"skill":      [KEY_Q],
-		"pause":      [KEY_ESCAPE],
+		"move_left":  [["key", KEY_A], ["key", KEY_LEFT]],
+		"move_right": [["key", KEY_D], ["key", KEY_RIGHT]],
+		"jump":       [["key", KEY_W], ["key", KEY_SPACE]],
+		"attack":     [["mouse", MOUSE_BUTTON_LEFT], ["key", KEY_J]],
+		"dash":       [["key", KEY_SHIFT], ["key", KEY_K]],
+		"skill":      [["mouse", MOUSE_BUTTON_RIGHT], ["key", KEY_Q]],
+		"pause":      [["key", KEY_ESCAPE]],
 	}
 	for action_id in defaults.keys():
 		if not InputMap.has_action(action_id):
 			continue
 		InputMap.action_erase_events(action_id)
-		for kc in defaults[action_id]:
-			var ev := InputEventKey.new()
-			ev.physical_keycode = int(kc)
-			InputMap.action_add_event(action_id, ev)
+		for entry in defaults[action_id]:
+			var t: String = str(entry[0])
+			var code: int = int(entry[1])
+			if t == "key":
+				var ev := InputEventKey.new()
+				ev.physical_keycode = code
+				InputMap.action_add_event(action_id, ev)
+			elif t == "mouse":
+				var mev := InputEventMouseButton.new()
+				mev.button_index = code
+				InputMap.action_add_event(action_id, mev)
 
 func _on_close_pressed() -> void:
 	emit_signal("closed")

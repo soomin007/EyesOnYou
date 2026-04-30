@@ -114,14 +114,23 @@ func is_final_stage_done() -> bool:
 	return current_stage >= TOTAL_STAGES
 
 # --- 설정 영속화 ---
+# v1 (구): input.<action> = [physical_keycode, ...]  — 키보드 전용
+# v2 (현): input.<action> = [{type, code/button}, ...]  — 키보드+마우스
+# v1 cfg 로드 시 input 섹션은 무시(스키마 호환 안 됨), 다음 저장에서 v2로 전환
+
+const SETTINGS_VERSION: int = 2
 
 func load_settings() -> void:
 	var cf := ConfigFile.new()
 	if cf.load(SETTINGS_PATH) != OK:
 		return
+	var version: int = int(cf.get_value("meta", "version", 1))
 	tutorial_done = bool(cf.get_value("flags", "tutorial_done", false))
 	master_volume = float(cf.get_value("audio", "master", 1.0))
 	sfx_volume = float(cf.get_value("audio", "sfx", 1.0))
+	if version < SETTINGS_VERSION:
+		# 구 스키마 — 키바인드 폐기, project.godot + Main.gd 기본값 유지
+		return
 	for action in KEYBIND_ACTIONS:
 		if not InputMap.has_action(action):
 			continue
@@ -129,23 +138,36 @@ func load_settings() -> void:
 		if stored.size() == 0:
 			continue
 		InputMap.action_erase_events(action)
-		for kc in stored:
-			var ev := InputEventKey.new()
-			ev.physical_keycode = int(kc)
-			InputMap.action_add_event(action, ev)
+		for entry in stored:
+			if not (entry is Dictionary):
+				continue
+			var d: Dictionary = entry
+			var t: String = str(d.get("type", ""))
+			if t == "key":
+				var ev := InputEventKey.new()
+				ev.physical_keycode = int(d.get("code", 0))
+				InputMap.action_add_event(action, ev)
+			elif t == "mouse":
+				var ev2 := InputEventMouseButton.new()
+				ev2.button_index = int(d.get("button", 0))
+				InputMap.action_add_event(action, ev2)
 
 func save_settings() -> void:
 	var cf := ConfigFile.new()
+	cf.set_value("meta", "version", SETTINGS_VERSION)
 	cf.set_value("flags", "tutorial_done", tutorial_done)
 	cf.set_value("audio", "master", master_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
 	for action in KEYBIND_ACTIONS:
 		if not InputMap.has_action(action):
 			continue
-		var keys: Array = []
+		var entries: Array = []
 		for ev in InputMap.action_get_events(action):
 			if ev is InputEventKey:
 				var k := ev as InputEventKey
-				keys.append(int(k.physical_keycode))
-		cf.set_value("input", action, keys)
+				entries.append({"type": "key", "code": int(k.physical_keycode)})
+			elif ev is InputEventMouseButton:
+				var m := ev as InputEventMouseButton
+				entries.append({"type": "mouse", "button": int(m.button_index)})
+		cf.set_value("input", action, entries)
 	cf.save(SETTINGS_PATH)
