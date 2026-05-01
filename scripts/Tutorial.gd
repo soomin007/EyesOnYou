@@ -29,8 +29,9 @@ const LEVELUP_DUMMY_B: Vector2 = Vector2(2550.0, GROUND_Y - 30.0)
 const LEVELUP_TRIGGER_X: float = 2200.0
 
 # 대시 구간: 가시 + 보라색 배리어
-const SPIKE_X_START: float = 2900.0
-const SPIKE_X_END: float = 3200.0
+# 가시 폭은 1회 대시 거리(720 × 0.18 ≈ 130px) 안에 들어가야 통과 가능
+const SPIKE_X_START: float = 2960.0
+const SPIKE_X_END: float = 3060.0
 const BARRIER_X: float = 3220.0
 
 # 골
@@ -49,6 +50,7 @@ var sign_jump: Label
 var sign_attack: Label
 var sign_levelup: Label
 var sign_dash: Label
+var sign_done: Label
 
 var jump_pickup: Area2D
 var attack_dummy: TutorialDummy
@@ -211,6 +213,7 @@ func _build_dash_section() -> void:
 func _make_platform(x: float, y: float, w: float) -> void:
 	var body := StaticBody2D.new()
 	body.collision_layer = 1
+	body.add_to_group("platform")
 	add_child(body)
 	var col := CollisionShape2D.new()
 	col.one_way_collision = true
@@ -239,10 +242,12 @@ func _build_signs() -> void:
 	sign_attack = _make_sign("마우스 좌클릭으로 사격\n(또는 J 키)", Vector2(1750.0, GROUND_Y - 200.0))
 	sign_levelup = _make_sign("적 처치 → 경험치 → 레벨업\n3개 중 1개의 스킬을 골라요", Vector2(2480.0, GROUND_Y - 280.0))
 	sign_dash = _make_sign("SHIFT — 대시\n무적 상태로 가시 구간 통과", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
+	sign_done = _make_sign("본편엔 더 다양한 적이 등장합니다\n처음 마주치면 도감 카드로 소개돼요", Vector2(GOAL_X - 180.0, GROUND_Y - 200.0))
 	sign_jump.visible = false
 	sign_attack.visible = false
 	sign_levelup.visible = false
 	sign_dash.visible = false
+	sign_done.visible = false
 
 func _make_sign(text: String, pos: Vector2) -> Label:
 	var l := Label.new()
@@ -483,6 +488,8 @@ func _advance_to(next: int) -> void:
 			if barrier_visual != null:
 				barrier_visual.queue_free()
 				barrier_visual = null
+			if sign_done != null:
+				sign_done.visible = true
 	_refresh_hud()
 
 func _physics_process(_delta: float) -> void:

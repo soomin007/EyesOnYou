@@ -7,17 +7,45 @@ extends Control
 
 const TYPE_INTERVAL: float = 0.04
 
-var full_text: String = ""
+# 시퀀스 모델: 각 line은 {speaker: "SYS"/"VEIL", text: String}
+# stage 0 진입 시 시스템 텍스트(OPERATION PALIMPSEST) + VEIL 첫 마디들이 먼저 나오고,
+# 그 다음 평소처럼 stage 브리핑 한 줄. 그 외 stage는 brief 한 줄만.
+var lines: Array = []
+var line_idx: int = 0
+
 var revealed_chars: int = 0
 var type_t: float = 0.0
 var done: bool = false
 
 func _ready() -> void:
 	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.TOTAL_STAGES]
-	speaker_label.text = "VEIL"
-	full_text = VeilDialogue.get_briefing(GameState.current_stage)
-	text_label.text = ""
+	lines = _build_lines()
+	_start_line()
+
+func _build_lines() -> Array:
+	var out: Array = []
+	# 첫 진입 시 1회만 OPERATION PALIMPSEST 시스템 텍스트 + VEIL 인사
+	if GameState.current_stage == 0:
+		out.append({"speaker": "SYS", "text": VeilDialogue.get_intro_system_text()})
+		for s in VeilDialogue.get_intro_veil_lines():
+			out.append({"speaker": "VEIL", "text": str(s)})
+	out.append({"speaker": "VEIL", "text": VeilDialogue.get_briefing(GameState.current_stage)})
+	return out
+
+func _start_line() -> void:
+	revealed_chars = 0
+	type_t = 0.0
+	done = false
 	hint_label.text = ""
+	var line: Dictionary = lines[line_idx]
+	var sp: String = str(line.get("speaker", ""))
+	if sp == "SYS":
+		speaker_label.text = ""
+		text_label.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	else:
+		speaker_label.text = "VEIL"
+		text_label.add_theme_color_override("font_color", Color(0.92, 0.92, 0.92))
+	text_label.text = ""
 
 func _process(delta: float) -> void:
 	if done:
@@ -26,21 +54,28 @@ func _process(delta: float) -> void:
 	if type_t >= TYPE_INTERVAL:
 		type_t = 0.0
 		revealed_chars += 1
-		if revealed_chars >= full_text.length():
-			revealed_chars = full_text.length()
+		var full: String = str(lines[line_idx].get("text", ""))
+		if revealed_chars >= full.length():
+			revealed_chars = full.length()
 			done = true
 			hint_label.text = "[ SPACE — 계속 ]"
-		text_label.text = full_text.substr(0, revealed_chars)
+		text_label.text = full.substr(0, revealed_chars)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
 		if not done:
-			revealed_chars = full_text.length()
-			text_label.text = full_text
+			# 한 줄 즉시 완성
+			var full: String = str(lines[line_idx].get("text", ""))
+			revealed_chars = full.length()
+			text_label.text = full
 			done = true
 			hint_label.text = "[ SPACE — 계속 ]"
 			return
-		_proceed()
+		_advance()
 
-func _proceed() -> void:
-	get_tree().change_scene_to_file(SceneRouter.ROUTE_MAP)
+func _advance() -> void:
+	line_idx += 1
+	if line_idx >= lines.size():
+		get_tree().change_scene_to_file(SceneRouter.ROUTE_MAP)
+		return
+	_start_line()

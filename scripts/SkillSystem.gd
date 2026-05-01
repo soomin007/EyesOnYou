@@ -14,9 +14,9 @@ const ALL_SKILLS: Array = [
 	{"id": "piercing",    "name": "관통탄",     "desc": "총알이 모든 적을 관통",            "tag": "전투", "active": false},
 	{"id": "multishot",   "name": "삼연사",     "desc": "한 번에 위/중/아래 3발 발사",       "tag": "전투", "active": false},
 	{"id": "explosive",   "name": "폭발물",     "desc": "주위 적을 광역 처치 (3s 쿨다운)",    "tag": "전투", "active": true,  "key": "skill"},
-	{"id": "wall_slide",  "name": "벽타기",     "desc": "벽에 붙어 있을 때 천천히 낙하",      "tag": "이동", "active": false},
-	{"id": "regen",       "name": "회복",       "desc": "스테이지 클리어 시 HP +1",           "tag": "생존", "active": false},
-	{"id": "shield",      "name": "방어막",     "desc": "다음 피격 1회를 무효화",            "tag": "생존", "active": false},
+	{"id": "glide",       "name": "공중 글라이드", "desc": "공중에서 점프 키 누르고 있으면 천천히 낙하", "tag": "이동", "active": false},
+	{"id": "regen",       "name": "최대 체력 +1", "desc": "최대 체력 영구 +1 (즉시 1 회복)",         "tag": "생존", "active": false},
+	{"id": "shield",      "name": "비상 방어막",   "desc": "쓰러질 때 1회만 살아남기 (HP 1로 부활)",  "tag": "생존", "active": false},
 ]
 
 static func roll_choices(owned: Array, count: int = 3) -> Array:

@@ -64,7 +64,20 @@ func _update_veil_comment() -> void:
 	if hovered_idx < 0 or hovered_idx >= pool.size():
 		return
 	var route: Dictionary = pool[hovered_idx]
-	veil_text.text = "VEIL  —  " + str(route.get("veil_comment", ""))
+	var msg: String = ""
+	var desc: String = str(route.get("description", ""))
+	if desc != "":
+		msg += desc + "\n\n"
+	msg += "VEIL  —  " + str(route.get("veil_comment", ""))
+	# 위험도가 보이는 루트(hidden 아님)에서만 명시 경고
+	if not route.get("hidden", false):
+		var risk: int = int(route.get("risk", 0))
+		if risk >= 3:
+			msg += "\n[고위험] 적 수가 더 많고 반응 속도도 빨라요."
+		var reward: int = int(route.get("reward", 0))
+		if reward >= 3:
+			msg += "\n[고보상] 클리어 보너스 경험치가 큽니다."
+	veil_text.text = msg
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):

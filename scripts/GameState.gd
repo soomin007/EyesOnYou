@@ -18,10 +18,13 @@ var last_veil_recommended_route: String = ""
 var followed_veil_last_choice: bool = false
 
 var skills: Array = []
+var current_route_id: String = ""
 var current_route_tags: Array = []
+var current_route_risk: int = 1   # 1~3, 적 수 배율 + 행동 강화에 사용
+var current_route_reward: int = 1  # 1~3, 클리어 시 보너스 XP에 사용
 
-var player_max_hp: int = 5
-var player_hp: int = 5
+var player_max_hp: int = 3
+var player_hp: int = 3
 var player_xp: int = 0
 var player_level: int = 1
 const XP_PER_LEVEL: int = 5
@@ -29,6 +32,16 @@ const XP_PER_LEVEL: int = 5
 var tutorial_done: bool = false
 var master_volume: float = 1.0
 var sfx_volume: float = 1.0
+
+# 디버그 연습장 모드 — Settings에서 진입. 영속화하지 않음.
+var playground_active: bool = false
+
+# ??? 맵 진행 중 Player 입력 제한 (이동/점프만 허용, 공격/대시/스킬 비활성)
+var restrict_combat_input: bool = false
+
+# 도감 — 첫 조우 시 카드 한 번만 띄우기 위한 영속 플래그.
+# 게임 reset()에서는 비우지 않음 (한 번 본 적은 다음 런에서도 본 거).
+var seen_enemies: Array = []
 
 func reset() -> void:
 	current_stage = 0
@@ -40,7 +53,12 @@ func reset() -> void:
 	last_veil_recommended_route = ""
 	followed_veil_last_choice = false
 	skills = STARTING_SKILLS.duplicate()
+	current_route_id = ""
 	current_route_tags = []
+	current_route_risk = 1
+	current_route_reward = 1
+	player_max_hp = 3
+	player_hp = 3
 	player_max_hp = 5
 	player_hp = 5
 	player_xp = 0
@@ -57,7 +75,10 @@ func start_main_game() -> void:
 	route_history = []
 	last_veil_recommended_route = ""
 	followed_veil_last_choice = false
+	current_route_id = ""
 	current_route_tags = []
+	current_route_risk = 1
+	current_route_reward = 1
 	player_hp = player_max_hp
 	player_xp = 0
 	player_level = 1
@@ -66,12 +87,27 @@ func start_main_game() -> void:
 func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	var rid: String = route.get("id", "")
 	route_history.append(rid)
+	current_route_id = rid
 	current_route_tags = route.get("tags", [])
+	current_route_risk = int(route.get("risk", 1))
+	current_route_reward = int(route.get("reward", 1))
 	followed_veil_last_choice = (rid == recommended_id)
 	if followed_veil_last_choice:
 		trust_score += 1
 	if "전투" in current_route_tags or "근접전" in current_route_tags:
 		aggression_score += 1
+
+func is_high_risk() -> bool:
+	return current_route_risk >= 3
+
+func is_high_reward() -> bool:
+	return current_route_reward >= 3
+
+func enemy_count_multiplier() -> float:
+	match current_route_risk:
+		1: return 0.7
+		3: return 1.4
+	return 1.0
 
 func add_xp(amount: int) -> bool:
 	player_xp += amount
@@ -104,14 +140,27 @@ func is_dead() -> bool:
 func register_death() -> void:
 	death_count += 1
 
-func on_stage_clear() -> void:
+func on_stage_clear() -> bool:
+	# 반환: 보너스 XP로 인한 레벨업이 발생했는지. 호출자가 LevelUpOverlay를
+	# 띄울지 판단할 수 있게 해 보너스 레벨업이 누락되지 않도록.
 	current_stage += 1
 	score += 100 * current_stage
-	if has_skill("regen"):
-		heal_player(1)
+	var leveled: bool = false
+	if current_route_reward > 0:
+		if add_xp(current_route_reward):
+			leveled = true
+	# regen은 획득 시점에 max_hp +1 효과만 — 매 stage HP 풀 회복이라 heal_player 불필요
+	return leveled
 
 func is_final_stage_done() -> bool:
 	return current_stage >= TOTAL_STAGES
+
+func mark_enemy_seen(id: String) -> bool:
+	if id == "" or id in seen_enemies:
+		return false
+	seen_enemies.append(id)
+	save_settings()
+	return true
 
 # --- 설정 영속화 ---
 # v1 (구): input.<action> = [physical_keycode, ...]  — 키보드 전용
@@ -128,6 +177,9 @@ func load_settings() -> void:
 	tutorial_done = bool(cf.get_value("flags", "tutorial_done", false))
 	master_volume = float(cf.get_value("audio", "master", 1.0))
 	sfx_volume = float(cf.get_value("audio", "sfx", 1.0))
+	seen_enemies = []
+	for v in cf.get_value("flags", "seen_enemies", []):
+		seen_enemies.append(str(v))
 	if version < SETTINGS_VERSION:
 		# 구 스키마 — 키바인드 폐기, project.godot + Main.gd 기본값 유지
 		return
@@ -156,6 +208,7 @@ func save_settings() -> void:
 	var cf := ConfigFile.new()
 	cf.set_value("meta", "version", SETTINGS_VERSION)
 	cf.set_value("flags", "tutorial_done", tutorial_done)
+	cf.set_value("flags", "seen_enemies", seen_enemies)
 	cf.set_value("audio", "master", master_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
 	for action in KEYBIND_ACTIONS:

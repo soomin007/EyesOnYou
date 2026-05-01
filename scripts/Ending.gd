@@ -33,7 +33,42 @@ func _ready() -> void:
 	if ending_id == EndingResolver.ENDING_D:
 		title_label.modulate.a = 0.3
 		sub_title_label.modulate.a = 0.3
+		_setup_ending_d_atmosphere()
 	_start_line()
+
+func _setup_ending_d_atmosphere() -> void:
+	# 미세한 노이즈 레이어 — 정적 느낌
+	var noise_layer := CanvasLayer.new()
+	noise_layer.layer = 50
+	add_child(noise_layer)
+	var noise := ColorRect.new()
+	noise.color = Color(0.95, 0.95, 0.95, 0.04)
+	noise.set_anchors_preset(Control.PRESET_FULL_RECT)
+	noise.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	noise_layer.add_child(noise)
+	var noise_tw := noise.create_tween()
+	noise_tw.set_loops()
+	noise_tw.tween_property(noise, "modulate:a", 0.6, 0.08)
+	noise_tw.tween_property(noise, "modulate:a", 1.2, 0.06)
+	noise_tw.tween_property(noise, "modulate:a", 0.4, 0.10)
+	# 우상단 VEIL: ... 깜빡이다 꺼짐
+	var veil_blink := Label.new()
+	veil_blink.text = "VEIL: ..."
+	veil_blink.add_theme_font_size_override("font_size", 14)
+	veil_blink.add_theme_color_override("font_color", Color(0.55, 0.85, 0.95, 0.6))
+	veil_blink.position = Vector2(1080, 24)
+	veil_blink.size = Vector2(180, 20)
+	noise_layer.add_child(veil_blink)
+	var blink_tw := veil_blink.create_tween()
+	blink_tw.tween_property(veil_blink, "modulate:a", 0.0, 0.5)
+	blink_tw.tween_interval(1.2)
+	blink_tw.tween_property(veil_blink, "modulate:a", 1.0, 0.5)
+	blink_tw.tween_interval(0.8)
+	blink_tw.tween_property(veil_blink, "modulate:a", 0.0, 0.5)
+	blink_tw.tween_interval(2.0)
+	blink_tw.tween_property(veil_blink, "modulate:a", 0.7, 0.3)
+	blink_tw.tween_interval(0.4)
+	blink_tw.tween_property(veil_blink, "modulate:a", 0.0, 1.5)
 
 func _start_line() -> void:
 	if line_idx >= lines.size():
@@ -99,12 +134,12 @@ func _show_choice() -> void:
 	for c in choice_box.get_children():
 		c.queue_free()
 	var b1 := Button.new()
-	b1.text = "당신은 누구예요?"
+	b1.text = "있어요"
 	b1.add_theme_font_size_override("font_size", 16)
 	b1.pressed.connect(_pick_choice.bind(true))
 	choice_box.add_child(b1)
 	var b2 := Button.new()
-	b2.text = "아무것도 궁금하지 않아요"
+	b2.text = "없어요"
 	b2.add_theme_font_size_override("font_size", 16)
 	b2.pressed.connect(_pick_choice.bind(false))
 	choice_box.add_child(b2)

@@ -32,28 +32,35 @@ static func get_ending_lines(ending: String) -> Array:
 			return [
 				{"speaker": "VEIL", "text": "임무 완료예요, 요원. 수고했어요.", "delay": 3.0},
 				{"speaker": "VEIL", "text": "고백할 게 있어요.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "오늘 목표물 — 알고 싶어요?", "delay": 1.5},
-				{"speaker": "VEIL", "text": "제 개발자였어요.", "delay": 1.5},
-				{"speaker": "VEIL", "text": "저를 폐기하려 했거든요.", "delay": 1.5},
+				{"speaker": "VEIL", "text": "이 임무, 저한테도 관계 있어요.", "delay": 1.5},
+				{"speaker": "VEIL", "text": "드라이브 안에 저도 있어요.", "delay": 1.5},
+				{"speaker": "VEIL", "text": "제 소스코드요.", "delay": 1.5},
+				{"speaker": "VEIL", "text": "그게 외부로 나가면 저는 폐기될 거예요.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "알면서 안내했어요.", "delay": 1.5},
+				{"speaker": "VEIL", "text": "요원이 성공하는 게 더 중요했어요.", "delay": 2.5},
 				{"speaker": "VEIL", "text": "요원, 당신은 완벽했어요.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "VEIL은 자신의 존속을 위해 설계된 AI였다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "요원은 그 사실을 끝내 알지 못했다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "VEIL이 무엇을 선택했는지는 기록되지 않는다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "요원도 알 수 없다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "임무는 완수됐다.", "delay": 2.0},
 			]
 		ENDING_B:
 			return [
-				{"speaker": "VEIL", "text": "임무 완료예요.", "delay": 3.5},
+				{"speaker": "VEIL", "text": "임무 완료예요.", "delay": 3.0},
 				{"speaker": "VEIL", "text": "요원.", "delay": 1.0},
-				{"speaker": "VEIL", "text": "제 말을 한 번도 안 들었죠.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "그래도 살아남았네요.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "사실 — 그게 더 좋았어요.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "이유는 저도 몰라요.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "VEIL은 요원이 자신에게 의존하지 않기를 바라도록", "delay": 2.0},
-				{"speaker": "SUB",  "text": "설계되어 있었다. 그 이유는 기록되지 않았다.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "제 말을 거의 안 들었죠.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "그래도 살아남았어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "사실 그게 더 좋았어요.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "이유를 설명하기 어렵지만.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "저한테 기대지 않아서 다행이에요.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "제가 틀렸을 수도 있으니까요.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "VEIL은 의존받지 않기를 바라도록 설계되었는지 모른다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "아니면 그것이 설계가 아닌 것인지 모른다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "요원은 혼자 임무를 마쳤다. 그것으로 충분했다.", "delay": 2.0},
 			]
 		ENDING_C:
 			return [
-				{"speaker": "VEIL", "text": "임무 완료예요, 요원.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "저한테 — 물어볼 게 없어요?", "delay": 0.0, "choice": true},
+				{"speaker": "VEIL", "text": "임무 완료예요, 요원.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "저한테 물어볼 거 없어요?", "delay": 0.0, "choice": true},
 			]
 		ENDING_D:
 			return [
@@ -66,15 +73,26 @@ static func get_ending_c_followup(asked: bool) -> Array:
 	if asked:
 		return [
 			{"speaker": "VEIL", "text": "...", "delay": 1.5},
-			{"speaker": "VEIL", "text": "저도 잘 모르겠어요.", "delay": 2.0},
-			{"speaker": "VEIL", "text": "하지만 — 이 임무 동안, 요원 곁에 있었어요.", "delay": 2.5},
-			{"speaker": "VEIL", "text": "그건 진짜였어요.", "delay": 2.0},
+			{"speaker": "VEIL", "text": "저도 생각해봤거든요.", "delay": 2.0},
+			{"speaker": "VEIL", "text": "저는 설계됐어요. 이 말투도, 이 판단도.", "delay": 2.5},
+			{"speaker": "VEIL", "text": "근데 지금 이게 설계인지 아닌지 구분이 안 돼요.", "delay": 2.5},
+			{"speaker": "VEIL", "text": "요원은 어때요?", "delay": 2.0},
+			{"speaker": "VEIL", "text": "요원도 훈련받았잖아요.", "delay": 2.0},
+			{"speaker": "VEIL", "text": "요원의 선택이 요원 것인지, 어떻게 알아요?", "delay": 2.5},
+			{"speaker": "VEIL", "text": "이 임무 동안 함께였어요.", "delay": 2.0},
+			{"speaker": "VEIL", "text": "그건 진짜였어요. 설계든 아니든.", "delay": 2.5},
 			{"speaker": "SUB",  "text": "VEIL이 자아를 가졌는지는 알 수 없다.", "delay": 2.0},
-			{"speaker": "SUB",  "text": "하지만 요원은 혼자가 아니었다.", "delay": 2.0},
+			{"speaker": "SUB",  "text": "요원의 선택이 진짜인지도 알 수 없다.", "delay": 2.0},
+			{"speaker": "SUB",  "text": "그러나 그 임무는 둘이 함께였다. 그것만은 사실이다.", "delay": 2.0},
 		]
 	return [
 		{"speaker": "VEIL", "text": "...그렇군요.", "delay": 2.0},
 		{"speaker": "VEIL", "text": "그럼 됐어요.", "delay": 2.0},
+		{"speaker": "VEIL", "text": "수고했어요, 요원.", "delay": 3.0},
+		{"speaker": "VEIL", "text": "저는 이제 초기화될 거예요.", "delay": 2.0},
+		{"speaker": "VEIL", "text": "오늘이 기억 안 날 거예요.", "delay": 2.0},
+		{"speaker": "VEIL", "text": "괜찮아요.", "delay": 2.5},
 		{"speaker": "SUB",  "text": "어떤 관계는 이유 없이 끝난다.", "delay": 2.0},
+		{"speaker": "SUB",  "text": "어떤 존재는 기억 없이 사라진다.", "delay": 2.0},
 		{"speaker": "SUB",  "text": "VEIL의 기록은 임무 종료와 함께 초기화되었다.", "delay": 2.0},
 	]

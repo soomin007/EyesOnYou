@@ -1,3 +1,4 @@
+class_name Player
 extends CharacterBody2D
 
 signal damaged
@@ -7,13 +8,14 @@ const SPEED: float = 240.0
 const JUMP_VELOCITY: float = -540.0
 const GRAVITY: float = 1400.0
 const MAX_FALL_SPEED: float = 1100.0
-const WALL_SLIDE_FALL_SPEED: float = 140.0  # wall_slide 보유 시 벽에서의 최대 낙하 속도
+const GLIDE_FALL_SPEED: float = 130.0  # glide(공중 글라이드) 시 점프 키 홀드 중 최대 낙하 속도
 const ATTACK_COOLDOWN: float = 0.30
 const DASH_SPEED: float = 720.0
 const DASH_DURATION: float = 0.18
 const DASH_COOLDOWN: float = 0.7
 const INVULN_AFTER_HIT: float = 0.8
 const SKILL_COOLDOWN: float = 3.0  # explosive 재사용 대기
+const DROP_THROUGH_DURATION: float = 0.25  # 플랫폼 통과 예외 유지 시간
 
 const ATTACK_MUZZLE_X: float = 14.0
 const ATTACK_MUZZLE_Y: float = -38.0  # 총구 높이 (가슴)
@@ -81,12 +83,34 @@ func _handle_input(_delta: float) -> void:
 
 	if Input.is_action_just_pressed("jump"):
 		_try_jump()
-	if Input.is_action_just_pressed("attack"):
-		_try_attack()
-	if Input.is_action_just_pressed("dash"):
-		_try_dash()
-	if Input.is_action_just_pressed("skill"):
-		_try_skill()
+	# 전투 입력 제한 (??? 맵에서) — 이동/점프만 허용
+	if not GameState.restrict_combat_input:
+		if Input.is_action_just_pressed("attack"):
+			_try_attack()
+		if Input.is_action_just_pressed("dash"):
+			_try_dash()
+		if Input.is_action_just_pressed("skill"):
+			_try_skill()
+	if Input.is_action_just_pressed("move_down"):
+		_try_drop_through()
+
+func _try_drop_through() -> void:
+	if not is_on_floor():
+		return
+	# 직전 move_and_slide의 충돌 결과에서 발 밑이 one-way 플랫폼인지 검사
+	for i in get_slide_collision_count():
+		var c := get_slide_collision(i)
+		var collider: Object = c.get_collider()
+		if collider is Node and (collider as Node).is_in_group("platform"):
+			add_collision_exception_with(collider)
+			get_tree().create_timer(DROP_THROUGH_DURATION).timeout.connect(
+				func() -> void:
+					if is_instance_valid(collider):
+						remove_collision_exception_with(collider)
+			)
+			position.y += 2.0
+			velocity.y = max(velocity.y, 80.0)
+			return
 
 func _try_jump() -> void:
 	var max_jumps: int = 2 if GameState.has_skill("double_jump") else 1
@@ -180,21 +204,31 @@ func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
 		return
 	velocity.y = min(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
-	# wall_slide: 벽에 붙어 떨어질 때만 낙하 속도 제한
-	if GameState.has_skill("wall_slide") and is_on_wall_only() and velocity.y > 0.0:
-		velocity.y = min(velocity.y, WALL_SLIDE_FALL_SPEED)
+	# 공중 글라이드 — 낙하 중 점프 키 누르고 있으면 천천히 떨어진다
+	if GameState.has_skill("glide") and velocity.y > 0.0 and Input.is_action_pressed("jump"):
+		velocity.y = min(velocity.y, GLIDE_FALL_SPEED)
 
 func take_hit(amount: int) -> void:
 	if invuln > 0.0:
 		return
-	if GameState.has_skill("shield") and amount >= 2:
-		amount = 1
-		GameState.skills.erase("shield")
 	GameState.damage_player(amount)
 	invuln = INVULN_AFTER_HIT
 	emit_signal("damaged")
+	# 비상 방어막 — 쓰러질 때 1회 한정 부활
+	if GameState.is_dead() and GameState.has_skill("shield"):
+		GameState.player_hp = 1
+		GameState.skills.erase("shield")
+		_show_shield_flash()
+		return
 	if GameState.is_dead():
 		emit_signal("died")
+
+func _show_shield_flash() -> void:
+	# 방어막 발동 시각 효과 — 흰 빛 잠시 휘감고 사라짐
+	if visual == null:
+		return
+	visual.modulate = Color(2.5, 2.5, 2.5)
+	create_tween().tween_property(visual, "modulate", Color(1, 1, 1), 0.45)
 
 func _update_visual() -> void:
 	if visual == null:

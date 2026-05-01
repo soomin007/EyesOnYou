@@ -79,6 +79,7 @@ func _ready() -> void:
 
 	tabs.add_child(_build_keybind_tab())
 	tabs.add_child(_build_av_tab())
+	tabs.add_child(_build_debug_tab())
 
 	var divider2 := ColorRect.new()
 	divider2.color = Color(0.55, 0.62, 0.78, 0.30)
@@ -143,6 +144,50 @@ func _build_keybind_tab() -> Control:
 			btns.append(btn)
 		key_buttons[action_id] = btns
 	return outer
+
+func _build_debug_tab() -> Control:
+	var outer := MarginContainer.new()
+	outer.name = "디버그"
+	outer.add_theme_constant_override("margin_left", 16)
+	outer.add_theme_constant_override("margin_right", 16)
+	outer.add_theme_constant_override("margin_top", 18)
+	outer.add_theme_constant_override("margin_bottom", 18)
+
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 14)
+	outer.add_child(v)
+
+	v.add_child(_make_section_header("연습장"))
+
+	var note := Label.new()
+	note.text = "스테이지/루트/난이도를 자유롭게 바꿔가며 테스트할 수 있어요. HUD에 토글 패널이 떠 있어 그 자리에서 설정을 바꾸면 맵이 즉시 다시 생성됩니다. 일반 진행 데이터에는 영향 없음."
+	note.add_theme_font_size_override("font_size", 13)
+	note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(note)
+
+	var enter_btn := Button.new()
+	enter_btn.text = "연습장으로 진입"
+	enter_btn.custom_minimum_size = Vector2(220, 40)
+	enter_btn.add_theme_font_size_override("font_size", 14)
+	enter_btn.pressed.connect(_on_playground_pressed)
+	v.add_child(enter_btn)
+
+	return outer
+
+func _on_playground_pressed() -> void:
+	GameState.playground_active = true
+	GameState.current_stage = 0
+	GameState.current_route_id = "route_lab"
+	GameState.current_route_tags = ["전투", "드론", "밝은_환경"]
+	GameState.current_route_risk = 2
+	GameState.current_route_reward = 2
+	GameState.player_hp = GameState.player_max_hp
+	GameState.player_xp = 0
+	GameState.player_level = 1
+	# pause 메뉴에서 진입한 경우 paused 해제 후 scene 전환
+	get_tree().paused = false
+	get_tree().change_scene_to_file(SceneRouter.STAGE)
 
 func _build_av_tab() -> Control:
 	var outer := MarginContainer.new()
