@@ -1,8 +1,16 @@
 extends Node2D
 
-const STAGE_LENGTH: float = 4400.0
-const GROUND_Y: float = 600.0
-const PLAYER_START: Vector2 = Vector2(140.0, 540.0)
+# 기본값 — MapData가 비었을 때 폴백. 실제로는 _ready에서 MapData 기반으로 덮어씀.
+var STAGE_LENGTH: float = 4400.0
+var GROUND_Y: float = 600.0
+var PLAYER_START: Vector2 = Vector2(140.0, 540.0)
+
+# DESIGN_world_layout 템플릿 시스템 — _ready에서 MapData에서 읽음
+var _world_type: String = "HORIZONTAL"
+var _world_size: Vector2 = Vector2(4400.0, 720.0)
+var _camera_mode: String = "HORIZONTAL"
+var _goal_type: String = "POSITION"
+var _goal_pos: Vector2 = Vector2(4320.0, 540.0)
 
 var player: CharacterBody2D
 var camera: Camera2D
@@ -27,11 +35,13 @@ const CD_BAR_WIDTH: float = 90.0
 func _ready() -> void:
 	add_to_group("stage")
 	GameState.player_hp = GameState.player_max_hp
-	# ??? 맵은 적/가시/골이 없는 정적 시퀀스 맵
+	# ??? 맵은 적/가시/골이 없는 정적 시퀀스 맵 (별도 로직)
 	if GameState.current_route_id == "route_hidden":
 		_build_hidden_archive()
 		return
 	GameState.restrict_combat_input = false
+	# MapData에서 세계 형태 / 시작 / 골 / 카메라 모드 로드
+	_load_world_meta()
 	_build_world()
 	_build_player()
 	_build_camera()
@@ -42,6 +52,23 @@ func _ready() -> void:
 	_setup_veil_mistakes()
 	if GameState.playground_active:
 		add_child(PlaygroundOverlay.new())
+
+func _load_world_meta() -> void:
+	# MapData를 먼저 한 번 lookup해서 세계 차원·골·카메라 모드 결정.
+	# (이후 _build_platforms가 다시 lookup해서 platform/적 사용)
+	var data: Dictionary = MapData.get_layout(GameState.current_route_id)
+	if data.is_empty():
+		# MapData 명세 없음 — 기본값(HORIZONTAL 4400×720) 유지
+		return
+	_world_type = str(data.get("world_type", "HORIZONTAL"))
+	_world_size = data.get("world_size", _world_size)
+	_camera_mode = str(data.get("camera_mode", "HORIZONTAL"))
+	_goal_type = str(data.get("goal_type", "POSITION"))
+	_goal_pos = data.get("goal_pos", Vector2.ZERO)
+	PLAYER_START = data.get("player_start", PLAYER_START)
+	STAGE_LENGTH = _world_size.x
+	# ground_y는 맵별로 명시 가능 (subway는 천장 낮아 ground_y=420 등)
+	GROUND_Y = float(data.get("ground_y", _world_size.y - 120.0))
 
 # ─── VEIL 실수 스크립트 ─────────────────────────────────────
 # 의도된 작은 균열 — VEIL이 한 번 틀리고 짧게 인정한다.
@@ -89,6 +116,9 @@ func _on_ward_foreshadow_zone(body: Node) -> void:
 	_show_veil_subtitle("누가 봉인했는지 저도 몰라요.", 3.0)
 
 func _arm_veil_mistake_at(trigger_x: float, before_line: String, after_line: String) -> void:
+	# 트리거가 월드 밖이면 (vertical 등 좁은 맵) 건너뛰기
+	if trigger_x > _world_size.x:
+		return
 	var area := Area2D.new()
 	area.name = "VeilMistakeTrigger"
 	area.collision_layer = 0
@@ -505,10 +535,12 @@ func _display_veil_subtitle(message: String, duration: float) -> void:
 	tw.tween_callback(msg_layer.queue_free)
 
 func _build_background() -> void:
+	# 세계 크기에 맞춰 배경 확장
+	var bg_height: float = _world_size.y + 600.0
 	var bg := ColorRect.new()
 	bg.color = _stage_color()
 	bg.position = Vector2(-200, -300)
-	bg.size = Vector2(STAGE_LENGTH + 400.0, 1200.0)
+	bg.size = Vector2(STAGE_LENGTH + 400.0, bg_height)
 	bg.z_index = -20
 	add_child(bg)
 
@@ -520,7 +552,9 @@ func _build_background() -> void:
 	top_grad.z_index = -19
 	add_child(top_grad)
 
-	# 멀리 있는 실루엣 기둥 (parallax 느낌)
+	# 멀리 있는 실루엣 기둥 — HORIZONTAL 맵에서만 (VERTICAL/ARENA에선 시각적으로 안 어울림)
+	if _world_type != "HORIZONTAL":
+		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 7919 + 13
 	var x: float = -100.0
@@ -934,14 +968,16 @@ func _build_platform(x: float, y: float, w: float) -> void:
 	add_child(top)
 
 func _build_wall(x: float) -> void:
+	# 세로 맵에서도 벽이 월드 전체 높이를 덮도록 height를 동적으로.
+	var wall_height: float = _world_size.y + 400.0
 	var body := StaticBody2D.new()
 	body.collision_layer = 1
 	add_child(body)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(60.0, 1400.0)
+	shape.size = Vector2(60.0, wall_height)
 	col.shape = shape
-	col.position = Vector2(x, GROUND_Y - 400.0)
+	col.position = Vector2(x, _world_size.y * 0.5)
 	body.add_child(col)
 
 func _build_player() -> void:
@@ -965,13 +1001,41 @@ func _build_player() -> void:
 func _build_camera() -> void:
 	camera = Camera2D.new()
 	camera.zoom = Vector2(1.0, 1.0)
-	camera.limit_left = 0
-	camera.limit_right = int(STAGE_LENGTH)
-	camera.limit_top = -200
-	camera.limit_bottom = int(GROUND_Y + 200.0)
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 6.0
-	player.add_child(camera)
+	# camera_mode별 limits / parent 분기
+	match _camera_mode:
+		"HORIZONTAL":
+			camera.limit_left = 0
+			camera.limit_right = int(STAGE_LENGTH)
+			camera.limit_top = -200
+			camera.limit_bottom = int(GROUND_Y + 200.0)
+			player.add_child(camera)
+		"VERTICAL":
+			camera.limit_left = 0
+			camera.limit_right = int(_world_size.x)
+			camera.limit_top = -200
+			camera.limit_bottom = int(_world_size.y + 200.0)
+			player.add_child(camera)
+		"FIXED":
+			# ARENA — 카메라 고정. zoom으로 월드 전체가 보이도록.
+			camera.limit_left = 0
+			camera.limit_right = int(_world_size.x)
+			camera.limit_top = 0
+			camera.limit_bottom = int(_world_size.y)
+			camera.position_smoothing_enabled = false
+			# 1280×720 viewport에 _world_size 전체가 맞게 zoom out.
+			var zoom_fit: float = min(1280.0 / _world_size.x, 720.0 / _world_size.y)
+			camera.zoom = Vector2(zoom_fit, zoom_fit)
+			add_child(camera)
+			camera.global_position = _world_size * 0.5
+		_:
+			# 폴백
+			camera.limit_left = 0
+			camera.limit_right = int(STAGE_LENGTH)
+			camera.limit_top = -200
+			camera.limit_bottom = int(GROUND_Y + 200.0)
+			player.add_child(camera)
 	camera.make_current()
 
 func _build_hud() -> void:
@@ -1166,6 +1230,11 @@ func _spawn_enemy(kind: int, pos: Vector2) -> void:
 
 func _on_enemy_killed(at_position: Vector2) -> void:
 	_spawn_orb(at_position + Vector2(0, -20.0))
+	# ARENA enemy_clear 모드 — 카운트 감소 시 0이 되면 클리어 트리거
+	if _goal_type == "ENEMY_CLEAR":
+		_enemies_remaining -= 1
+		if _enemies_remaining <= 0:
+			call_deferred("_on_arena_cleared")
 
 func _spawn_orb(pos: Vector2, static_placement: bool = false) -> void:
 	# static_placement=true면 bounce 스킵 — 분기 보상으로 미리 배치된 orb는 그 자리에 그대로 둠.
@@ -1230,11 +1299,28 @@ func _build_rewards() -> void:
 	for pos in rewards.get("hp_pickups", []):
 		_spawn_hp_orb(pos)
 
+var _enemies_remaining: int = 0  # ARENA enemy_clear 카운트
+
 func _build_goal() -> void:
+	match _goal_type:
+		"POSITION":
+			_build_goal_position()
+		"ENEMY_CLEAR":
+			_setup_arena_clear_tracking()
+		"SEQUENCE":
+			pass  # ??? 등 — 자체 종료 로직
+		_:
+			_build_goal_position()
+
+func _build_goal_position() -> void:
 	var goal := Area2D.new()
 	goal.collision_layer = 0
 	goal.collision_mask = 2
-	goal.position = Vector2(STAGE_LENGTH - 80.0, GROUND_Y - 60.0)
+	# MapData에서 명시한 goal_pos 사용 (없으면 우측 끝 폴백)
+	var pos: Vector2 = _goal_pos
+	if pos == Vector2.ZERO:
+		pos = Vector2(STAGE_LENGTH - 80.0, GROUND_Y - 60.0)
+	goal.position = pos
 	add_child(goal)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
@@ -1260,6 +1346,27 @@ func _on_goal_reached(body: Node) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
 	goal_reached = true
+	_trigger_stage_clear()
+
+func _setup_arena_clear_tracking() -> void:
+	# ARENA — _spawn_enemies가 끝난 시점이라 group에 등록된 적 수가 곧 카운트.
+	_enemies_remaining = get_tree().get_nodes_in_group("enemy").size()
+	if _enemies_remaining <= 0:
+		# 적 없는 ARENA (이상 케이스) — 즉시 클리어
+		call_deferred("_on_arena_cleared")
+
+func _on_arena_cleared() -> void:
+	if goal_reached:
+		return
+	goal_reached = true
+	# ARENA 클리어 보너스 XP — MapData arena_clear_xp
+	var data: Dictionary = MapData.get_layout(GameState.current_route_id)
+	var bonus_xp: int = int(data.get("arena_clear_xp", 0))
+	if bonus_xp > 0:
+		GameState.add_xp(bonus_xp, false)
+	_trigger_stage_clear()
+
+func _trigger_stage_clear() -> void:
 	if GameState.playground_active:
 		# 연습장에선 자동 진행 안 함 — 패널에서 직접 다음 stage/route 선택
 		_show_playground_clear_msg()
