@@ -53,7 +53,7 @@ func _setup_veil_mistakes() -> void:
 		return
 	if GameState.current_stage == 0:
 		# 첫 적 구역 진입 시 한 번 — 트리거 좌표는 첫 patrol 근처
-		_arm_veil_mistake_at(680.0, "왼쪽엔 둘이에요. 조심해요.", "셋이었네요. 제가 틀렸어요.")
+		_arm_veil_mistake_at(680.0, "앞쪽에 둘이에요. 조심해요.", "셋이었네요. 제가 틀렸어요.")
 	elif GameState.current_stage == 2:
 		_arm_veil_mistake_at(1400.0, "이 구역은 경비 없을 거예요.", "있었네요. 미안해요.")
 

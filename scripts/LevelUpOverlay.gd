@@ -52,8 +52,16 @@ static func show(host: Node, advice: String, on_picked: Callable) -> CanvasLayer
 	for p in picks:
 		var skill: Dictionary = p
 		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(220, 140)
-		btn.text = "%s\n[%s]\n\n%s" % [str(skill.get("name", "")), str(skill.get("tag", "")), str(skill.get("desc", ""))]
+		btn.custom_minimum_size = Vector2(220, 160)
+		var family: String = str(skill.get("family", ""))
+		var tier: int = int(skill.get("tier", 1))
+		var tier_tag: String = "T%d" % tier
+		var header: String
+		if family != "":
+			header = "[%s · %s]" % [family, tier_tag]
+		else:
+			header = "[%s]" % tier_tag
+		btn.text = "%s  %s\n\n%s" % [str(skill.get("name", "")), header, str(skill.get("desc", ""))]
 		btn.add_theme_font_size_override("font_size", 15)
 		btn.process_mode = Node.PROCESS_MODE_ALWAYS
 		var sid: String = str(skill.get("id", ""))

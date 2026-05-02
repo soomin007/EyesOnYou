@@ -55,7 +55,9 @@ func _on_body_entered(body: Node) -> void:
 			return
 		hit_enemies.append(body)
 		if body.has_method("take_damage"):
-			body.take_damage(damage, global_position.x)
+			# bullet의 진행 방향(dir)을 전달 — 방패 판정에 사용. 위치(global_position.x)는
+			# 충돌 시점에 enemy 안쪽으로 이미 들어가 있어 부호가 어긋날 수 있음.
+			body.take_damage(damage, dir)
 		if not pierce:
 			queue_free()
 	elif body is StaticBody2D:

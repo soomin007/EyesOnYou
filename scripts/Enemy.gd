@@ -454,12 +454,11 @@ func _shield_player_nearby(p: Node2D) -> bool:
 	var dy: float = abs(p.global_position.y - global_position.y)
 	return dx <= SHIELD_DETECT_X and dy <= SHIELD_DETECT_Y
 
-func _shield_blocks(from_x: float) -> bool:
-	# from_x가 enemy의 정면(dir 방향)에 있으면 방패가 막음
-	var rel: float = from_x - global_position.x
-	if rel == 0.0:
-		return false
-	return (rel > 0.0 and dir > 0) or (rel < 0.0 and dir < 0)
+func _shield_blocks(from_dir: int) -> bool:
+	# bullet의 진행 방향이 enemy의 정면을 향하면(부호 반대) 방패가 막음.
+	# 예: enemy.dir=-1(왼쪽 향함), bullet.dir=+1(오른쪽으로 날아옴) → head-on → 막음.
+	# enemy.dir=-1, bullet.dir=-1(같은 방향, 즉 뒤에서 옴) → 통과.
+	return from_dir * dir < 0
 
 # ─── 공통 ───────────────────────────────────────────────────
 
@@ -517,12 +516,13 @@ func _check_touch_player() -> void:
 			player.take_hit(TOUCH_DAMAGE)
 			touch_cd = TOUCH_COOLDOWN
 
-func take_damage(amount: int, from_x: float = INF) -> void:
+func take_damage(amount: int, from_dir: int = 0) -> void:
 	if dead:
 		return
-	# 방패병 — 정면 피격은 막힘 (시각 피드백만)
-	if enemy_type == EnemyType.SHIELD and from_x != INF and _shield_blocks(from_x):
-		_show_block_spark(from_x)
+	# 방패병 — 정면(enemy.dir이 가리키는 쪽)으로 날아오는 사격은 막힘.
+	# 즉 bullet의 진행 방향(from_dir)과 enemy의 dir이 반대 부호일 때 head-on이라 막음.
+	if enemy_type == EnemyType.SHIELD and from_dir != 0 and _shield_blocks(from_dir):
+		_show_block_spark(from_dir)
 		return
 	hp -= amount
 	modulate = Color(1.6, 1.6, 1.6)
@@ -530,16 +530,18 @@ func take_damage(amount: int, from_x: float = INF) -> void:
 	if hp <= 0:
 		_die()
 
-func _show_block_spark(from_x: float) -> void:
-	# 방패 막힘 — 노란 짧은 라인이 방패 면에서 튀는 효과
+func _show_block_spark(from_dir: int) -> void:
+	# 방패 막힘 — 노란 짧은 라인이 방패 면(enemy.dir 쪽 외곽)에서 튀는 효과
 	var spark := Line2D.new()
 	spark.width = 2.0
 	spark.default_color = Color(1.0, 0.85, 0.30, 0.9)
 	spark.z_index = 4
 	var face_x: float = global_position.x + (1.0 if dir > 0 else -1.0) * 16.0
 	var y0: float = global_position.y - 26.0
+	# 스파크는 방패 면 바깥쪽으로 튀는 모양. bullet이 들어온 방향의 반대로 흩어지게.
+	var splash: float = -8.0 * float(from_dir)
 	spark.add_point(Vector2(face_x, y0 - 4.0))
-	spark.add_point(Vector2(face_x + (8.0 if from_x > global_position.x else -8.0), y0))
+	spark.add_point(Vector2(face_x + splash, y0))
 	spark.add_point(Vector2(face_x, y0 + 4.0))
 	get_parent().add_child(spark)
 	var tw := spark.create_tween()
