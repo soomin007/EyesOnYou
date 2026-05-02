@@ -170,38 +170,39 @@ T3 방어막 재충전형    (30s 후 재무장)
 
 ### Phase B — 성장 시스템 (스토리/맵과 독립)
 
-**B-1 데이터 정의** (단일 세션 단위)
-- [ ] `scripts/SkillTreeData.gd` 신규 — 계열/티어 데이터 + lookup 헬퍼
-- [ ] `scripts/GameState.gd` — `skills: Array` → `skills: Dictionary` 마이그레이션, `has_skill`/`add_skill` 시그니처 갱신
-- [ ] `scripts/SkillSystem.gd` — `ALL_SKILLS` 제거 또는 SkillTreeData로 위임, `roll_choices` 티어 prereq 로직, `find_by_id` 갱신
-- [ ] 인게임 빌드 통과 확인 (효과는 미구현이라도 트리가 굴러가는지)
+**B-1 데이터 정의** ✅ 완료 (commit 64dcbd1)
+- [x] `scripts/SkillTreeData.gd` 신규 — 계열/티어 데이터 + lookup 헬퍼
+- [x] `scripts/GameState.gd` — `skills: Array` → `skills: Dictionary` 마이그레이션
+- [x] `scripts/SkillSystem.gd` — `roll_choices` 티어 prereq, `find_by_id` 위임
 
-**B-2 효과 + UI**
-- [ ] `scripts/Player.gd` — 각 스킬 효과를 `GameState.skills.get(id, 0)` (티어값) 기반으로 분기. T2/T3 계산식 적용.
-- [ ] `scripts/LevelUpOverlay.gd` — 카드에 T1/T2/T3 뱃지 + VEIL 추천 표시
-- [ ] `scripts/Stage.gd` — high-risk 루트(`current_route_risk == 3`) 적 처치 XP +50% 보너스
-- [ ] `XP_PER_LEVEL = 8` 적용 + 인게임에서 평균 렙업 횟수 검증
+**B-2 효과 + UI** ✅ 완료 (commit ec368b2)
+- [x] `scripts/Player.gd` — 각 라인 효과 티어 분기 (T1/T2/T3)
+- [x] `scripts/LevelUpOverlay.gd` — 카드 [family · T#] 헤더 + VEIL 추천 표시
+- [x] `scripts/GameState.gd` — high-risk 루트 적 처치 XP +50%, XP_PER_LEVEL 8
 
 ### Phase C — 맵 + 스테이지 확장
 
-**C-1 데이터/규칙** (실제 맵 layout 없이 메타데이터만)
-- [ ] `scripts/RouteData.gd` — `min_stage`/`max_stage`/`unique` 필드 추가, 11개 맵 메타 등록 (격리 병동 = `guaranteed_in_stages: [3, 4]`도 검토)
-- [ ] `scripts/RouteMap.gd` — 중복 방문 제외(`route_history` 필터), 풀 < 픽수 동적 처리, ACT 범위 필터
-- [ ] `scripts/GameState.gd` — `TOTAL_STAGES = 7`, `SCORE_THRESHOLD = 4`
-- [ ] 신규 5개 맵의 `_build_world` 분기는 임시(기존 비주얼 재사용)로 시작 → 흐름 동작 검증
+**C-1 데이터/규칙** ✅ 완료 (commit da74ea4)
+- [x] `scripts/RouteData.gd` — min/max_stage/unique/guaranteed_in_stages, 11개 맵
+- [x] `scripts/RouteMap.gd` — route_history 필터
+- [x] `scripts/GameState.gd` — TOTAL_STAGES=7, SCORE_THRESHOLD=4
+- [x] 신규 5개 맵 ambience 임시 매핑
 
-**C-2 신규 맵 layout**
-- [ ] `scripts/Stage.gd` — 5개 맵 각각의 platform/장식/적 배치
-  - 냉각 시설 (수직 구조, 드론)
-  - 감시탑 (저격수 밀집, 원거리 유리)
-  - 격리 병동 (좁은 복도, 은폐, 복선 트리거)
-  - 데이터 센터 (드론+저격 혼합)
-  - 비상 탈출로 (저위험)
+**C-2 신규 맵 layout** ✅ 완료
+- [x] `scripts/Stage.gd` — 5개 맵 platform layout
+- [x] `scripts/Stage.gd` — 5개 맵 ambience (cooling/watchtower/ward/datacenter/escape)
 
-**C-3 내러티브**
-- [ ] `scripts/VeilDialogue.gd` — Stage 5/6 브리핑 풀 각 3개
-- [ ] 격리 병동 통과 시 "...이 구역은 오래됐어요." 트리거 (Area2D + 1회 플래그, `(body, area)` 순서 주의)
-- [ ] 잠긴 문 톤 보강 — 크기 ↑, LED 펄스, 현재 한 줄 외 추가 시각 단서
+**C-3 내러티브** ✅ 완료
+- [x] `scripts/VeilDialogue.gd` — Stage 5/6 브리핑 풀 추가, ACT 매핑 재정렬
+- [x] `scripts/Stage.gd` — 격리 병동 복선 트리거 (route_ward 진입 시)
+- [x] `scripts/Stage.gd` — 잠긴 문 톤 보강 (크기 ↑, LED 펄스, ACCESS DENIED 라벨, 후광, 추가 대사)
+
+### 인게임 검증 / 후속 polish 항목
+- [ ] 새 빌드 평균 레벨업 횟수 측정 (XP_PER_LEVEL=8이 너무 빡빡한지)
+- [ ] 7스테이지 완주 시간이 8~15분 안에 들어오는지
+- [ ] 격리 병동 복선 → ??? 맵 발견 흐름이 "아, 그거였구나" 연결되는지
+- [ ] explosive T3 (2회 충전), glide T3 (사격 패널티 제거), shield T3 (재충전), hp T3 (슬로모) 미구현분
+- [ ] multishot T3 추적 미구현
 
 ---
 

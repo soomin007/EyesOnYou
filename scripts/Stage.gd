@@ -47,6 +47,7 @@ func _ready() -> void:
 # Stage 0과 Stage 2에서 각 한 번씩 (1회 플래그).
 
 var veil_mistake_triggered: bool = false
+var ward_foreshadow_triggered: bool = false
 
 func _setup_veil_mistakes() -> void:
 	if GameState.playground_active:
@@ -56,6 +57,40 @@ func _setup_veil_mistakes() -> void:
 		_arm_veil_mistake_at(680.0, "앞쪽에 둘이에요. 조심해요.", "셋이었네요. 제가 틀렸어요.")
 	elif GameState.current_stage == 2:
 		_arm_veil_mistake_at(1400.0, "이 구역은 경비 없을 거예요.", "있었네요. 미안해요.")
+	# 격리 병동 통과 시 ??? 맵 복선 (stage 3 또는 4)
+	if GameState.current_route_id == "route_ward":
+		_arm_ward_foreshadow_at(2000.0)
+
+func _arm_ward_foreshadow_at(trigger_x: float) -> void:
+	var area := Area2D.new()
+	area.name = "WardForeshadow"
+	area.collision_layer = 0
+	area.collision_mask = 2
+	area.position = Vector2(trigger_x, GROUND_Y - 50.0)
+	add_child(area)
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(120.0, 200.0)
+	col.shape = shape
+	area.add_child(col)
+	area.body_entered.connect(_on_ward_foreshadow_zone)
+
+func _on_ward_foreshadow_zone(body: Node) -> void:
+	if ward_foreshadow_triggered:
+		return
+	if not (body is CharacterBody2D and body == player):
+		return
+	ward_foreshadow_triggered = true
+	# 짧은 침묵 → "...이 구역은 오래됐어요." → 한 박자 후 정보 추가
+	_show_veil_subtitle("...", 1.2)
+	get_tree().create_timer(1.4).timeout.connect(
+		func() -> void:
+			_show_veil_subtitle("이 구역은 오래됐어요.", 3.0)
+	)
+	get_tree().create_timer(5.0).timeout.connect(
+		func() -> void:
+			_show_veil_subtitle("누가 봉인했는지 저도 몰라요.", 3.0)
+	)
 
 func _arm_veil_mistake_at(trigger_x: float, before_line: String, after_line: String) -> void:
 	var area := Area2D.new()
@@ -365,30 +400,53 @@ func _build_world() -> void:
 var locked_door_triggered: bool = false
 
 func _build_locked_door() -> void:
-	# Stage 3에서만 등장 — ??? 맵에 대한 시각적 복선.
-	# 콜리전 없는 장식 + 트리거 영역 (플레이어가 가까이 가면 VEIL 한 줄).
-	if GameState.current_stage != 3:
+	# Stage 3~4에서 등장 — ??? 맵(stage 5/6)에 대한 시각적 복선.
+	# 콜리전 없는 장식 + 트리거 영역. 톤 보강: 더 큼 + LED 펄스 + 주변 약한 빛.
+	if GameState.current_stage != 3 and GameState.current_stage != 4:
 		return
 	var x: float = STAGE_LENGTH * 0.55
+	# 외곽 프레임 — 더 큼
 	var frame := ColorRect.new()
 	frame.color = Color(0.18, 0.18, 0.22)
-	frame.position = Vector2(x - 18.0, GROUND_Y - 110.0)
-	frame.size = Vector2(36.0, 110.0)
+	frame.position = Vector2(x - 26.0, GROUND_Y - 150.0)
+	frame.size = Vector2(52.0, 150.0)
 	frame.z_index = 0
 	add_child(frame)
+	# 안쪽 어두운 면
 	var inner := ColorRect.new()
-	inner.color = Color(0.06, 0.07, 0.09)
-	inner.position = Vector2(x - 14.0, GROUND_Y - 105.0)
-	inner.size = Vector2(28.0, 100.0)
+	inner.color = Color(0.05, 0.06, 0.08)
+	inner.position = Vector2(x - 22.0, GROUND_Y - 145.0)
+	inner.size = Vector2(44.0, 140.0)
 	inner.z_index = 1
 	add_child(inner)
-	# 잠금 표시 — 빨간 LED
+	# 잠금 표시 — 빨간 LED, 더 크고 펄스
 	var lock := ColorRect.new()
-	lock.color = Color(0.85, 0.30, 0.30, 0.8)
-	lock.position = Vector2(x - 3.0, GROUND_Y - 60.0)
-	lock.size = Vector2(6.0, 6.0)
-	lock.z_index = 2
+	lock.color = Color(0.95, 0.30, 0.30, 0.95)
+	lock.position = Vector2(x - 5.0, GROUND_Y - 80.0)
+	lock.size = Vector2(10.0, 10.0)
+	lock.z_index = 3
 	add_child(lock)
+	var pulse := lock.create_tween()
+	pulse.set_loops()
+	pulse.tween_property(lock, "modulate:a", 0.30, 0.7)
+	pulse.tween_property(lock, "modulate:a", 1.0, 0.7)
+	# 잠금 주변 어두운 후광 (문이 거기 "있다"는 인지)
+	var halo := ColorRect.new()
+	halo.color = Color(0.95, 0.30, 0.30, 0.07)
+	halo.position = Vector2(x - 80.0, GROUND_Y - 200.0)
+	halo.size = Vector2(160.0, 230.0)
+	halo.z_index = -2
+	add_child(halo)
+	# "ACCESS DENIED" 작은 라벨
+	var label := Label.new()
+	label.text = "ACCESS DENIED"
+	label.add_theme_font_size_override("font_size", 9)
+	label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.55, 0.85))
+	label.position = Vector2(x - 36.0, GROUND_Y - 60.0)
+	label.size = Vector2(72.0, 12.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.z_index = 3
+	add_child(label)
 
 	var area := Area2D.new()
 	area.name = "LockedDoor"
@@ -398,7 +456,7 @@ func _build_locked_door() -> void:
 	add_child(area)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(140.0, 120.0)
+	shape.size = Vector2(180.0, 160.0)
 	col.shape = shape
 	area.add_child(col)
 	area.body_entered.connect(_on_locked_door_approached)
@@ -409,7 +467,12 @@ func _on_locked_door_approached(body: Node) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
 	locked_door_triggered = true
-	_show_veil_subtitle("그쪽은 임무 범위 밖이에요.", 4.0)
+	_show_veil_subtitle("그쪽은 임무 범위 밖이에요.", 3.5)
+	# 한 박자 쉬고 한 줄 추가 — 플레이어가 "여기 뭐가 있구나"를 분명히 인지하도록.
+	get_tree().create_timer(4.0).timeout.connect(
+		func() -> void:
+			_show_veil_subtitle("그 문, 도면에는 없어요.", 3.0)
+	)
 
 func _show_veil_subtitle(message: String, duration: float) -> void:
 	var msg_layer := CanvasLayer.new()
@@ -541,6 +604,43 @@ func _platform_layout_for_route(route_id: String) -> Array:
 				Vector2(2000, 420), Vector2(2400, 510), Vector2(2800, 510),
 				Vector2(3200, 510), Vector2(3700, 380), Vector2(4100, 510),
 			], 220.0)
+		"route_cooling":
+			# 냉각 시설 — 수직 파이프 사이로 좁고 높은 디딤대 + 위쪽 드론 자리
+			return _layout_uniform([
+				Vector2(700, 530), Vector2(1050, 430), Vector2(1400, 330),
+				Vector2(1750, 430), Vector2(2100, 530), Vector2(2500, 380),
+				Vector2(2850, 280), Vector2(3200, 380), Vector2(3600, 480),
+				Vector2(4000, 380),
+			], 150.0)
+		"route_watchtower":
+			# 감시탑 — 노출된 평행 라인. 디딤대 길지만 사이가 멀다 (저격 노출).
+			return _layout_uniform([
+				Vector2(700, 480), Vector2(1250, 480), Vector2(1800, 380),
+				Vector2(2350, 480), Vector2(2900, 380), Vector2(3450, 480),
+				Vector2(4000, 380),
+			], 260.0)
+		"route_ward":
+			# 격리 병동 — 좁고 평탄한 복도. 디딤대 짧고 빽빽 (천장 낮은 통로).
+			return _layout_uniform([
+				Vector2(700, 520), Vector2(960, 520), Vector2(1220, 520),
+				Vector2(1500, 510), Vector2(1780, 520), Vector2(2080, 510),
+				Vector2(2380, 520), Vector2(2700, 510), Vector2(3000, 520),
+				Vector2(3320, 510), Vector2(3640, 520), Vector2(3960, 510),
+			], 130.0)
+		"route_datacenter":
+			# 데이터 센터 — 격자 평탄 + 가끔 위쪽 자리 (드론 + 저격 혼합)
+			return _layout_uniform([
+				Vector2(700, 480), Vector2(1100, 480), Vector2(1500, 380),
+				Vector2(1900, 480), Vector2(2300, 380), Vector2(2700, 480),
+				Vector2(3100, 380), Vector2(3500, 480), Vector2(3900, 380),
+			], 220.0)
+		"route_escape":
+			# 비상 탈출로 — 짧고 빠른 통로. 디딤대 길고 평탄, 적 적음.
+			return _layout_uniform([
+				Vector2(700, 510), Vector2(1200, 510), Vector2(1700, 510),
+				Vector2(2200, 470), Vector2(2700, 510), Vector2(3200, 510),
+				Vector2(3700, 510),
+			], 280.0)
 		"route_hidden":
 			# ??? — 매 진입 시 RNG 시드로 형태 변동 (현재는 컨셉 미정)
 			return _layout_random_hidden()
@@ -631,23 +731,27 @@ func _on_spike_touched(body: Node) -> void:
 
 func _build_route_ambience() -> void:
 	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용.
-	# C-1 단계: 신규 5개 맵(cooling/watchtower/ward/datacenter/escape)은 기존 ambience를 재사용.
-	# C-2에서 각 맵 고유 layout/장식으로 교체 예정.
 	match GameState.current_route_id:
 		"route_sewers":
 			_ambience_sewers()
-		"route_rooftops", "route_watchtower":
-			# 감시탑은 노출/원거리 컨셉이라 옥상과 시각 톤 공유.
+		"route_rooftops":
 			_ambience_rooftops()
-		"route_lab", "route_datacenter", "route_cooling":
-			# 데이터 센터/냉각 시설은 격자 라이팅 톤 공유 (임시).
+		"route_lab":
 			_ambience_lab()
-		"route_back_alley", "route_escape":
-			# 비상 탈출로는 어두운 골목 톤 공유 (임시).
+		"route_back_alley":
 			_ambience_back_alley()
-		"route_subway", "route_ward":
-			# 격리 병동은 좁은 복도 + 깜빡 비상등 컨셉 → 지하철 톤 공유 (임시).
+		"route_subway":
 			_ambience_subway()
+		"route_cooling":
+			_ambience_cooling()
+		"route_watchtower":
+			_ambience_watchtower()
+		"route_ward":
+			_ambience_ward()
+		"route_datacenter":
+			_ambience_datacenter()
+		"route_escape":
+			_ambience_escape()
 		"route_hidden":
 			_ambience_hidden()
 
@@ -725,6 +829,122 @@ func _ambience_subway() -> void:
 			tw.tween_property(tube, "modulate:a", 0.15, rng.randf_range(0.05, 0.15))
 			tw.tween_property(tube, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
 		x += rng.randf_range(380.0, 620.0)
+
+func _ambience_cooling() -> void:
+	# 냉각 시설 — 수직 파이프 라인, 차가운 푸른 톤
+	var x: float = 240.0
+	while x < STAGE_LENGTH:
+		var pipe := ColorRect.new()
+		pipe.color = Color(0.30, 0.55, 0.70, 0.20)
+		pipe.position = Vector2(x - 6.0, -200.0)
+		pipe.size = Vector2(12.0, 850.0)
+		pipe.z_index = -9
+		add_child(pipe)
+		x += 220.0
+	# 차가운 푸른 안개 (바닥)
+	var fog := ColorRect.new()
+	fog.color = Color(0.40, 0.65, 0.85, 0.08)
+	fog.position = Vector2(-200, GROUND_Y - 80.0)
+	fog.size = Vector2(STAGE_LENGTH + 400.0, 100.0)
+	fog.z_index = -3
+	add_child(fog)
+
+func _ambience_watchtower() -> void:
+	# 감시탑 — 붉은 스캔라인 (노출 = 위험 신호)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 113 + 17
+	for i in 5:
+		var beam := ColorRect.new()
+		beam.color = Color(0.85, 0.30, 0.30, 0.05)
+		beam.size = Vector2(STAGE_LENGTH + 400.0, 8.0)
+		beam.position = Vector2(-200, rng.randf_range(-180.0, GROUND_Y - 100.0))
+		beam.z_index = -7
+		add_child(beam)
+		# 천천히 위아래로 흐르는 스캔라인 효과
+		var tw := beam.create_tween()
+		tw.set_loops()
+		tw.tween_property(beam, "position:y", beam.position.y + 30.0, rng.randf_range(2.5, 4.5))
+		tw.tween_property(beam, "position:y", beam.position.y, rng.randf_range(2.5, 4.5))
+
+func _ambience_ward() -> void:
+	# 격리 병동 — 좁은 복도 + 양쪽 어두운 비네트 + 깜빡이는 비상등
+	var vignette := CanvasLayer.new()
+	vignette.layer = 1
+	add_child(vignette)
+	for side in [Vector2(0, 0), Vector2(1, 0)]:
+		var v := ColorRect.new()
+		v.color = Color(0, 0, 0, 0.55)
+		v.size = Vector2(220, 720)
+		v.position = Vector2(side.x * (1280 - 220), 0)
+		vignette.add_child(v)
+	# 비상등 — 붉은 점멸
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 149 + 23
+	var x: float = 350.0
+	while x < STAGE_LENGTH:
+		var lamp := ColorRect.new()
+		lamp.color = Color(0.85, 0.20, 0.20, 0.30)
+		lamp.position = Vector2(x - 30.0, -100.0)
+		lamp.size = Vector2(60.0, 700.0)
+		lamp.z_index = -7
+		add_child(lamp)
+		var tw := lamp.create_tween()
+		tw.set_loops()
+		tw.tween_property(lamp, "modulate:a", 0.4, rng.randf_range(0.8, 1.6))
+		tw.tween_property(lamp, "modulate:a", 1.0, rng.randf_range(0.8, 1.6))
+		x += rng.randf_range(640.0, 920.0)
+
+func _ambience_datacenter() -> void:
+	# 데이터 센터 — 격자 + 데이터 흐름 라인 (밝은 푸른 톤)
+	var x: float = 200.0
+	while x < STAGE_LENGTH:
+		var line := ColorRect.new()
+		line.color = Color(0.30, 0.65, 0.95, 0.08)
+		line.position = Vector2(x, -200.0)
+		line.size = Vector2(1.5, 800.0)
+		line.z_index = -10
+		add_child(line)
+		x += 90.0
+	# 가로 데이터 라인 (천천히 흐르는 LED 효과)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 167 + 31
+	for i in 8:
+		var bar := ColorRect.new()
+		bar.color = Color(0.40, 0.85, 1.0, 0.35)
+		bar.size = Vector2(40.0, 2.0)
+		bar.position = Vector2(rng.randf_range(0.0, STAGE_LENGTH), rng.randf_range(-160.0, GROUND_Y - 60.0))
+		bar.z_index = -5
+		add_child(bar)
+		var tw := bar.create_tween()
+		tw.set_loops()
+		tw.tween_property(bar, "position:x", bar.position.x + 80.0, rng.randf_range(1.5, 2.8))
+		tw.tween_property(bar, "modulate:a", 0.0, 0.1)
+		tw.tween_property(bar, "modulate:a", 0.35, 0.1)
+
+func _ambience_escape() -> void:
+	# 비상 탈출로 — 녹색 비상 표시등 + 옅은 안개. 톤 차분.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 191 + 37
+	var x: float = 400.0
+	while x < STAGE_LENGTH:
+		var sign := ColorRect.new()
+		sign.color = Color(0.30, 0.85, 0.45, 0.55)
+		sign.size = Vector2(18.0, 18.0)
+		sign.position = Vector2(x - 9.0, GROUND_Y - 220.0)
+		sign.z_index = -4
+		add_child(sign)
+		var tw := sign.create_tween()
+		tw.set_loops()
+		tw.tween_interval(rng.randf_range(2.0, 4.0))
+		tw.tween_property(sign, "modulate:a", 0.3, 0.4)
+		tw.tween_property(sign, "modulate:a", 1.0, 0.4)
+		x += rng.randf_range(540.0, 800.0)
+	var fog := ColorRect.new()
+	fog.color = Color(0.20, 0.45, 0.30, 0.06)
+	fog.position = Vector2(-200, GROUND_Y - 60.0)
+	fog.size = Vector2(STAGE_LENGTH + 400.0, 80.0)
+	fog.z_index = -3
+	add_child(fog)
 
 func _ambience_hidden() -> void:
 	# 글리치 — 무작위 위치에 작은 색 사각형이 짧게 깜빡
