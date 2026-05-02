@@ -3,6 +3,7 @@ extends CharacterBody2D
 
 signal damaged
 signal died
+signal revived
 
 const SPEED: float = 240.0
 const JUMP_VELOCITY: float = -540.0
@@ -87,7 +88,8 @@ func _handle_input(_delta: float) -> void:
 		_try_jump()
 	# 전투 입력 제한 (??? 맵에서) — 이동/점프만 허용
 	if not GameState.restrict_combat_input:
-		if Input.is_action_just_pressed("attack"):
+		# 공격 — 꾹 누르면 쿨다운마다 자동 연발. _try_attack이 cd 체크해 자체 무시.
+		if Input.is_action_pressed("attack"):
 			_try_attack()
 		if Input.is_action_just_pressed("dash"):
 			_try_dash()
@@ -267,16 +269,44 @@ func take_hit(amount: int) -> void:
 		GameState.player_hp = 2 if sh_tier >= 2 else 1
 		GameState.skills.erase("shield")
 		_show_shield_flash()
+		emit_signal("revived")
 		return
 	if GameState.is_dead():
 		emit_signal("died")
 
 func _show_shield_flash() -> void:
-	# 방어막 발동 시각 효과 — 흰 빛 잠시 휘감고 사라짐
-	if visual == null:
-		return
-	visual.modulate = Color(2.5, 2.5, 2.5)
-	create_tween().tween_property(visual, "modulate", Color(1, 1, 1), 0.45)
+	# 방어막 발동 — 강한 흰 플래시 + 확장하는 후광 (한 번에 인지되도록 강화).
+	if visual != null:
+		visual.modulate = Color(3.5, 3.5, 4.0)
+		create_tween().tween_property(visual, "modulate", Color(1, 1, 1), 0.6)
+	var halo := Polygon2D.new()
+	halo.color = Color(1.0, 1.0, 1.2, 0.85)
+	var pts: Array = []
+	for i in 28:
+		var a: float = float(i) * TAU / 28.0
+		pts.append(Vector2(cos(a) * 28.0, sin(a) * 28.0))
+	halo.polygon = PackedVector2Array(pts)
+	halo.position = Vector2(0, -28)
+	halo.z_index = 5
+	add_child(halo)
+	var tw := halo.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(halo, "scale", Vector2(3.4, 3.4), 0.55)
+	tw.tween_property(halo, "modulate:a", 0.0, 0.55)
+	tw.chain().tween_callback(halo.queue_free)
+	# 두 번째 후광 (살짝 늦게 따라옴 — 섬광 느낌)
+	var halo2 := Polygon2D.new()
+	halo2.color = Color(0.85, 0.95, 1.0, 0.5)
+	halo2.polygon = PackedVector2Array(pts)
+	halo2.position = Vector2(0, -28)
+	halo2.z_index = 4
+	add_child(halo2)
+	var tw2 := halo2.create_tween()
+	tw2.tween_interval(0.12)
+	tw2.set_parallel(true)
+	tw2.tween_property(halo2, "scale", Vector2(4.5, 4.5), 0.5)
+	tw2.tween_property(halo2, "modulate:a", 0.0, 0.5)
+	tw2.chain().tween_callback(halo2.queue_free)
 
 func _update_visual() -> void:
 	if visual == null:

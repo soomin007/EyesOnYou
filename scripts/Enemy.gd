@@ -44,7 +44,9 @@ const SHIELD_TOUCH_COOLDOWN: float = 0.8
 # Sniper — 시야가 트여 있을 때만 발사
 const SNIPER_FIRE_INTERVAL: float = 2.6
 const SNIPER_AIM_TIME: float = 0.7
-const SNIPER_RANGE: float = 520.0
+# 저격수다운 사거리 — 플레이어 총알 사거리(495px)보다 충분히 길게.
+# 플레이어가 사거리 안에 들어오면 LoS 체크 후 발사. 엄폐가 보일 만큼 길어야 진짜 저격수.
+const SNIPER_RANGE: float = 820.0
 
 # Drone — 머리 위 호버 후 폭탄 투하
 const DRONE_SPEED: float = 110.0
@@ -76,8 +78,8 @@ var bomber_state: int = BomberState.ROAMING
 var bomber_state_timer: float = 0.0
 
 # 방패병 정면 회전 지연 — 한 번 돈 뒤 일정 시간 다시 못 돌게.
-# 측면/후면을 잡을 윈도우를 만들어준다 (대시로 뒤로 빠져나가는 플레이가 가능하도록).
-const SHIELD_DIR_LOCK_DURATION: float = 0.7
+# 대시 쿨다운(0.7s)보다 충분히 길어야 측면/후면 잡고 돌아갈 시간이 생김.
+const SHIELD_DIR_LOCK_DURATION: float = 2.0
 var shield_dir_lock_timer: float = 0.0
 
 var encountered: bool = false

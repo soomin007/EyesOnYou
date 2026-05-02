@@ -1034,6 +1034,8 @@ func _build_player() -> void:
 	add_child(player)
 	player.global_position = PLAYER_START
 	player.died.connect(_on_player_died)
+	player.damaged.connect(_on_player_damaged)
+	player.revived.connect(_on_player_revived)
 
 func _build_camera() -> void:
 	camera = Camera2D.new()
@@ -1340,6 +1342,48 @@ func _show_playground_clear_msg() -> void:
 func _on_player_died() -> void:
 	GameState.register_death()
 	get_tree().change_scene_to_file(SceneRouter.DEATH)
+
+func _on_player_damaged() -> void:
+	# 피격 — 화면 가장자리 짧은 붉은 플래시 + 가벼운 카메라 흔들림
+	_screen_flash(Color(1.0, 0.18, 0.22, 0.55), 0.06, 0.32)
+	_camera_shake(6.0, 0.18)
+
+func _on_player_revived() -> void:
+	# 부활 — 강한 흰 플래시 (전체 화면이 잠깐 밝아짐)
+	_screen_flash(Color(1.0, 1.0, 1.15, 0.85), 0.05, 0.5)
+
+func _screen_flash(col: Color, fade_in: float, fade_out: float) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 35
+	add_child(layer)
+	var rect := ColorRect.new()
+	rect.color = Color(col.r, col.g, col.b, 0.0)
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(rect)
+	var tw := rect.create_tween()
+	tw.tween_property(rect, "color:a", col.a, fade_in)
+	tw.tween_property(rect, "color:a", 0.0, fade_out)
+	tw.tween_callback(layer.queue_free)
+
+func _camera_shake(magnitude: float, duration: float) -> void:
+	if camera == null or not is_instance_valid(camera):
+		return
+	var origin: Vector2 = camera.offset
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var elapsed: float = 0.0
+	var steps: int = 6
+	for i in steps:
+		var t: float = float(i) / float(steps)
+		var falloff: float = 1.0 - t
+		var ox: float = rng.randf_range(-magnitude, magnitude) * falloff
+		var oy: float = rng.randf_range(-magnitude, magnitude) * falloff
+		camera.offset = origin + Vector2(ox, oy)
+		await get_tree().create_timer(duration / float(steps)).timeout
+		if not is_instance_valid(camera):
+			return
+	camera.offset = origin
 
 func _process(_delta: float) -> void:
 	_refresh_hud()

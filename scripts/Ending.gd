@@ -9,6 +9,8 @@ extends Control
 
 const TYPE_INTERVAL: float = 0.045
 
+const HOLD_TO_QUIT_DURATION: float = 3.0
+
 var ending_id: String = ""
 var lines: Array = []
 var line_idx: int = 0
@@ -18,6 +20,9 @@ var typing_done: bool = false
 var waiting_choice: bool = false
 var sequence_complete: bool = false
 var silent_timer: float = 0.0
+var hold_progress: float = 0.0
+var hold_hint: Label
+var hold_progress_bar: ColorRect
 
 func _ready() -> void:
 	ending_id = EndingResolver.resolve(GameState.trust_score, GameState.aggression_score)
@@ -34,7 +39,38 @@ func _ready() -> void:
 		title_label.modulate.a = 0.3
 		sub_title_label.modulate.a = 0.3
 		_setup_ending_d_atmosphere()
+	_build_hold_hint()
 	_start_line()
+
+func _build_hold_hint() -> void:
+	# 우측 하단 안내 — 시퀀스 완료 후에만 표시. SPACE를 3초간 누르고 있어야 타이틀로 이동.
+	var layer := CanvasLayer.new()
+	layer.layer = 10
+	add_child(layer)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	box.position = Vector2(1000, 660)
+	box.size = Vector2(260, 50)
+	layer.add_child(box)
+	hold_hint = Label.new()
+	hold_hint.text = "SPACE 길게 — 타이틀로 (3초)"
+	hold_hint.add_theme_font_size_override("font_size", 12)
+	hold_hint.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
+	hold_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hold_hint.size = Vector2(260, 16)
+	hold_hint.visible = false
+	box.add_child(hold_hint)
+	# progress bar (배경 + 채우기)
+	var bg := ColorRect.new()
+	bg.color = Color(0.18, 0.20, 0.24, 0.7)
+	bg.custom_minimum_size = Vector2(260, 4)
+	bg.size = Vector2(260, 4)
+	hold_progress_bar = ColorRect.new()
+	hold_progress_bar.color = Color(0.55, 0.85, 0.95)
+	hold_progress_bar.size = Vector2(0, 4)
+	bg.add_child(hold_progress_bar)
+	bg.visible = false
+	box.add_child(bg)
 
 func _setup_ending_d_atmosphere() -> void:
 	# 미세한 노이즈 레이어 — 정적 느낌
@@ -96,6 +132,21 @@ func _color_for_speaker(sp: String) -> void:
 			text_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 
 func _process(delta: float) -> void:
+	# 시퀀스 완료 후엔 SPACE 누른 시간 누적 → 3초 채우면 타이틀로.
+	if sequence_complete:
+		if Input.is_action_pressed("jump") or Input.is_action_pressed("ui_skip"):
+			hold_progress += delta
+			if hold_progress_bar != null:
+				hold_progress_bar.size.x = 260.0 * clamp(hold_progress / HOLD_TO_QUIT_DURATION, 0.0, 1.0)
+			if hold_progress >= HOLD_TO_QUIT_DURATION:
+				GameState.reset()
+				get_tree().change_scene_to_file(SceneRouter.TITLE)
+				return
+		else:
+			hold_progress = max(0.0, hold_progress - delta * 1.5)  # 손 떼면 빠르게 줄어듦
+			if hold_progress_bar != null:
+				hold_progress_bar.size.x = 260.0 * clamp(hold_progress / HOLD_TO_QUIT_DURATION, 0.0, 1.0)
+		return
 	if line_idx >= lines.size():
 		return
 	var line: Dictionary = lines[line_idx]
@@ -154,16 +205,19 @@ func _pick_choice(asked: bool) -> void:
 
 func _on_sequence_done() -> void:
 	sequence_complete = true
-	hint_label.text = "[ SPACE — 타이틀로 ]"
+	hint_label.text = ""
+	if hold_hint != null:
+		hold_hint.visible = true
+	if hold_progress_bar != null and hold_progress_bar.get_parent() is Control:
+		(hold_progress_bar.get_parent() as Control).visible = true
 
 func _unhandled_input(event: InputEvent) -> void:
 	if waiting_choice:
 		return
+	# 시퀀스 완료 후엔 SPACE 단발은 무시 — 길게 누르기로만 타이틀 이동 (process에서 처리).
+	if sequence_complete:
+		return
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
-		if sequence_complete:
-			GameState.reset()
-			get_tree().change_scene_to_file(SceneRouter.TITLE)
-			return
 		# 한 줄 즉시 완성
 		if line_idx < lines.size():
 			var line: Dictionary = lines[line_idx]
