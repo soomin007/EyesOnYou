@@ -81,16 +81,10 @@ func _on_ward_foreshadow_zone(body: Node) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
 	ward_foreshadow_triggered = true
-	# 짧은 침묵 → "...이 구역은 오래됐어요." → 한 박자 후 정보 추가
+	# 자막 큐에 차례로 enqueue — _drain_subtitles가 겹치지 않게 순차 재생.
 	_show_veil_subtitle("...", 1.2)
-	get_tree().create_timer(1.4).timeout.connect(
-		func() -> void:
-			_show_veil_subtitle("이 구역은 오래됐어요.", 3.0)
-	)
-	get_tree().create_timer(5.0).timeout.connect(
-		func() -> void:
-			_show_veil_subtitle("누가 봉인했는지 저도 몰라요.", 3.0)
-	)
+	_show_veil_subtitle("이 구역은 오래됐어요.", 3.0)
+	_show_veil_subtitle("누가 봉인했는지 저도 몰라요.", 3.0)
 
 func _arm_veil_mistake_at(trigger_x: float, before_line: String, after_line: String) -> void:
 	var area := Area2D.new()
@@ -114,12 +108,9 @@ func _on_veil_mistake_zone(body: Node, area: Area2D) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
 	veil_mistake_triggered = true
+	# 큐에 차례로 — before 자막 끝나고 after가 자동 재생.
 	_show_veil_subtitle(str(area.get_meta("before", "")), 2.5)
-	# 2.8초 후 인정 대사
-	get_tree().create_timer(2.8).timeout.connect(
-		func() -> void:
-			_show_veil_subtitle(str(area.get_meta("after", "")), 3.0)
-	)
+	_show_veil_subtitle(str(area.get_meta("after", "")), 3.0)
 
 func _build_hidden_archive() -> void:
 	# 격리 서버실 — 적/가시/골 없음, 단말기 2개 시퀀스 후 자동 ENDING 전환
@@ -334,23 +325,19 @@ func _on_archive_finished() -> void:
 		if arch != null:
 			arch.play(_veil_self_lines())
 	elif archive_active_term == "veil_self":
-		# 10초 침묵 후 자동 ENDING 전환
+		# ArchiveOverlay가 이미 panel 페이드아웃까지 처리하고 finished를 emit한 상태.
+		# 추가 침묵 후 ENDING 직행 (??? 맵은 게임 클라이맥스라 stage 진행과 무관).
 		archive_active_term = "wait"
-		var arch := get_node_or_null("ArchiveOverlay") as ArchiveOverlay
-		if arch != null:
-			arch.hide_panel()
-		await get_tree().create_timer(10.0).timeout
+		await get_tree().create_timer(2.5).timeout
 		_finish_hidden_archive()
 
 func _finish_hidden_archive() -> void:
 	GameState.restrict_combat_input = false
 	GameState.trust_score += 1  # ??? 클리어 보너스
-	var leveled: bool = GameState.on_stage_clear()
-	# 보너스 레벨업이 있더라도 ??? 직후엔 LevelUpOverlay 띄우지 않음 — ENDING으로 직행
-	if GameState.is_final_stage_done():
-		get_tree().change_scene_to_file(SceneRouter.ENDING)
-	else:
-		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+	# ??? 맵은 게임의 클라이맥스 — 잔여 stage 무시하고 무조건 ENDING으로 직행.
+	# (이전엔 stage 인덱스 기준으로 BRIEFING 갈 가능성 있어 엔딩에 도달하지 못함.)
+	GameState.current_stage = GameState.TOTAL_STAGES
+	get_tree().change_scene_to_file(SceneRouter.ENDING)
 
 func _veil1_lines() -> Array:
 	return [
@@ -467,14 +454,31 @@ func _on_locked_door_approached(body: Node) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
 	locked_door_triggered = true
-	_show_veil_subtitle("그쪽은 임무 범위 밖이에요.", 3.5)
-	# 한 박자 쉬고 한 줄 추가 — 플레이어가 "여기 뭐가 있구나"를 분명히 인지하도록.
-	get_tree().create_timer(4.0).timeout.connect(
-		func() -> void:
-			_show_veil_subtitle("그 문, 도면에는 없어요.", 3.0)
-	)
+	_show_veil_subtitle("그쪽은 임무 범위 밖이에요.", 3.0)
+	_show_veil_subtitle("그 문, 도면에는 없어요.", 3.0)
+
+var _subtitle_queue: Array = []
+var _subtitle_active: bool = false
 
 func _show_veil_subtitle(message: String, duration: float) -> void:
+	# 자막 큐 — 여러 줄을 빠르게 호출해도 겹치지 않고 차례로 표시.
+	_subtitle_queue.append({"message": message, "duration": duration})
+	if not _subtitle_active:
+		_drain_subtitles()
+
+func _drain_subtitles() -> void:
+	if _subtitle_queue.is_empty():
+		_subtitle_active = false
+		return
+	_subtitle_active = true
+	var item: Dictionary = _subtitle_queue.pop_front()
+	var dur: float = float(item.get("duration", 2.5))
+	_display_veil_subtitle(str(item.get("message", "")), dur)
+	# fade in 0.3 + show + fade out 0.5 + small gap 0.2
+	var total: float = 0.3 + dur + 0.5 + 0.2
+	get_tree().create_timer(total).timeout.connect(_drain_subtitles)
+
+func _display_veil_subtitle(message: String, duration: float) -> void:
 	var msg_layer := CanvasLayer.new()
 	msg_layer.layer = 20
 	add_child(msg_layer)
@@ -1071,6 +1075,9 @@ func _build_hud() -> void:
 	bottom.add_theme_constant_override("margin_bottom", 16)
 	bottom.add_theme_constant_override("margin_right", 24)
 	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	# anchor가 화면 하단(top=1.0)에 붙은 상태에서 콘텐츠가 위로 확장되도록 grow를 BEGIN으로.
+	# (기본 END면 콘텐츠가 화면 아래로 빠져 게이지가 안 보임.)
+	bottom.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	hud.add_child(bottom)
 	var bottom_v := VBoxContainer.new()
 	bottom_v.add_theme_constant_override("separation", 8)
@@ -1156,9 +1163,10 @@ func _refresh_hud() -> void:
 		skill_label.text = "SKILL  —"
 	# 쿨다운 게이지 갱신
 	if player != null and is_instance_valid(player):
-		_update_cd_slot(cd_attack_slot, float(player.get("attack_cd")), Player.ATTACK_COOLDOWN)
-		_update_cd_slot(cd_dash_slot, float(player.get("dash_cd")), Player.DASH_COOLDOWN)
-		_update_cd_slot(cd_skill_slot, float(player.get("skill_cd")), Player.SKILL_COOLDOWN)
+		# 티어에 따라 실제 max 쿨다운이 달라지므로 player의 helper를 통해 조회.
+		_update_cd_slot(cd_attack_slot, float(player.get("attack_cd")), player.get_attack_cd_max())
+		_update_cd_slot(cd_dash_slot, float(player.get("dash_cd")), player.get_dash_cd_max())
+		_update_cd_slot(cd_skill_slot, float(player.get("skill_cd")), player.get_skill_cd_max())
 		# 보유 스킬에 따라 슬롯 가시성
 		if cd_dash_slot != null:
 			cd_dash_slot.visible = GameState.has_skill("dash")

@@ -75,6 +75,11 @@ var drone_bomb_cd: float = 0.0
 var bomber_state: int = BomberState.ROAMING
 var bomber_state_timer: float = 0.0
 
+# 방패병 정면 회전 지연 — 한 번 돈 뒤 일정 시간 다시 못 돌게.
+# 측면/후면을 잡을 윈도우를 만들어준다 (대시로 뒤로 빠져나가는 플레이가 가능하도록).
+const SHIELD_DIR_LOCK_DURATION: float = 0.7
+var shield_dir_lock_timer: float = 0.0
+
 var encountered: bool = false
 var visual: Node2D
 
@@ -426,14 +431,18 @@ func _tick_shield(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
+	if shield_dir_lock_timer > 0.0:
+		shield_dir_lock_timer -= delta
+
 	var p := _find_player()
 
-	# 방패병 정체성 = 정면으로 막기. 플레이어가 존재하면 거리 무관 항상 정면을 맞춤.
-	# 이전엔 SHIELD_DETECT_X(180px) 안에서만 dir이 player 방향으로 잠기고 그 밖에선 patrol
-	# 방향대로 회전했음 → 사거리(~495px)보다 좁아서 멀리서 쏠 때 dir이 무작위가 되고
-	# 방패의 효과가 그래픽과 어긋나는 것처럼 보임.
+	# 방패병 정체성 = 정면으로 막기. 플레이어 방향으로 정면을 맞추되, 회전에 지연을 둠.
+	# 한 번 돈 뒤 SHIELD_DIR_LOCK_DURATION 동안 잠금 → 측면/후면 사격 윈도우 확보.
 	if not harmless and p != null:
-		dir = 1 if p.global_position.x > global_position.x else -1
+		var desired_dir: int = 1 if p.global_position.x > global_position.x else -1
+		if desired_dir != dir and shield_dir_lock_timer <= 0.0:
+			dir = desired_dir
+			shield_dir_lock_timer = SHIELD_DIR_LOCK_DURATION
 
 	# 근접 시에만 추격 이동. 그 외에는 좁은 범위 patrol.
 	if not harmless and p != null and _shield_player_nearby(p):

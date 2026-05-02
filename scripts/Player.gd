@@ -123,6 +123,19 @@ func _try_jump() -> void:
 		velocity.y = JUMP_VELOCITY * 0.92
 		jumps_used += 1
 
+# 현재 티어가 반영된 실제 max 쿨다운 (HUD 게이지 표시용).
+func get_attack_cd_max() -> float:
+	return ATTACK_COOLDOWN * (0.75 if GameState.get_skill_tier("fire_boost") >= 2 else 1.0)
+
+func get_dash_cd_max() -> float:
+	return DASH_COOLDOWN * (0.8 if GameState.get_skill_tier("dash_boost") >= 1 else 1.0)
+
+func get_skill_cd_max() -> float:
+	var ex_tier: int = GameState.get_skill_tier("explosive")
+	if ex_tier >= 2:
+		return 2.5
+	return SKILL_COOLDOWN
+
 func _try_attack() -> void:
 	if attack_cd > 0.0:
 		return
@@ -148,11 +161,14 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	var fb_tier: int = GameState.get_skill_tier("fire_boost")
 	b.damage = 1 + min(fb_tier, 2)  # T0=1, T1=2, T2=3, T3=3
 	b.pierce = fb_tier >= 3
+	# 부채꼴 — 가운데를 0으로 양 끝으로 10°씩 벌림.
+	# T1(3발): -10°/0/+10°. T2(5발): -20/-10/0/+10/+20.
+	if total > 1:
+		var step: float = deg_to_rad(10.0)
+		var center: float = float(total - 1) * 0.5
+		b.angle = (float(idx) - center) * step
 	var muzzle_x: float = ATTACK_MUZZLE_X * float(facing)
 	var muzzle_y: float = ATTACK_MUZZLE_Y
-	if total > 1:
-		var spread: float = float(idx) - float(total - 1) * 0.5
-		muzzle_y += spread * 14.0
 	b.global_position = global_position + Vector2(muzzle_x, muzzle_y)
 	get_parent().add_child(b)
 

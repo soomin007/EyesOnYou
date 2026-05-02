@@ -23,6 +23,7 @@ var revealed: int = 0
 var typing: bool = false
 var pause_remaining: float = 0.0
 var t: float = 0.0
+var _finalizing: bool = false
 
 func _ready() -> void:
 	layer = CanvasLayer.new()
@@ -63,13 +64,15 @@ func _ready() -> void:
 func play(lines: Array) -> void:
 	queued_lines = lines
 	line_idx = 0
+	_finalizing = false
 	panel.visible = true
+	panel.modulate.a = 1.0
 	_start_line()
 
 func _start_line() -> void:
 	if line_idx >= queued_lines.size():
 		typing = false
-		emit_signal("finished")
+		_start_finalize()
 		return
 	var line: Dictionary = queued_lines[line_idx]
 	current_full = str(line.get("text", ""))
@@ -115,3 +118,20 @@ func _process(delta: float) -> void:
 func hide_panel() -> void:
 	if panel != null:
 		panel.visible = false
+
+func _start_finalize() -> void:
+	# 마지막 대사가 delay까지 다 보여진 시점. 한 박자 더 띄워두고 부드럽게 페이드아웃 후 finished.
+	if _finalizing:
+		return
+	_finalizing = true
+	if panel == null:
+		emit_signal("finished")
+		return
+	var tw := panel.create_tween()
+	tw.tween_interval(1.4)  # 마지막 대사 더 보여줌
+	tw.tween_property(panel, "modulate:a", 0.0, 1.6)  # 부드러운 페이드아웃
+	tw.tween_callback(func() -> void:
+		if panel != null:
+			panel.visible = false
+		emit_signal("finished")
+	)

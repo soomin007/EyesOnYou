@@ -14,6 +14,8 @@ var speed_mult: float = 1.0
 var lifetime_mult: float = 1.0
 var lifetime: float = BASE_LIFETIME
 var hit_enemies: Array = []
+# 부채꼴 발사용 — 0이면 수평. radian, dir 기준 위/아래로 벌림.
+var angle: float = 0.0
 
 func _ready() -> void:
 	collision_layer = 0
@@ -44,7 +46,12 @@ func _ready() -> void:
 	add_child(bullet)
 
 func _process(delta: float) -> void:
-	position.x += BASE_SPEED * speed_mult * float(dir) * delta
+	# 진행 벡터 — 수평 베이스(dir) + 각도(angle) 적용. 시각적 회전은 생략(스프라이트가
+	# 작아 어색하지 않음).
+	var vx: float = cos(angle) * float(dir)
+	var vy: float = sin(angle)
+	position.x += BASE_SPEED * speed_mult * vx * delta
+	position.y += BASE_SPEED * speed_mult * vy * delta
 	lifetime -= delta
 	if lifetime <= 0.0:
 		queue_free()
