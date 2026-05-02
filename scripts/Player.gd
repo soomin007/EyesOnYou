@@ -163,6 +163,8 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	var fb_tier: int = GameState.get_skill_tier("fire_boost")
 	b.damage = 1 + min(fb_tier, 2)  # T0=1, T1=2, T2=3, T3=3
 	b.pierce = fb_tier >= 3
+	# multishot T3 — 약한 추적
+	b.tracking = GameState.get_skill_tier("multishot") >= 3
 	# 부채꼴 — 가운데를 0으로 양 끝으로 10°씩 벌림.
 	# T1(3발): -10°/0/+10°. T2(5발): -20/-10/0/+10/+20.
 	if total > 1:

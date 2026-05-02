@@ -10,6 +10,10 @@ var settings_overlay: Control = null
 
 func _ready() -> void:
 	GameState.reset()
+	# 부스/QR 환경 가정 — 매 타이틀 진입은 새 플레이어 세션. 도감을 비워서 첫 조우 카드가
+	# 다시 뜨도록. (같은 사람이 연속 플레이해도 카드는 짧고 빠르게 dismissable이라 부담 작음.)
+	GameState.seen_enemies.clear()
+	GameState.save_settings()
 	title_label.text = "EYES ON YOU"
 	hint_label.text = "[ 시작하려면 SPACE ]"
 	tutorial_button.pressed.connect(_on_tutorial_pressed)

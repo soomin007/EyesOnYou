@@ -170,39 +170,56 @@ static func _subway() -> Dictionary:
 	}
 
 # ─── 5. 냉각 시설 (cooling) ──────────────────────────────────
-# 수직 상승 — 좌측 파이프(빠름/위험) vs 우측 계단(넓고 안전).
+# 진짜 수직 — 시작에서 한 번 올라가고, 상단 통로를 traversal, 마지막에 계단으로 하강.
+# 한 번 위로 올라가지 못하면 망하던 구조 → 중간에 다시 올라갈 수 있는 mid climb 1개 추가.
+# 드론은 상단 perch에서. 지면도 통과 가능 (단 드론 폭격 압박).
 static func _cooling() -> Dictionary:
 	return {
 		"platforms": [
-			# 분기 전 공통 발판
-			{"pos": Vector2(600, 520),  "w": 100.0},
-			# 우측 계단 루트 (안전, 차근차근 상승)
-			{"pos": Vector2(700, 520),  "w": 200.0},
-			{"pos": Vector2(1000, 460), "w": 200.0},
-			{"pos": Vector2(1300, 400), "w": 200.0},
-			{"pos": Vector2(1600, 340), "w": 200.0},
-			{"pos": Vector2(1900, 280), "w": 200.0},
-			{"pos": Vector2(2200, 220), "w": 200.0},
-			{"pos": Vector2(2600, 200), "w": 200.0},
-			{"pos": Vector2(3000, 200), "w": 200.0},
-			{"pos": Vector2(3300, 200), "w": 200.0},
-			# 좌측 파이프 루트 (좁은 발판 빠른 상승)
-			{"pos": Vector2(600, 480),  "w": 80.0},
-			{"pos": Vector2(680, 400),  "w": 80.0},
-			{"pos": Vector2(760, 320),  "w": 80.0},
-			{"pos": Vector2(840, 240),  "w": 80.0},
-			{"pos": Vector2(920, 180),  "w": 80.0},
+			# 첫 climb (x=550~650 vertical stack) — 부드러운 단차
+			{"pos": Vector2(580, 540),  "w": 140.0},
+			{"pos": Vector2(580, 460),  "w": 120.0},
+			{"pos": Vector2(580, 380),  "w": 120.0},
+			{"pos": Vector2(580, 300),  "w": 120.0},
+			{"pos": Vector2(580, 220),  "w": 140.0},
+			# 상단 horizontal 통로 (y=220 일직선) — drone perch 위치
+			{"pos": Vector2(820, 220),  "w": 200.0},
+			{"pos": Vector2(1100, 220), "w": 200.0},
+			{"pos": Vector2(1400, 220), "w": 200.0},
+			{"pos": Vector2(1700, 220), "w": 200.0},
+			{"pos": Vector2(2000, 220), "w": 200.0},
+			{"pos": Vector2(2300, 220), "w": 200.0},
+			{"pos": Vector2(2600, 220), "w": 200.0},
+			# 중간 climb (x=2000) — 떨어졌다가 다시 올라올 수 있게. 좁고 짧음.
+			{"pos": Vector2(2000, 540), "w": 120.0},
+			{"pos": Vector2(2000, 440), "w": 100.0},
+			{"pos": Vector2(2000, 340), "w": 100.0},
+			# 하강 stairs (상단 → ground)
+			{"pos": Vector2(2900, 300), "w": 200.0},
+			{"pos": Vector2(3200, 380), "w": 200.0},
+			{"pos": Vector2(3500, 460), "w": 200.0},
+			{"pos": Vector2(3800, 540), "w": 200.0},
+			# ground 통로 발판 (드론 폭격 회피용 안전 지대)
+			{"pos": Vector2(1100, 560), "w": 200.0},
+			{"pos": Vector2(1500, 560), "w": 200.0},
+			{"pos": Vector2(2400, 560), "w": 200.0},
+			{"pos": Vector2(2800, 560), "w": 200.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(1200, 380.0), Vector2(1800, 260.0), Vector2(2400, 200.0)],
-			"sniper": [Vector2(2000, 200.0)],
-			"drone":  [Vector2(900, 160.0), Vector2(1100, 140.0), Vector2(2000, 160.0), Vector2(2800, 160.0)],
+			# 상단 perch에 patrol — 플레이어가 올라가서 처치
+			"patrol": [Vector2(1200, 200.0), Vector2(2400, 200.0)],
+			# 저격수 1마리 — 상단 한쪽
+			"sniper": [Vector2(2700, 200.0)],
+			# 드론 2마리만 (이전 4 → 2). 상단 천장에 perch.
+			"drone":  [Vector2(1500, 140.0), Vector2(2200, 140.0)],
 			"bomber": [],
 			"shield": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(900, 160.0), Vector2(940, 160.0)],
-			"hp_pickups": [Vector2(3100, 180.0)],
+			# 상단 끝부분에 XP — 위로 끝까지 traverse한 보상
+			"xp_orbs":    [Vector2(2600, 200.0), Vector2(2640, 200.0)],
+			# 중간 climb 위에 HP — 떨어졌다 다시 올라가는 사람 보상
+			"hp_pickups": [Vector2(2000, 320.0)],
 		},
 		"spikes": [],
 	}
@@ -255,39 +272,35 @@ static func _watchtower() -> Dictionary:
 	}
 
 # ─── 7. 격리 병동 (ward) ─────────────────────────────────────
-# 수평 미로형. 주통로(방패병) vs 환기구 우회(은폐/HP). ??? 복선.
+# 좁고 어두운 단일 복도. 평탄한 진행 — 사격 라인을 막는 천장 발판 없음.
+# 분기는 짧은 우회 발판 1개로 단순화 (HP 보상). 스토리 톤이 핵심 — 복선 트리거를 일찍.
 static func _ward() -> Dictionary:
 	return {
 		"platforms": [
-			# 주 통로 (낮은 발판 — 좁은 복도 느낌)
-			{"pos": Vector2(400, 560),  "w": 200.0},
-			{"pos": Vector2(700, 560),  "w": 180.0},
-			# 환기구 진입
-			{"pos": Vector2(800, 460),  "w": 80.0},
-			{"pos": Vector2(860, 420),  "w": 80.0},
-			# 환기구 내부
-			{"pos": Vector2(1000, 420), "w": 300.0},
-			{"pos": Vector2(1400, 420), "w": 300.0},
-			{"pos": Vector2(1800, 420), "w": 300.0},
-			{"pos": Vector2(2200, 420), "w": 300.0},
-			{"pos": Vector2(2600, 420), "w": 200.0},
-			# 환기구 탈출
-			{"pos": Vector2(2900, 440), "w": 80.0},
-			{"pos": Vector2(2960, 480), "w": 80.0},
-			# 주 통로 후반
-			{"pos": Vector2(3100, 560), "w": 200.0},
-			{"pos": Vector2(3400, 560), "w": 200.0},
+			# 단일 ground 복도 — 낮은 발판으로 조명/구획 표시
+			{"pos": Vector2(400, 560),  "w": 240.0},
+			{"pos": Vector2(800, 560),  "w": 240.0},
+			{"pos": Vector2(1200, 560), "w": 240.0},
+			{"pos": Vector2(1600, 560), "w": 240.0},
+			{"pos": Vector2(2000, 560), "w": 240.0},
+			{"pos": Vector2(2400, 560), "w": 240.0},
+			{"pos": Vector2(2800, 560), "w": 240.0},
+			{"pos": Vector2(3200, 560), "w": 240.0},
+			{"pos": Vector2(3600, 560), "w": 200.0},
+			# 짧은 우회 발판 (HP 보상) — 메인 복도에서 살짝 위로
+			{"pos": Vector2(2400, 460), "w": 200.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(1800, GROUND_Y - 30.0), Vector2(2800, GROUND_Y - 30.0)],
+			"patrol": [Vector2(1500, GROUND_Y - 30.0), Vector2(3000, GROUND_Y - 30.0)],
 			"sniper": [],
 			"drone":  [],
-			"bomber": [Vector2(3000, GROUND_Y - 30.0)],
-			"shield": [Vector2(1300, GROUND_Y - 30.0), Vector2(2100, GROUND_Y - 30.0)],
+			"bomber": [Vector2(2700, GROUND_Y - 30.0)],
+			# 방패병 2마리 — 좁은 복도에서 정면 차단
+			"shield": [Vector2(1800, GROUND_Y - 30.0), Vector2(2400, GROUND_Y - 30.0)],
 		},
 		"rewards": {
 			"xp_orbs":    [],
-			"hp_pickups": [Vector2(1800, 400.0)],
+			"hp_pickups": [Vector2(2400, 440.0)],
 		},
 		"spikes": [],
 	}
@@ -358,44 +371,42 @@ static func _escape() -> Dictionary:
 	}
 
 # ─── 10. 핵심부 (lab) ────────────────────────────────────────
-# 보스 챔버. 다층(메인+상단 숨은 길) + 지면 함정.
+# 보스 챔버 — 넓은 ground 아레나가 메인. 사격 라인 막는 천장 발판 최소.
+# 측면 우회 mid platform 몇 개 + 끝부분 상단 보상 발판. 함정은 입구 부근에만.
 static func _lab() -> Dictionary:
 	return {
 		"platforms": [
-			# 메인 전장 (y=420)
-			{"pos": Vector2(600, 420),  "w": 280.0},
-			{"pos": Vector2(1000, 400), "w": 240.0},
-			{"pos": Vector2(1400, 420), "w": 280.0},
-			{"pos": Vector2(1800, 400), "w": 240.0},
-			{"pos": Vector2(2200, 420), "w": 280.0},
-			{"pos": Vector2(2600, 400), "w": 240.0},
-			{"pos": Vector2(3000, 420), "w": 280.0},
-			{"pos": Vector2(3300, 420), "w": 200.0},
-			# 상단 통로
-			{"pos": Vector2(800, 240),  "w": 160.0},
-			{"pos": Vector2(1200, 220), "w": 120.0},
-			{"pos": Vector2(1600, 240), "w": 160.0},
-			{"pos": Vector2(2000, 220), "w": 120.0},
-			{"pos": Vector2(2400, 240), "w": 160.0},
-			{"pos": Vector2(2800, 220), "w": 120.0},
-			{"pos": Vector2(3100, 240), "w": 160.0},
-			# 메인→상단 진입 발판
-			{"pos": Vector2(740, 340),  "w": 60.0},
-			{"pos": Vector2(780, 280),  "w": 60.0},
+			# Ground 발판 (메인 전장 — 넓고 평탄)
+			{"pos": Vector2(500, 540),  "w": 280.0},
+			{"pos": Vector2(900, 540),  "w": 280.0},
+			{"pos": Vector2(1400, 540), "w": 280.0},
+			{"pos": Vector2(1900, 540), "w": 280.0},
+			{"pos": Vector2(2400, 540), "w": 280.0},
+			{"pos": Vector2(2900, 540), "w": 280.0},
+			{"pos": Vector2(3400, 540), "w": 280.0},
+			# Mid platform — 측면 사격 라인 (3개만, sparse)
+			{"pos": Vector2(1200, 400), "w": 200.0},
+			{"pos": Vector2(2100, 400), "w": 200.0},
+			{"pos": Vector2(3000, 400), "w": 200.0},
+			# 상단 보상 발판 — 챔버 후반에 단 1개. 진입 발판 1단계
+			{"pos": Vector2(2900, 280), "w": 180.0},
+			{"pos": Vector2(2900, 360), "w": 100.0},  # mid → top 진입 발판
 		],
 		"enemies": {
-			"patrol": [Vector2(1600, 380.0), Vector2(2200, 380.0), Vector2(2800, 380.0), Vector2(1000, GROUND_Y - 30.0), Vector2(2000, GROUND_Y - 30.0)],
-			"sniper": [Vector2(1200, 380.0), Vector2(2400, 380.0), Vector2(1600, 220.0)],
-			"drone":  [Vector2(1000, 160.0), Vector2(2000, 160.0), Vector2(3000, 160.0)],
-			"bomber": [Vector2(2000, GROUND_Y - 30.0)],
-			"shield": [Vector2(3000, 380.0)],
+			# Ground 메인 전장 (drone은 후반 등장 컨셉이라 1마리만)
+			"patrol": [Vector2(1100, GROUND_Y - 30.0), Vector2(1700, GROUND_Y - 30.0), Vector2(2400, GROUND_Y - 30.0)],
+			"sniper": [Vector2(1200, 380.0), Vector2(2100, 380.0)],
+			"drone":  [Vector2(2200, 160.0)],
+			"bomber": [Vector2(2700, GROUND_Y - 30.0)],
+			# 마지막 관문 — 합류 직전 ground 평지에 방패병
+			"shield": [Vector2(3300, GROUND_Y - 30.0)],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(2000, 200.0), Vector2(2050, 200.0)],
+			"xp_orbs":    [Vector2(2900, 260.0), Vector2(2950, 260.0)],
 			"hp_pickups": [],
 		},
 		"spikes": [
-			{"x": 1600, "y": GROUND_Y - 6.0},
-			{"x": 2400, "y": GROUND_Y - 6.0},
+			{"x": 1500, "y": GROUND_Y - 6.0},
+			{"x": 2300, "y": GROUND_Y - 6.0},
 		],
 	}

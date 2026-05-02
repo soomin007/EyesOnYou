@@ -16,6 +16,9 @@ var lifetime: float = BASE_LIFETIME
 var hit_enemies: Array = []
 # 부채꼴 발사용 — 0이면 수평. radian, dir 기준 위/아래로 벌림.
 var angle: float = 0.0
+# multishot T3 — 가장 가까운 적 방향으로 약하게 휨.
+var tracking: bool = false
+const TRACKING_BLEND: float = 0.06  # 매 프레임 현재 방향과 타깃 방향을 lerp하는 비율
 
 func _ready() -> void:
 	collision_layer = 0
@@ -48,6 +51,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	# 진행 벡터 — 수평 베이스(dir) + 각도(angle) 적용. 시각적 회전은 생략(스프라이트가
 	# 작아 어색하지 않음).
+	if tracking:
+		_apply_tracking(delta)
 	var vx: float = cos(angle) * float(dir)
 	var vy: float = sin(angle)
 	position.x += BASE_SPEED * speed_mult * vx * delta
@@ -55,6 +60,38 @@ func _process(delta: float) -> void:
 	lifetime -= delta
 	if lifetime <= 0.0:
 		queue_free()
+
+func _apply_tracking(_delta: float) -> void:
+	# 가장 가까운 적을 찾아 진행 방향을 살짝 그쪽으로 기울인다.
+	# bullet의 진행은 (cos(angle)*dir, sin(angle)). 진행이 dir 부호를 따라가니까
+	# x 축 부호 자체는 보존하고 y 성분(angle)만 천천히 조정한다.
+	var nearest: Node2D = _find_nearest_enemy()
+	if nearest == null:
+		return
+	var dx: float = nearest.global_position.x - global_position.x
+	# 적이 진행 방향 반대편이면 추적 안 함 (이미 지나친 적).
+	if dx * float(dir) <= 0.0:
+		return
+	var dy: float = (nearest.global_position.y - 28.0) - global_position.y  # 적 가슴 높이
+	# 새 angle 계산: 진행 방향(+dir 쪽)에서 dy/dx 비율로 기울기.
+	var target_angle: float = atan2(dy, abs(dx))
+	# 너무 급하게 꺾이지 않게 clamp (±25도 안)
+	target_angle = clamp(target_angle, -0.43, 0.43)
+	angle = lerp(angle, target_angle, TRACKING_BLEND)
+
+func _find_nearest_enemy() -> Node2D:
+	var nearest: Node2D = null
+	var min_d: float = 99999.0
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not (e is Node2D):
+			continue
+		if e in hit_enemies:
+			continue
+		var d: float = global_position.distance_to((e as Node2D).global_position)
+		if d < min_d:
+			min_d = d
+			nearest = e as Node2D
+	return nearest
 
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("enemy"):

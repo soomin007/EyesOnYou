@@ -58,9 +58,10 @@ func _setup_veil_mistakes() -> void:
 		_arm_veil_mistake_at(680.0, "앞쪽에 둘이에요. 조심해요.", "셋이었네요. 제가 틀렸어요.")
 	elif GameState.current_stage == 2:
 		_arm_veil_mistake_at(1400.0, "이 구역은 경비 없을 거예요.", "있었네요. 미안해요.")
-	# 격리 병동 통과 시 ??? 맵 복선 (stage 3 또는 4)
+	# 격리 병동 통과 시 ??? 맵 복선 (stage 3 또는 4).
+	# x=900 — 진입 직후 분기 결정 전에 분위기 깔리도록 일찍 트리거.
 	if GameState.current_route_id == "route_ward":
-		_arm_ward_foreshadow_at(2000.0)
+		_arm_ward_foreshadow_at(900.0)
 
 func _arm_ward_foreshadow_at(trigger_x: float) -> void:
 	var area := Area2D.new()
@@ -388,9 +389,9 @@ func _build_world() -> void:
 var locked_door_triggered: bool = false
 
 func _build_locked_door() -> void:
-	# Stage 3~4에서 등장 — ??? 맵(stage 5/6)에 대한 시각적 복선.
-	# 콜리전 없는 장식 + 트리거 영역. 톤 보강: 더 큼 + LED 펄스 + 주변 약한 빛.
-	if GameState.current_stage != 3 and GameState.current_stage != 4:
+	# 격리 병동에서만 등장 — ??? 맵(stage 5/6)에 대한 시각적 복선.
+	# 다른 stage 3~4 루트에서 잠긴 문이 떠 있으면 컨텍스트 없이 보여 혼란을 줘서 ward로 좁힘.
+	if GameState.current_route_id != "route_ward":
 		return
 	var x: float = STAGE_LENGTH * 0.55
 	# 외곽 프레임 — 더 큼

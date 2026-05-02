@@ -69,7 +69,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 2, "max_stage": 3,
+		# 드론 첫 등장 맵 — 사용자 피드백상 후반에 등장하는 게 더 자연스러워 stage 3~4로 이동.
+		"min_stage": 3, "max_stage": 4,
 		"tags": ["전투", "드론", "수직"],
 		"veil_comment": "수직 구조예요. 위에서 와요.",
 		"stage_color": Color(0.10, 0.16, 0.20),
