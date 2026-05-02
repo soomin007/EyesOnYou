@@ -428,23 +428,29 @@ func _tick_shield(delta: float) -> void:
 
 	var p := _find_player()
 
-	# 플레이어가 같은 높이대 + 사거리 내라면 그쪽으로 천천히 이동 (정면 유지)
-	if not harmless and p != null and _shield_player_nearby(p):
+	# 방패병 정체성 = 정면으로 막기. 플레이어가 존재하면 거리 무관 항상 정면을 맞춤.
+	# 이전엔 SHIELD_DETECT_X(180px) 안에서만 dir이 player 방향으로 잠기고 그 밖에선 patrol
+	# 방향대로 회전했음 → 사거리(~495px)보다 좁아서 멀리서 쏠 때 dir이 무작위가 되고
+	# 방패의 효과가 그래픽과 어긋나는 것처럼 보임.
+	if not harmless and p != null:
 		dir = 1 if p.global_position.x > global_position.x else -1
+
+	# 근접 시에만 추격 이동. 그 외에는 좁은 범위 patrol.
+	if not harmless and p != null and _shield_player_nearby(p):
 		var d2: float = global_position.distance_to(p.global_position)
 		if d2 > SHIELD_MELEE_RANGE * 0.8:
 			velocity.x = float(dir) * SHIELD_SPEED
 		else:
 			velocity.x = 0.0
 	else:
-		# 평소 순찰
-		velocity.x = float(dir) * SHIELD_SPEED * 0.8
-		if global_position.x > origin_x + patrol_range:
-			dir = -1
-		elif global_position.x < origin_x - patrol_range:
-			dir = 1
+		# 평소 순찰. dir은 player 방향으로 잠겨 있으니, patrol_range를 벗어나면 제자리에 멈춤.
+		var px: float = global_position.x
+		if (dir > 0 and px > origin_x + patrol_range) or (dir < 0 and px < origin_x - patrol_range):
+			velocity.x = 0.0
+		else:
+			velocity.x = float(dir) * SHIELD_SPEED * 0.8
 		if is_on_wall():
-			dir = -dir
+			velocity.x = 0.0
 
 	_flip_visual(dir < 0)
 	move_and_slide()
