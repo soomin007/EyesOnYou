@@ -104,7 +104,8 @@ EoY/
 ├── PRD.md                       제품 요구사항 (의사결정·우선순위·성공 기준)
 ├── EYES_ON_YOU_v2_spec.md       구현 사양 (씬 구조·대사 풀·결말 연출)
 ├── STORY.md                    스토리 캐논 + 게임 텍스트 인벤토리 (단일 진실)
-├── DESIGN_growth_system.md     성장 시스템 확정 설계 + 구현 계획 (Phase B/C)
+├── DESIGN_growth_system.md     성장 시스템 확정 설계 + 구현 계획 (Phase B/C 완료)
+├── BRIEF_map_redesign.md       맵 재설계 외부 의뢰용 브리프 (Phase D 진입 직전)
 ├── icon.svg
 ├── assets/                      (배경 이미지·폰트 — P2)
 ├── scenes/
@@ -180,7 +181,8 @@ EoY/
 - ✅ **튜토리얼** — 5단계 점진 학습
 - ✅ **P2-β (스토리/콘텐츠)** — SILO-7 컨텍스트 6개 맵, ACT별 VEIL 대사 풀, ??? 단말기 시퀀스, 결말 4종 갱신
 - ✅ **P2-γ (적 확장)** — 자폭병/방패병 추가 (총 5종), 기본 HP 3 정책, 적 수 미세 상향
-- ✅ **P2-δ (성장 시스템 + 7스테이지 확장)** — 3계열×3티어 스킬 트리, 11개 맵, TOTAL_STAGES=7. [`DESIGN_growth_system.md`](DESIGN_growth_system.md) 참조 (인게임 검증/balance 후 polish 잔여)
+- ✅ **P2-δ (성장 시스템 + 7스테이지 확장)** — 3계열×3티어 스킬 트리, 11개 맵, TOTAL_STAGES=7. [`DESIGN_growth_system.md`](DESIGN_growth_system.md) 참조
+- 📋 **P2-ε (맵 재설계 / 데드셀 스타일)** — 직선 단조 → 분기·수직 구조. 외부 의뢰 합의 후 구현. [`BRIEF_map_redesign.md`](BRIEF_map_redesign.md) 참조
 - 🚧 **P3 (마무리)** — 한글 폰트 번들, 배경 이미지, SFX, Web Export, itch.io 업로드
 
 상세 우선순위는 [`PRD.md`](PRD.md) §6, 구현 디테일은 [`EYES_ON_YOU_v2_spec.md`](EYES_ON_YOU_v2_spec.md), 스토리 캐논과 인게임 텍스트는 [`STORY.md`](STORY.md) 참조.

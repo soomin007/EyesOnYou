@@ -105,12 +105,21 @@
 - 기본 HP 3 정책 (reset() 덮어쓰기 버그 수정 후 실제 적용)
 - enemy_count_multiplier 살짝 ↑ (1=0.8, 2=1.1, 3=1.5)
 
-### P2-δ — 성장 시스템 확장 (📋 제안 단계)
-스킬/레벨 시스템 재설계 + 7스테이지 확장 — 자세한 내용은 `DESIGN_growth_system.md` 참조
-- 8개 단발 스킬 → 3계열 × 3티어 트리로 재편 (A안 추천)
-- 같은 계열 연달아 찍어야 티어 상승 → 한 런에 다 못 찍게
-- trust/aggression 점수가 추천 가중치로 작동 → 스토리 결합
-- 사용자 결정 6항(안 선택/레벨 캡/계열 분류 등) 합의 후 구현 진입
+### P2-δ — 성장 시스템 + 7스테이지 확장 (✅ 완료)
+- 8개 단발 스킬 → 3계열 × 3티어 트리 (전투/이동/생존, 7라인)
+- 같은 라인 연달아 찍어야 티어 상승 → 한 런에 다 못 찍게
+- trust/aggression 우세에 따라 VEIL 추천 표시 (잠금 없음)
+- 5스테이지 → 7스테이지, 6맵 → 11맵 (cooling/watchtower/ward/datacenter/escape 신규)
+- 격리 병동(ward)은 Stage 3~4 후보 풀에 보장 (??? 맵 복선 트리거)
+- 임계값 3 → 4 비례 상향, XP_PER_LEVEL 5 → 8, high-risk 적 처치 XP +50%
+- 자세한 내용: `DESIGN_growth_system.md`
+
+### P2-ε — 맵 재설계 / 데드셀 스타일 (📋 외부 의뢰 단계)
+직선 단조 → 분기·수직 구조 — 자세한 내용은 `BRIEF_map_redesign.md` 참조
+- 11개 맵 각각 고유 지형 정체성 부여 (옥상=수직 상승, 감시탑=3-tier, 격리 병동=수평 미로 등)
+- 분기 구조 도입 (high/mid/low) — 일방통행 결정 무게
+- 적 배치를 지형에 종속 (저격수=높은 곳, 드론=천장, 자폭병=좁은 통로 등)
+- 외부 클로드 답변 받아 통합 후 phase별 구현
 
 ### P3 — 마무리
 - 한글 폰트 번들(NotoSansKR / Pretendard, DynamicFont)
@@ -236,7 +245,8 @@ aggression_score # 전투 루트(우회 대신)를 선택할 때마다 +1
 
 - `EYES_ON_YOU_v2_spec.md` — 구현 세부 사양 (씬 구조, 스크립트 시그니처, 대사 풀, 결말 연출 전문)
 - `STORY.md` — 스토리 캐논 + 게임 텍스트 인벤토리 (이전 FULL_STORY/GAME_TEXT/STORY_BRIEF 통합본)
-- `DESIGN_growth_system.md` — 성장 시스템 확정 설계 + 구현 계획 (Phase B/C)
+- `DESIGN_growth_system.md` — 성장 시스템 확정 설계 + 구현 계획 (Phase B/C 완료)
+- `BRIEF_map_redesign.md` — 맵 재설계 외부 의뢰용 브리프 (Phase D 진입 직전)
 - `README.md` — 프로젝트 개요 + 조작 + 진행 상태
 - 본 문서(PRD.md) — 제품 의사결정 / 우선순위 / 성공 기준
 
