@@ -12,7 +12,7 @@ permissions:
 
 env:
   GODOT_VERSION: 4.6-stable
-  EXPORT_PRESET: "Web"
+  EXPORT_PRESET: "Eyes On You"
   BUILD_DIR: build
 
 jobs:

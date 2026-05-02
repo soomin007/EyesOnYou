@@ -641,14 +641,16 @@ func _build_decorations() -> void:
 		x += rng.randf_range(420.0, 720.0)
 
 func _build_hazards() -> void:
-	# 가시 함정 — MapData가 명시한 좌표에 배치. 명세 없으면 함정 태그 폴백.
+	# 가시 함정 — MapData가 명시한 (x, y) 좌표에 배치. y가 없으면 GROUND_Y 폴백.
 	var spikes: Array = _map_data.get("spikes", [])
 	if not spikes.is_empty():
 		for entry in spikes:
 			var d: Dictionary = entry
-			_build_spike(float(d.get("x", 0.0)), 90.0)
+			var sx: float = float(d.get("x", 0.0))
+			var sy: float = float(d.get("y", GROUND_Y - 6.0))
+			_build_spike(sx, 90.0, sy)
 		return
-	# 폴백 (디버그/플레이그라운드 — MapData 없을 때만 함정 태그로 RNG 배치)
+	# 폴백 (디버그/플레이그라운드)
 	if not "함정" in GameState.current_route_tags:
 		return
 	var rng := RandomNumberGenerator.new()
@@ -657,29 +659,33 @@ func _build_hazards() -> void:
 	for i in count:
 		var base_x: float = lerp(900.0, STAGE_LENGTH - 600.0, float(i + 1) / float(count + 1))
 		var x: float = base_x + rng.randf_range(-80.0, 80.0)
-		_build_spike(x, 90.0)
+		_build_spike(x, 90.0, GROUND_Y - 6.0)
 
-func _build_spike(center_x: float, w: float) -> void:
+func _build_spike(center_x: float, w: float, base_y: float = -1.0) -> void:
+	# base_y는 가시 끝(뾰족한 부분)의 y. -1이면 GROUND_Y - 6 폴백 (지면 위 가시).
+	# 가시는 base_y 위로 18px, 즉 base_y - 18에서 시작해 base_y에서 끝남.
+	if base_y < 0.0:
+		base_y = GROUND_Y - 6.0
 	var x_start: float = center_x - w * 0.5
 	var x_end: float = center_x + w * 0.5
 	var visual := ColorRect.new()
 	visual.color = Color(0.85, 0.20, 0.25, 0.55)
-	visual.position = Vector2(x_start, GROUND_Y - 30.0)
+	visual.position = Vector2(x_start, base_y - 24.0)
 	visual.size = Vector2(w, 30.0)
 	add_child(visual)
 	for sx in range(int(x_start) + 12, int(x_end), 24):
 		var spike := Polygon2D.new()
 		spike.color = Color(0.95, 0.30, 0.30)
 		spike.polygon = PackedVector2Array([
-			Vector2(float(sx), GROUND_Y),
-			Vector2(float(sx) + 12.0, GROUND_Y),
-			Vector2(float(sx) + 6.0, GROUND_Y - 18.0),
+			Vector2(float(sx), base_y),
+			Vector2(float(sx) + 12.0, base_y),
+			Vector2(float(sx) + 6.0, base_y - 18.0),
 		])
 		add_child(spike)
 	var zone := Area2D.new()
 	zone.collision_layer = 0
 	zone.collision_mask = 2  # 플레이어
-	zone.position = Vector2(center_x, GROUND_Y - 18.0)
+	zone.position = Vector2(center_x, base_y - 12.0)
 	add_child(zone)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()

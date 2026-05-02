@@ -10,6 +10,11 @@ const ROUTE_OPTIONS: Array = [
 	{"id": "route_rooftops",   "label": "옥상"},
 	{"id": "route_sewers",     "label": "배수로"},
 	{"id": "route_subway",     "label": "지하철"},
+	{"id": "route_cooling",    "label": "냉각"},
+	{"id": "route_watchtower", "label": "감시탑"},
+	{"id": "route_ward",       "label": "병동"},
+	{"id": "route_datacenter", "label": "데이터"},
+	{"id": "route_escape",     "label": "탈출로"},
 	{"id": "route_lab",        "label": "핵심부"},
 	{"id": "route_hidden",     "label": "???"},
 ]
