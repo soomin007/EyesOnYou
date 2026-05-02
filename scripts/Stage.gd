@@ -73,7 +73,7 @@ func _arm_veil_mistake_at(trigger_x: float, before_line: String, after_line: Str
 	area.set_meta("after", after_line)
 	area.body_entered.connect(_on_veil_mistake_zone.bind(area))
 
-func _on_veil_mistake_zone(area: Area2D, body: Node) -> void:
+func _on_veil_mistake_zone(body: Node, area: Area2D) -> void:
 	if veil_mistake_triggered:
 		return
 	if not (body is CharacterBody2D and body == player):
@@ -242,7 +242,7 @@ var archive_term1_done: bool = false
 var archive_term2_done: bool = false
 var archive_active_term: String = ""
 
-func _on_terminal_entered(area: Area2D, body: Node) -> void:
+func _on_terminal_entered(body: Node, area: Area2D) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
 	var term_id: String = str(area.get_meta("term_id", ""))
