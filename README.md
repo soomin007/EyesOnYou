@@ -67,21 +67,22 @@
 
 | 루트 | id | available_stages | risk | reward | 태그 |
 |---|---|---|---|---|---|
-| 뒷골목 | route_back_alley | 0~1 | 1 | 1 | 우회, 어두운_환경 |
-| 옥상 | route_rooftops | 0~2 | 1 | 2 | 원거리, 노출, 이동 |
-| 하수도 | route_sewers | 1~3 | 2 | 3 | 근접전, 함정, 어두운_환경 |
-| 지하철 | route_subway | 2~4 | 2 | 2 | 근접전, 함정 |
-| 연구실 | route_lab | 3~4 | 3 | 3 | 전투, 드론, 밝은_환경 |
+| 외곽 진입로 | route_back_alley | 0~1 | 1 | 1 | 우회, 어두운_환경 |
+| 외벽 옥상 | route_rooftops | 0~2 | 1 | 2 | 원거리, 노출, 이동 |
+| 지하 배수로 | route_sewers | 1~3 | 2 | 3 | 근접전, 함정, 어두운_환경 |
+| 지하철 연결로 | route_subway | 2~4 | 2 | 2 | 근접전, 함정 |
+| 핵심부 | route_lab | 3~4 | 3 | 3 | 전투, 드론, 밝은_환경 |
 | ??? | route_hidden | 4 | 2 | 3 | 우회, 정보 (hidden=true) |
 
-- **Risk**: 1=적 수 ×0.7 / 2=기본 / 3=적 수 ×1.4 + 적 행동 강화
+- **Risk**: 1=적 수 ×0.8 / 2=×1.1 / 3=×1.5 + 적 행동 강화
 - **Reward**: 클리어 시 보너스 XP (1=+1, 2=+2, 3=+3)
-- 함정 태그(하수도/지하철)에는 가시 자동 배치
+- 함정 태그(지하 배수로/지하철 연결로)에는 가시 자동 배치
 - 각 맵마다 다른 플랫폼 layout + 환경 효과
+- ??? 루트는 Stage 4 풀에 무작위 등장, hidden=true (VEIL 추천에서 제외) — 메타 서사 + trust +1 보너스
 
 ---
 
-## 적 (3종) — 도감 자동 트리거
+## 적 (5종) — 도감 자동 트리거
 
 첫 조우 시 도감 카드가 떠서 행동/공략을 알려줌.
 
@@ -90,6 +91,8 @@
 | 정찰병 (Patrol) | 좌우 순찰, 근접 시 텔레그래프 후 돌진 | 깜빡일 때 옆으로 회피 → 회복 중 사격 |
 | 저격수 (Sniper) | 정지, 조준선 노출 후 발사 | 플랫폼/벽으로 시야 차단 시 발사 취소 |
 | 공습 드론 (Strike Drone) | 머리 위 호버링 후 폭탄 투하 | 그림자 들어오면 옆 회피, 호버 중 사격 |
+| 자폭병 (Bomber) | 순찰 → 감지 시 추격 → 90px 안에서 점멸 → 광역 폭발 | 멀리서 정리 / 점멸 시작하면 즉시 거리 벌리기 (HP 1) |
+| 방패병 (Shield) | 정면 32px 무효, 같은 높이대 안에서 플레이어 방향 고정 | 정면 사격 막힘 → dash/점프로 측면 잡고 사격 (HP 3) |
 
 ---
 
@@ -118,16 +121,17 @@ EoY/
 │   ├── SceneRouter.gd           씬 전환 헬퍼
 │   ├── RouteData.gd             루트 풀 (id/risk/reward/tags/available_stages)
 │   ├── VeilDialogue.gd          4상황별 대사 풀
-│   ├── SkillSystem.gd           10종 스킬 풀 + 레벨업 3중 1
+│   ├── SkillSystem.gd           8종 스킬 풀 + 레벨업 3중 1 (베이스라인 dash/double_jump)
 │   ├── EndingResolver.gd        두 축 점수 → 결말 결정
 │   ├── Player.gd                이동/점프/대시/사격/플랫폼 드롭/액티브 스킬
-│   ├── Enemy.gd                 정찰병(돌진) / 저격수(시야 검사) / 드론(폭탄)
+│   ├── Enemy.gd                 5종 — 정찰병/저격수/드론/자폭병/방패병
 │   ├── Bullet.gd                플레이어 사격
 │   ├── Bomb.gd                  드론 투하 폭탄 (광역)
 │   ├── ExpOrb.gd                경험치 오브
 │   ├── CharacterArt.gd          벡터 캐릭터 빌더 (코드 생성)
 │   ├── BestiaryData.gd          적 도감 텍스트 데이터
 │   ├── BestiaryOverlay.gd       첫 조우 시 도감 카드
+│   ├── ArchiveOverlay.gd        ??? 맵 단말기 자막 시퀀스 (타자기 + 발화자 색)
 │   ├── LevelUpOverlay.gd        스킬 3중 1 카드
 │   ├── PlaygroundOverlay.gd     디버그 연습장 패널 (HUD에 토글)
 │   ├── PauseHelper.gd           ESC 일시정지 메뉴
@@ -173,7 +177,9 @@ EoY/
   - Risk/Reward 게임플레이 반영
 - ✅ **디버그 도구** — 연습장 모드 (스테이지/루트/난이도 즉시 전환)
 - ✅ **튜토리얼** — 5단계 점진 학습
-- 🚧 **P2-β (스토리/콘텐츠)** — 맵 description, ??? 보스 컨셉, VEIL 대사 풀 보강
+- ✅ **P2-β (스토리/콘텐츠)** — SILO-7 컨텍스트 6개 맵, ACT별 VEIL 대사 풀, ??? 단말기 시퀀스, 결말 4종 갱신
+- ✅ **P2-γ (적 확장)** — 자폭병/방패병 추가 (총 5종), 기본 HP 3 정책, 적 수 미세 상향
+- 📋 **P2-δ (성장 시스템 확장)** — 스킬 트리 재설계 제안 단계, [`PROPOSAL_growth_system.md`](PROPOSAL_growth_system.md) 참조
 - 🚧 **P3 (마무리)** — 한글 폰트 번들, 배경 이미지, SFX, Web Export, itch.io 업로드
 
 상세 우선순위는 [`PRD.md`](PRD.md) §6, 구현 디테일은 [`EYES_ON_YOU_v2_spec.md`](EYES_ON_YOU_v2_spec.md), 스토리 컨텍스트는 [`STORY_BRIEF.md`](STORY_BRIEF.md) 참조.
