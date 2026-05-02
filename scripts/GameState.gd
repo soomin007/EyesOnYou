@@ -1,7 +1,7 @@
 extends Node
 
-const TOTAL_STAGES: int = 5
-const SCORE_THRESHOLD: int = 3
+const TOTAL_STAGES: int = 7
+const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
 # 모든 플레이어가 기본 보유하는 베이스라인 스킬 (트리 외)

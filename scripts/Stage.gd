@@ -630,17 +630,23 @@ func _on_spike_touched(body: Node) -> void:
 		body.take_hit(1)
 
 func _build_route_ambience() -> void:
-	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용
+	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용.
+	# C-1 단계: 신규 5개 맵(cooling/watchtower/ward/datacenter/escape)은 기존 ambience를 재사용.
+	# C-2에서 각 맵 고유 layout/장식으로 교체 예정.
 	match GameState.current_route_id:
 		"route_sewers":
 			_ambience_sewers()
-		"route_rooftops":
+		"route_rooftops", "route_watchtower":
+			# 감시탑은 노출/원거리 컨셉이라 옥상과 시각 톤 공유.
 			_ambience_rooftops()
-		"route_lab":
+		"route_lab", "route_datacenter", "route_cooling":
+			# 데이터 센터/냉각 시설은 격자 라이팅 톤 공유 (임시).
 			_ambience_lab()
-		"route_back_alley":
+		"route_back_alley", "route_escape":
+			# 비상 탈출로는 어두운 골목 톤 공유 (임시).
 			_ambience_back_alley()
-		"route_subway":
+		"route_subway", "route_ward":
+			# 격리 병동은 좁은 복도 + 깜빡 비상등 컨셉 → 지하철 톤 공유 (임시).
 			_ambience_subway()
 		"route_hidden":
 			_ambience_hidden()

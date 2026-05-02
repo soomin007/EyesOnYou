@@ -133,7 +133,8 @@ static func get_levelup_advice(player_skills: Dictionary, route_tags: Array) -> 
 	return SKILL_GENERIC_COMMENTS[idx]
 
 static func get_death_briefing(death_count: int, followed_advice: bool) -> String:
-	# stage 진행도로 ACT 판별 (current_stage는 사망 시점의 진행 stage)
+	# stage 진행도로 ACT 판별 (current_stage는 사망 시점의 진행 stage).
+	# 7스테이지 매핑: ACT 1=stage 0~1, ACT 2=stage 2~4, ACT 3=stage 5~6.
 	var stage: int = GameState.current_stage
 	var is_first: bool = death_count <= 1
 	if stage <= 1:
@@ -141,7 +142,7 @@ static func get_death_briefing(death_count: int, followed_advice: bool) -> Strin
 		if is_first:
 			return _pick(DEATH_ACT1_FIRST)
 		return _pick(DEATH_ACT1_FOLLOWED) if followed_advice else _pick(DEATH_ACT1_IGNORED)
-	elif stage <= 3:
+	elif stage <= 4:
 		# ACT 2
 		if is_first:
 			return _pick(DEATH_ACT2_FIRST)

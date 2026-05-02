@@ -1,6 +1,13 @@
 class_name RouteData
 extends RefCounted
 
+# 11개 맵 — Dead Cells 스타일로 stage_index 별 후보 풀이 다름.
+#   min_stage / max_stage : 등장 가능 stage 범위 (양 끝 포함)
+#   available_stages       : 명시적 리스트 (있으면 우선, 없으면 min/max 사용)
+#   guaranteed_in_stages   : 해당 stage 풀 빌드 시 항상 포함되는 맵 (셔플 전 fix-slot)
+#   unique                 : true면 한 번 선택 후 다시 등장 안 함 (현재는 route_history 필터로 보편 규칙)
+#   hidden                 : VEIL 추천 대상에서 제외 (??? 전용)
+
 const ALL_ROUTES: Array = [
 	{
 		"id": "route_back_alley",
@@ -9,46 +16,117 @@ const ALL_ROUTES: Array = [
 		"risk": 1,
 		"reward": 1,
 		"hidden": false,
+		"unique": false,
+		"min_stage": 0, "max_stage": 0,
 		"tags": ["우회", "어두운_환경"],
 		"veil_comment": "조용한 루트예요. 경비가 적어요.",
 		"stage_color": Color(0.12, 0.12, 0.14),
-		"available_stages": [0, 1],
 	},
 	{
 		"id": "route_rooftops",
 		"name": "외벽 옥상",
 		"description": "시설 외벽을 타고 오르는 루트. 탁 트여 있고, 그만큼 노출된다.",
-		"risk": 1,
+		"risk": 2,
 		"reward": 2,
 		"hidden": false,
+		"unique": false,
+		"min_stage": 0, "max_stage": 1,
 		"tags": ["원거리", "노출", "이동"],
 		"veil_comment": "저격 노출이 있어요. 엄폐 포인트 챙겨요.",
 		"stage_color": Color(0.10, 0.13, 0.20),
-		"available_stages": [0, 1, 2],
 	},
 	{
 		"id": "route_sewers",
-		"name": "지하 배수로",
+		"name": "지하 인입로",
 		"description": "시설 아래로 연결된 옛날 배수 통로. 보안 카메라가 없는 대신 함정이 있다.",
 		"risk": 2,
 		"reward": 3,
 		"hidden": false,
+		"unique": false,
+		"min_stage": 1, "max_stage": 2,
 		"tags": ["근접전", "어두운_환경", "함정", "전투"],
 		"veil_comment": "함정이 깔려 있어요. 발 밑 봐요.",
 		"stage_color": Color(0.18, 0.22, 0.20),
-		"available_stages": [1, 2, 3],
 	},
 	{
 		"id": "route_subway",
-		"name": "지하철 연결로",
+		"name": "폐쇄 지하철",
 		"description": "SILO-7이 지어지기 전 폐쇄된 지하철 구간. 좁고 어둡고 길다.",
 		"risk": 2,
 		"reward": 2,
 		"hidden": false,
+		"unique": false,
+		"min_stage": 1, "max_stage": 2,
 		"tags": ["근접전", "함정", "전투"],
 		"veil_comment": "좁아요. 대시 써서 함정 넘어가요.",
 		"stage_color": Color(0.08, 0.10, 0.14),
-		"available_stages": [2, 3, 4],
+	},
+	{
+		"id": "route_cooling",
+		"name": "냉각 시설",
+		"description": "내부 기계실. 차가운 공기와 수직 파이프, 위에서 떨어지는 드론.",
+		"risk": 2,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 2, "max_stage": 3,
+		"tags": ["전투", "드론", "수직"],
+		"veil_comment": "수직 구조예요. 위에서 와요.",
+		"stage_color": Color(0.10, 0.16, 0.20),
+	},
+	{
+		"id": "route_watchtower",
+		"name": "감시탑",
+		"description": "내부 중층의 관제 구역. 멀리서 노려보는 저격수가 많다.",
+		"risk": 3,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 2, "max_stage": 4,
+		"tags": ["원거리", "전투", "노출"],
+		"veil_comment": "저격이 많아요. 엄폐 짧게 쓰고 빠르게.",
+		"stage_color": Color(0.18, 0.16, 0.22),
+	},
+	{
+		"id": "route_ward",
+		"name": "격리 병동",
+		"description": "내부 중층, 오래 봉인된 구역. 좁은 복도에 흐릿한 비상등.",
+		"risk": 2,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 3, "max_stage": 4,
+		# 격리 병동은 ??? 맵 복선 트리거가 있어 Stage 3~4 풀에 항상 포함되어야 함.
+		"guaranteed_in_stages": [3, 4],
+		"tags": ["우회", "어두운_환경", "은폐"],
+		"veil_comment": "이 구역은 오래됐어요. 조심해요.",
+		"stage_color": Color(0.12, 0.10, 0.14),
+	},
+	{
+		"id": "route_datacenter",
+		"name": "데이터 센터",
+		"description": "핵심부 인접. 서버 랙과 푸른 LED, 그리고 드론과 저격이 동시에.",
+		"risk": 3,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 4, "max_stage": 5,
+		"tags": ["전투", "드론", "원거리"],
+		"veil_comment": "드론과 저격이 동시에 와요. 어렵겠어요.",
+		"stage_color": Color(0.14, 0.18, 0.24),
+	},
+	{
+		"id": "route_escape",
+		"name": "비상 탈출로",
+		"description": "핵심부를 우회하는 비좁은 통로. 위험은 낮지만 보상도 적다.",
+		"risk": 1,
+		"reward": 2,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 5, "max_stage": 6,
+		"tags": ["우회", "은폐"],
+		"veil_comment": "조용한 길이에요. 빠르게 빠져요.",
+		"stage_color": Color(0.10, 0.12, 0.14),
 	},
 	{
 		"id": "route_lab",
@@ -57,10 +135,11 @@ const ALL_ROUTES: Array = [
 		"risk": 3,
 		"reward": 3,
 		"hidden": false,
+		"unique": false,
+		"min_stage": 5, "max_stage": 6,
 		"tags": ["전투", "드론", "밝은_환경"],
 		"veil_comment": "드론이 위에서 와요. 보상은 그만큼 커요.",
 		"stage_color": Color(0.22, 0.18, 0.18),
-		"available_stages": [3, 4],
 	},
 	{
 		"id": "route_hidden",
@@ -69,29 +148,56 @@ const ALL_ROUTES: Array = [
 		"risk": 2,
 		"reward": 3,
 		"hidden": true,
+		"unique": true,
+		"min_stage": 5, "max_stage": 6,
 		"tags": ["우회", "정보"],
 		"veil_comment": "저도 모르겠어요. 미안해요.",
 		"stage_color": Color(0.06, 0.06, 0.08),
-		"available_stages": [4],
 	},
 ]
 
-static func get_route_pool_for_stage(stage_index: int) -> Array:
-	# 1) 해당 스테이지에 등장 가능한 루트만 추림.
-	#    available_stages 미지정인 루트는 모든 스테이지에서 등장 (안전 폴백).
-	var available: Array = []
+# 해당 stage에 등장 가능한 맵 풀을 만든다.
+# visited: 이미 선택한 route id 목록 (중복 방문 금지). 비워두면 필터 안 함.
+# guaranteed_in_stages가 있는 맵은 셔플 전 우선 포함된다.
+static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> Array:
+	var guaranteed: Array = []
+	var others: Array = []
 	for r in ALL_ROUTES:
 		var route: Dictionary = r
-		var stages: Array = route.get("available_stages", [])
-		if stages.is_empty() or stage_index in stages:
-			available.append(route)
-	# 2) 무작위 셔플 후 픽 (stage 0은 2장, 그 이후는 3장)
-	available.shuffle()
-	var pick_count: int = min(available.size(), 3 if stage_index >= 1 else 2)
+		var rid: String = str(route.get("id", ""))
+		if rid in visited:
+			continue
+		if not _stage_in_range(route, stage_index):
+			continue
+		var g: Array = route.get("guaranteed_in_stages", [])
+		if stage_index in g:
+			guaranteed.append(route)
+		else:
+			others.append(route)
+	others.shuffle()
+	var pick_count: int = 3 if stage_index >= 1 else 2
 	var pool: Array = []
-	for i in pick_count:
-		pool.append(available[i])
+	for r in guaranteed:
+		pool.append(r)
+		if pool.size() >= pick_count:
+			return pool
+	for r in others:
+		pool.append(r)
+		if pool.size() >= pick_count:
+			break
 	return pool
+
+static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
+	# 명시적 available_stages가 있으면 우선 (디버그/특수 용도).
+	# 없으면 min_stage/max_stage 범위 사용.
+	if route.has("available_stages"):
+		var stages: Array = route.get("available_stages", [])
+		if not stages.is_empty():
+			return stage_index in stages
+	if route.has("min_stage") and route.has("max_stage"):
+		return stage_index >= int(route["min_stage"]) and stage_index <= int(route["max_stage"])
+	# 둘 다 없으면 모든 stage 등장 (안전 폴백).
+	return true
 
 static func choose_veil_recommendation(pool: Array) -> String:
 	var best_id: String = ""
