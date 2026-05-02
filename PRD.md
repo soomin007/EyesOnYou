@@ -114,12 +114,19 @@
 - 임계값 3 → 4 비례 상향, XP_PER_LEVEL 5 → 8, high-risk 적 처치 XP +50%
 - 자세한 내용: `DESIGN_growth_system.md`
 
-### P2-ε — 맵 재설계 / 데드셀 스타일 (📋 외부 의뢰 단계)
-직선 단조 → 분기·수직 구조 — 자세한 내용은 `BRIEF_map_redesign.md` 참조
-- 11개 맵 각각 고유 지형 정체성 부여 (옥상=수직 상승, 감시탑=3-tier, 격리 병동=수평 미로 등)
-- 분기 구조 도입 (high/mid/low) — 일방통행 결정 무게
-- 적 배치를 지형에 종속 (저격수=높은 곳, 드론=천장, 자폭병=좁은 통로 등)
-- 외부 클로드 답변 받아 통합 후 phase별 구현
+### P2-ε-1 — 맵 platform 재설계 1차 (✅ 완료)
+- 11맵 platform/적/보상/함정 좌표를 `MapData.gd`로 명시화
+- 적이 RNG 흩기 → 지형 종속 spawn (저격수=상단, 드론=천장 등)
+- 분기 보상(XP +2 / HP 1) 정적 배치
+- 한계: 모든 맵이 동일 4400×720 박스 안 — 결국 platform 모양만 다른 직선형 그대로
+
+### P2-ε-2 — 맵 세계 구조 v2 + 특수 방 (📋 외부 의뢰 단계)
+P2-ε-1로 platform 단계의 차별화는 끝났지만 세계 자체가 모두 같아 단조로움 미해결.
+이번 단계는 **맵의 세계 형태**를 컨셉마다 바꾼다. 자세한 내용은 `BRIEF_room_variety.md` 참조
+- 4가지 정도의 세계 템플릿 (HORIZONTAL_LONG / VERTICAL_UP / VERTICAL_DOWN / SINGLE_SCREEN_ARENA 등)
+- 맵별 world_size / start / goal_pos / camera_behavior 명세
+- 특수 방 다양화: 보스(핵심부=보스 챔버), 이스터에그, 도전, 휴식
+- ??? 콘텐츠 다회차 매력 보강 (단말기 추가)
 
 ### P3 — 마무리
 - 한글 폰트 번들(NotoSansKR / Pretendard, DynamicFont)
@@ -246,7 +253,9 @@ aggression_score # 전투 루트(우회 대신)를 선택할 때마다 +1
 - `EYES_ON_YOU_v2_spec.md` — 구현 세부 사양 (씬 구조, 스크립트 시그니처, 대사 풀, 결말 연출 전문)
 - `STORY.md` — 스토리 캐논 + 게임 텍스트 인벤토리 (이전 FULL_STORY/GAME_TEXT/STORY_BRIEF 통합본)
 - `DESIGN_growth_system.md` — 성장 시스템 확정 설계 + 구현 계획 (Phase B/C 완료)
-- `BRIEF_map_redesign.md` — 맵 재설계 외부 의뢰용 브리프 (Phase D 진입 직전)
+- `BRIEF_map_redesign.md` — 맵 재설계 1차 의뢰 (platform 좌표 단계, 완료)
+- `DESIGN_map_layout.md` — 맵 재설계 1차 답변 (platform 명세, P2-ε-2에서 일부 폐기 예정)
+- `BRIEF_room_variety.md` — 맵 세계 구조 v2 + 특수 방 의뢰 (Phase E 진입 직전)
 - `README.md` — 프로젝트 개요 + 조작 + 진행 상태
 - 본 문서(PRD.md) — 제품 의사결정 / 우선순위 / 성공 기준
 
