@@ -232,7 +232,12 @@ func _player_in_charge_range(p: Node2D) -> bool:
 # ─── Sniper ─────────────────────────────────────────────────
 
 func _tick_sniper(delta: float) -> void:
-	velocity = Vector2.ZERO
+	velocity.x = 0.0
+	if not is_on_floor():
+		velocity.y = min(velocity.y + GRAVITY * delta, 1100.0)
+	else:
+		velocity.y = 0.0
+	move_and_slide()
 	var p := _find_player()
 	if p == null:
 		_clear_aim()
