@@ -106,7 +106,7 @@
 - enemy_count_multiplier 살짝 ↑ (1=0.8, 2=1.1, 3=1.5)
 
 ### P2-δ — 성장 시스템 확장 (📋 제안 단계)
-스킬/레벨 시스템 재설계 — 자세한 내용은 `PROPOSAL_growth_system.md` 참조
+스킬/레벨 시스템 재설계 + 7스테이지 확장 — 자세한 내용은 `DESIGN_growth_system.md` 참조
 - 8개 단발 스킬 → 3계열 × 3티어 트리로 재편 (A안 추천)
 - 같은 계열 연달아 찍어야 티어 상승 → 한 런에 다 못 찍게
 - trust/aggression 점수가 추천 가중치로 작동 → 스토리 결합
@@ -139,7 +139,7 @@ aggression_score # 전투 루트(우회 대신)를 선택할 때마다 +1
 - 대사는 전부 하드코딩. LLM/외부 API 호출 금지.
 - **emdash(`—`) 망설임 표현 금지** — AI 같은 인상을 주므로 콤마/마침표/자연스러운 어순으로 풀 것. UI 구분자/주석은 무관.
 - "있을 수 있어요"류 모호한 헷지는 사실 확정인 경우엔 사용하지 않음 ("가시가 있어요").
-- 톤 가이드 상세는 `STORY_BRIEF.md` §10 참조.
+- 톤 가이드 상세는 `STORY.md` Part I → "VEIL 대사 톤 가이드" 참조.
 
 ### 7.3 루트 시스템
 
@@ -235,7 +235,8 @@ aggression_score # 전투 루트(우회 대신)를 선택할 때마다 +1
 ## 13. 참조 문서
 
 - `EYES_ON_YOU_v2_spec.md` — 구현 세부 사양 (씬 구조, 스크립트 시그니처, 대사 풀, 결말 연출 전문)
-- `STORY_BRIEF.md` — 외부 의뢰용 스토리 작업 컨텍스트 (현재 대사 인벤토리, 톤 가이드, deliverables)
+- `STORY.md` — 스토리 캐논 + 게임 텍스트 인벤토리 (이전 FULL_STORY/GAME_TEXT/STORY_BRIEF 통합본)
+- `DESIGN_growth_system.md` — 성장 시스템 확정 설계 + 구현 계획 (Phase B/C)
 - `README.md` — 프로젝트 개요 + 조작 + 진행 상태
 - 본 문서(PRD.md) — 제품 의사결정 / 우선순위 / 성공 기준
 

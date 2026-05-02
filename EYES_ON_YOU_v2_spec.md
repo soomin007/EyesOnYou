@@ -2,7 +2,7 @@
 
 > 본 문서는 초기 v2 구현 계획서를 베이스로 P0~P2-α 완료 시점의 실제 구현을 반영해 갱신한 사양이다.
 > 외부 API 없음. 모든 텍스트와 로직은 코드 안에 완결.
-> 우선순위/제품 결정은 `PRD.md`, 외부 스토리 의뢰용 컨텍스트는 `STORY_BRIEF.md` 참조.
+> 우선순위/제품 결정은 `PRD.md`, 스토리 캐논과 인게임 텍스트는 `STORY.md`, 성장 시스템 확정 설계는 `DESIGN_growth_system.md` 참조.
 
 ---
 
@@ -214,7 +214,7 @@
 - VEIL은 침착하고 간결. 1~2문장. 끝에 "요원"을 자주 붙임
 - 가끔 판단이 틀린다 — 이게 사람처럼 보이는 핵심 장치
 - **emdash(`—`) 망설임 표현 금지** (AI 같은 인상). "있을 수 있어요" 같은 모호한 헷지도 사실 확정인 경우엔 사용 안 함
-- 톤 가이드 상세는 `STORY_BRIEF.md` §10 참조
+- 톤 가이드 상세는 `STORY.md` Part I → "VEIL 대사 톤 가이드" 참조
 
 ### VEIL이 말하는 4가지 순간
 
@@ -376,7 +376,7 @@ VEIL: 응답 없음.
 ```
 res://
 ├── project.godot              # AutoLoad: GameState, physics_interpolation 활성
-├── PRD.md / STORY_BRIEF.md / EYES_ON_YOU_v2_spec.md / README.md
+├── PRD.md / STORY.md / DESIGN_growth_system.md / EYES_ON_YOU_v2_spec.md / README.md
 ├── scenes/
 │   ├── main.tscn              # 진입점 — Settings 로드 후 Title 전환
 │   ├── title.tscn
@@ -501,12 +501,12 @@ P0 MVP (이동/사망/루트/레벨업/두 점수 축), P1 VEIL 4상황 발화 +
 - HUD 마크 (`[고위험]` / `[고보상]`)
 - VEIL 대사 톤 정리 (emdash 제거, 직관성 강화)
 
-### Phase 8 — 🚧 스토리 / 콘텐츠 (P2-β)
-외부(클로드 챗) 의뢰로 받아올 것 — `STORY_BRIEF.md` 참조:
-- 맵 description (6개) → RouteData에 description 필드 추가, Briefing/RouteMap 표시
-- 5 stage narrative beat → 브리핑 풀 보강
-- VEIL 캐릭터 시트 → 대사 풀 일관 보강
-- ??? 맵 컨셉 → 보스/특수 인카운터 시스템 구현
+### Phase 8 — ✅ 스토리 / 콘텐츠 (P2-β)
+완료. 캐논과 인게임 텍스트 인벤토리는 `STORY.md`로 통합.
+- 6개 맵 description → RouteData 반영
+- 5스테이지 narrative beat → 브리핑 풀 보강
+- VEIL 캐릭터 시트 → ACT별 톤 변화 적용
+- ??? 맵 시퀀스 → 단말기 시스템 구현
 
 ### Phase 9 — 🚧 마무리 (P3)
 - 한글 폰트 번들 (NotoSansKR/Pretendard, DynamicFont)
