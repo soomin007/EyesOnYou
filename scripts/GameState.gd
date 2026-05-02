@@ -4,8 +4,9 @@ const TOTAL_STAGES: int = 5
 const SCORE_THRESHOLD: int = 3
 const SETTINGS_PATH: String = "user://settings.cfg"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
-# 모든 플레이어가 기본 보유하는 베이스라인 스킬
-const STARTING_SKILLS: Array = ["dash", "double_jump"]
+# 모든 플레이어가 기본 보유하는 베이스라인 스킬 (트리 외)
+# 자료형: Dictionary[String, int] — line_id → 보유 티어 (베이스라인은 항상 1).
+const STARTING_SKILLS: Dictionary = {"dash": 1, "double_jump": 1}
 
 var current_stage: int = 0
 var death_count: int = 0
@@ -17,7 +18,7 @@ var route_history: Array = []
 var last_veil_recommended_route: String = ""
 var followed_veil_last_choice: bool = false
 
-var skills: Array = []
+var skills: Dictionary = {}
 var current_route_id: String = ""
 var current_route_tags: Array = []
 var current_route_risk: int = 1   # 1~3, 적 수 배율 + 행동 강화에 사용
@@ -118,13 +119,26 @@ func add_xp(amount: int) -> bool:
 	return false
 
 func has_skill(id: String) -> bool:
-	return id in skills
+	return int(skills.get(id, 0)) >= 1
 
+# 해당 라인의 보유 티어 반환 (0=미보유, 1~3=보유).
+func get_skill_tier(id: String) -> int:
+	return int(skills.get(id, 0))
+
+# 라인을 한 단계 업그레이드. 이미 T3면 무시.
+# 즉시 효과(예: hp 라인의 max_hp 증가)는 여기서 처리.
 func add_skill(id: String) -> void:
-	if not has_skill(id):
-		skills.append(id)
-		match id:
-			"regen":
+	var current: int = int(skills.get(id, 0))
+	if current >= 3:
+		return
+	var new_tier: int = current + 1
+	skills[id] = new_tier
+	# 라인별 즉시 효과 — 티어 업 시점에 적용.
+	# B-1 단계: hp 라인만 처리(기존 regen 동작 보존). 나머지 효과는 B-2에서 Player.gd가 티어를 읽어 분기.
+	match id:
+		"hp":
+			# T1: max_hp +1, T2: 추가 +1 (총 +2), T3: max_hp 변화 없음 (슬로모만)
+			if new_tier == 1 or new_tier == 2:
 				player_max_hp += 1
 				player_hp = min(player_hp + 1, player_max_hp)
 

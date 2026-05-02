@@ -919,8 +919,12 @@ func _refresh_hud() -> void:
 	if GameState.skills.size() > 0:
 		var names: Array = []
 		for sid in GameState.skills:
-			var skill: Dictionary = SkillSystem.find_by_id(str(sid))
-			names.append(str(skill.get("name", sid)))
+			var tier: int = int(GameState.skills[sid])
+			var skill: Dictionary = SkillSystem.find_by_id(str(sid), tier)
+			var display: String = str(skill.get("name", sid))
+			if tier > 1:
+				display += " T%d" % tier
+			names.append(display)
 		skill_label.text = "SKILL  " + ", ".join(names)
 	else:
 		skill_label.text = "SKILL  —"

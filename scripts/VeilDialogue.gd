@@ -115,16 +115,19 @@ static func get_intro_system_text() -> String:
 static func get_intro_veil_lines() -> Array[String]:
 	return INTRO_VEIL
 
-static func get_levelup_advice(player_skills: Array, route_tags: Array) -> String:
-	if "근접전" in route_tags and not ("ranged" in player_skills):
+static func get_levelup_advice(player_skills: Dictionary, route_tags: Array) -> String:
+	# 트리 라인 보유 여부는 player_skills.has(id)로 체크 (티어 무관).
+	# "ranged"는 v2 트리에서 사라져 fire_boost / multishot 중 하나라도 있으면 원거리 보강된 것으로 간주.
+	var has_ranged_buff: bool = player_skills.has("fire_boost") or player_skills.has("multishot")
+	if "근접전" in route_tags and not has_ranged_buff:
 		return "원거리가 없으면 불리해요. 선택은 요원 몫이지만."
-	if "함정" in route_tags and not ("dash" in player_skills):
+	if "함정" in route_tags and not player_skills.has("dash"):
 		return "대시가 있으면 함정을 건너뛸 수 있어요."
-	if "드론" in route_tags and not ("ranged" in player_skills):
+	if "드론" in route_tags and not has_ranged_buff:
 		return "드론은 위에서 와요. 원거리가 도움돼요."
-	if "근접전" in route_tags and not ("dash" in player_skills):
+	if "근접전" in route_tags and not player_skills.has("dash"):
 		return "근접전이 많아요. 대시로 헛돌진 유도할 수 있어요."
-	if "드론" in route_tags and not ("double_jump" in player_skills):
+	if "드론" in route_tags and not player_skills.has("double_jump"):
 		return "위로 올라갈 수 있으면 드론한테 유리해요."
 	var idx: int = randi() % SKILL_GENERIC_COMMENTS.size()
 	return SKILL_GENERIC_COMMENTS[idx]
