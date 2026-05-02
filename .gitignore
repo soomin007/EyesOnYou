@@ -30,6 +30,16 @@ build/
 *.zip
 *.pck
 *.exe
+# Godot Web export artifacts (root에 export될 때 — 워크플로는 build/로 보냄)
+Eyes on You.*.png
+Eyes on You.png
+Eyes on You.html
+Eyes on You.js
+Eyes on You.wasm
+Eyes on You.audio.worklet.js
+Eyes on You.audio.position.worklet.js
+Eyes on You.service.worker.js
+Eyes on You.offline.html
 *.x86_64
 *.x86_32
 *.dmg
