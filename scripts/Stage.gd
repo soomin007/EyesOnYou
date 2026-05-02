@@ -37,6 +37,7 @@ func _ready() -> void:
 	_build_camera()
 	_build_hud()
 	_spawn_enemies()
+	_build_rewards()
 	_build_goal()
 	_setup_veil_mistakes()
 	if GameState.playground_active:
@@ -558,121 +559,37 @@ func _build_ground() -> void:
 	line.size = Vector2(STAGE_LENGTH + 400.0, 1.0)
 	add_child(line)
 
+var _map_data: Dictionary = {}
+
 func _build_platforms() -> void:
-	# 단일점프 상승 ~104px. 첫 플랫폼 y=510 (top 498), 이후 단계마다 80~90px 상승.
-	# 모든 레이아웃은 단일점프 계단으로 도달 가능하도록 설계.
-	# 루트별로 모양과 너비가 달라 같은 스테이지여도 체감이 다르도록.
-	var entries: Array = _platform_layout_for_route(GameState.current_route_id)
-	for entry in entries:
+	# DESIGN_map_layout.md 기반 — MapData에서 platform/적/보상/함정 통합 명세를 가져온다.
+	_map_data = MapData.get_layout(GameState.current_route_id)
+	if _map_data.is_empty():
+		# 폴백 — 디버그/플레이그라운드 환경에서 route_id가 없을 때.
+		_build_platforms_fallback()
+		return
+	for entry in _map_data.get("platforms", []):
 		var d: Dictionary = entry
 		var p: Vector2 = d.get("pos", Vector2.ZERO)
 		var w: float = float(d.get("w", 220.0))
 		_build_platform(p.x, p.y, w)
 
-func _platform_layout_for_route(route_id: String) -> Array:
-	# entry: {"pos": Vector2, "w": float}
-	match route_id:
-		"route_sewers":
-			# 좁고 평탄한 통로 — 짧은 디딤대 다수, 천장 낮음
-			return _layout_uniform([
-				Vector2(700, 520), Vector2(1050, 510), Vector2(1380, 510),
-				Vector2(1700, 500), Vector2(2050, 510), Vector2(2400, 510),
-				Vector2(2750, 500), Vector2(3100, 510), Vector2(3500, 510),
-				Vector2(3900, 510),
-			], 160.0)
-		"route_rooftops":
-			# 솟구치는 옥상 — 높이차 큼, 디딤대 짧음
-			return _layout_uniform([
-				Vector2(800, 510), Vector2(1300, 410), Vector2(1700, 320),
-				Vector2(2150, 230), Vector2(2600, 320), Vector2(3050, 410),
-				Vector2(3500, 320), Vector2(3950, 220),
-			], 180.0)
-		"route_lab":
-			# 격자 — 같은 높이대로 정렬된 평탄한 라인
-			return _layout_uniform([
-				Vector2(700, 480), Vector2(1100, 480), Vector2(1500, 480),
-				Vector2(1900, 480), Vector2(2300, 480), Vector2(2700, 480),
-				Vector2(3100, 480), Vector2(3500, 480), Vector2(3900, 480),
-			], 240.0)
-		"route_back_alley":
-			# 좁은 골목 — 넓은 단차 + 깊은 골 + 짧은 디딤대
-			return _layout_uniform([
-				Vector2(700, 540), Vector2(1100, 460), Vector2(1500, 380),
-				Vector2(1900, 460), Vector2(2400, 540), Vector2(2900, 460),
-				Vector2(3400, 380), Vector2(3900, 460),
-			], 140.0)
-		"route_subway":
-			# 지하철 — 평탄 위주에 가끔 뚝 떨어지는 낙차
-			return _layout_uniform([
-				Vector2(700, 510), Vector2(1100, 510), Vector2(1500, 510),
-				Vector2(2000, 420), Vector2(2400, 510), Vector2(2800, 510),
-				Vector2(3200, 510), Vector2(3700, 380), Vector2(4100, 510),
-			], 220.0)
-		"route_cooling":
-			# 냉각 시설 — 수직 파이프 사이로 좁고 높은 디딤대 + 위쪽 드론 자리
-			return _layout_uniform([
-				Vector2(700, 530), Vector2(1050, 430), Vector2(1400, 330),
-				Vector2(1750, 430), Vector2(2100, 530), Vector2(2500, 380),
-				Vector2(2850, 280), Vector2(3200, 380), Vector2(3600, 480),
-				Vector2(4000, 380),
-			], 150.0)
-		"route_watchtower":
-			# 감시탑 — 노출된 평행 라인. 디딤대 길지만 사이가 멀다 (저격 노출).
-			return _layout_uniform([
-				Vector2(700, 480), Vector2(1250, 480), Vector2(1800, 380),
-				Vector2(2350, 480), Vector2(2900, 380), Vector2(3450, 480),
-				Vector2(4000, 380),
-			], 260.0)
-		"route_ward":
-			# 격리 병동 — 좁고 평탄한 복도. 디딤대 짧고 빽빽 (천장 낮은 통로).
-			return _layout_uniform([
-				Vector2(700, 520), Vector2(960, 520), Vector2(1220, 520),
-				Vector2(1500, 510), Vector2(1780, 520), Vector2(2080, 510),
-				Vector2(2380, 520), Vector2(2700, 510), Vector2(3000, 520),
-				Vector2(3320, 510), Vector2(3640, 520), Vector2(3960, 510),
-			], 130.0)
-		"route_datacenter":
-			# 데이터 센터 — 격자 평탄 + 가끔 위쪽 자리 (드론 + 저격 혼합)
-			return _layout_uniform([
-				Vector2(700, 480), Vector2(1100, 480), Vector2(1500, 380),
-				Vector2(1900, 480), Vector2(2300, 380), Vector2(2700, 480),
-				Vector2(3100, 380), Vector2(3500, 480), Vector2(3900, 380),
-			], 220.0)
-		"route_escape":
-			# 비상 탈출로 — 짧고 빠른 통로. 디딤대 길고 평탄, 적 적음.
-			return _layout_uniform([
-				Vector2(700, 510), Vector2(1200, 510), Vector2(1700, 510),
-				Vector2(2200, 470), Vector2(2700, 510), Vector2(3200, 510),
-				Vector2(3700, 510),
-			], 280.0)
-		"route_hidden":
-			# ??? — 매 진입 시 RNG 시드로 형태 변동 (현재는 컨셉 미정)
-			return _layout_random_hidden()
-	# 폴백 — 안정적 진행
-	return _layout_uniform([
-		Vector2(700, 510), Vector2(1100, 480), Vector2(1500, 440),
-		Vector2(1900, 480), Vector2(2400, 510), Vector2(2900, 470),
-		Vector2(3400, 440), Vector2(3900, 480),
-	], 220.0)
-
-func _layout_uniform(positions: Array, width: float) -> Array:
-	var out: Array = []
-	for p in positions:
-		out.append({"pos": p, "w": width})
-	return out
-
-func _layout_random_hidden() -> Array:
-	# 시드는 stage 진행도 + route_id로 고정해 같은 진입에선 같은 형태
-	var rng := RandomNumberGenerator.new()
-	rng.seed = GameState.current_stage * 7331 + 41
-	var out: Array = []
-	var x: float = 700.0
-	while x < STAGE_LENGTH - 300.0:
-		var y: float = rng.randf_range(280.0, 540.0)
-		var w: float = rng.randf_range(120.0, 240.0)
-		out.append({"pos": Vector2(x, y), "w": w})
-		x += rng.randf_range(280.0, 480.0)
-	return out
+func _build_platforms_fallback() -> void:
+	# 안전한 일자형 폴백 (튜토리얼/플레이그라운드용)
+	var entries: Array = [
+		{"pos": Vector2(700, 510), "w": 220.0},
+		{"pos": Vector2(1100, 480), "w": 220.0},
+		{"pos": Vector2(1500, 440), "w": 220.0},
+		{"pos": Vector2(1900, 480), "w": 220.0},
+		{"pos": Vector2(2400, 510), "w": 220.0},
+		{"pos": Vector2(2900, 470), "w": 220.0},
+		{"pos": Vector2(3400, 440), "w": 220.0},
+		{"pos": Vector2(3900, 480), "w": 220.0},
+	]
+	for entry in entries:
+		var d: Dictionary = entry
+		var p: Vector2 = d.get("pos", Vector2.ZERO)
+		_build_platform(p.x, p.y, float(d.get("w", 220.0)))
 
 func _build_decorations() -> void:
 	# 천장 라이트 (드문드문)
@@ -689,7 +606,14 @@ func _build_decorations() -> void:
 		x += rng.randf_range(420.0, 720.0)
 
 func _build_hazards() -> void:
-	# "함정" 태그가 있는 루트만 가시를 배치. 폭은 1대시(약 130px) 안에 들어가도록 90px.
+	# 가시 함정 — MapData가 명시한 좌표에 배치. 명세 없으면 함정 태그 폴백.
+	var spikes: Array = _map_data.get("spikes", [])
+	if not spikes.is_empty():
+		for entry in spikes:
+			var d: Dictionary = entry
+			_build_spike(float(d.get("x", 0.0)), 90.0)
+		return
+	# 폴백 (디버그/플레이그라운드 — MapData 없을 때만 함정 태그로 RNG 배치)
 	if not "함정" in GameState.current_route_tags:
 		return
 	var rng := RandomNumberGenerator.new()
@@ -1182,54 +1106,41 @@ func _hearts(hp: int, max_hp: int) -> String:
 	return s
 
 func _spawn_enemies() -> void:
-	var tags: Array = GameState.current_route_tags
-	var counts := {"patrol": 4, "sniper": 0, "drone": 0, "bomber": 0, "shield": 0}
-	if "전투" in tags or "근접전" in tags:
-		counts["patrol"] = 6
-		counts["bomber"] = 1
-	if "원거리" in tags or "노출" in tags:
-		counts["sniper"] = 2
-	if "드론" in tags:
-		counts["drone"] = 2
-	if "함정" in tags:
-		# 함정 루트는 좁은 통로에 자폭병 한둘 — 회피 압박
-		counts["bomber"] = max(int(counts["bomber"]), 1)
-	if "전투" in tags:
-		# 전투 루트엔 방패병 등장 — 정면 돌파 차단
-		counts["shield"] = 1
-	# 후반 stage 가중
-	if GameState.current_stage >= 2:
-		counts["sniper"] += 1
-	if GameState.current_stage >= 3:
-		counts["drone"] += 1
-		counts["bomber"] += 1
-	if GameState.current_stage >= 4:
-		counts["shield"] = max(int(counts["shield"]), 1)
-		counts["patrol"] += 1
-	# Risk → 적 수 배율. 0인 항목은 그대로 0(태그 없는 종은 등장 안 함).
+	# MapData spawn guide 기반 — 각 적이 지형(분기/층)에 맞춰 미리 명시된 좌표에 배치된다.
+	# 명세 없으면 폴백 (구 RNG 흩기 로직).
+	var enemies: Dictionary = _map_data.get("enemies", {})
+	if enemies.is_empty():
+		_spawn_enemies_fallback()
+		return
+	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4}
+	# Risk 배율 — 가이드 좌표 수에 비례해서 가감. risk=1=0.8, 2=1.1, 3=1.5.
 	var mult: float = GameState.enemy_count_multiplier()
-	for k in counts.keys():
-		var base: int = int(counts[k])
-		if base > 0:
-			counts[k] = max(1, int(round(float(base) * mult)))
+	for kind_name in enemies.keys():
+		var positions: Array = enemies[kind_name]
+		if positions.is_empty():
+			continue
+		var kind_int: int = int(kind_map.get(kind_name, 0))
+		var target: int = int(round(float(positions.size()) * mult))
+		target = clamp(target, 0, positions.size() * 2)
+		# 가이드 좌표는 우선 다 spawn — sample 부족하면 일부 생략, 더 필요하면 중복 spawn(약간 오프셋).
+		if target >= positions.size():
+			for p in positions:
+				_spawn_enemy(kind_int, p)
+			var extra: int = target - positions.size()
+			for i in extra:
+				var base_p: Vector2 = positions[i % positions.size()]
+				_spawn_enemy(kind_int, base_p + Vector2(randf_range(-120.0, 120.0), 0.0))
+		else:
+			# 줄여야 할 때는 앞쪽 좌표만 — 후반부 적이 빠지면 진행이 더 편해짐.
+			for i in target:
+				_spawn_enemy(kind_int, positions[i])
 
+func _spawn_enemies_fallback() -> void:
+	# MapData 명세가 없을 때 (디버그/플레이그라운드 등) 단순 흩기 폴백.
+	var counts: Dictionary = {"patrol": 4, "sniper": 0, "drone": 0, "bomber": 0, "shield": 0}
 	for i in counts["patrol"]:
 		var x: float = lerp(400.0, STAGE_LENGTH - 300.0, float(i + 1) / float(counts["patrol"] + 1))
 		_spawn_enemy(0, Vector2(x, GROUND_Y - 30.0))
-	for i in counts["sniper"]:
-		var x2: float = lerp(800.0, STAGE_LENGTH - 600.0, float(i + 1) / float(counts["sniper"] + 1))
-		_spawn_enemy(1, Vector2(x2, GROUND_Y - 250.0))
-	for i in counts["drone"]:
-		var x3: float = lerp(1000.0, STAGE_LENGTH - 800.0, float(i + 1) / float(counts["drone"] + 1))
-		_spawn_enemy(2, Vector2(x3, GROUND_Y - 320.0))
-	for i in counts["bomber"]:
-		# 자폭병은 patrol과 다른 위치에 깔아 동선이 겹치지 않게
-		var x4: float = lerp(1100.0, STAGE_LENGTH - 500.0, float(i + 1) / float(counts["bomber"] + 1)) + 120.0
-		_spawn_enemy(3, Vector2(x4, GROUND_Y - 30.0))
-	for i in counts["shield"]:
-		# 방패병은 좁은 통로 / 후반부에 — patrol/bomber 사이에 끼우기
-		var x5: float = lerp(1500.0, STAGE_LENGTH - 700.0, float(i + 1) / float(counts["shield"] + 1)) - 80.0
-		_spawn_enemy(4, Vector2(x5, GROUND_Y - 30.0))
 
 func _spawn_enemy(kind: int, pos: Vector2) -> void:
 	var e := CharacterBody2D.new()
@@ -1255,7 +1166,8 @@ func _spawn_enemy(kind: int, pos: Vector2) -> void:
 func _on_enemy_killed(at_position: Vector2) -> void:
 	_spawn_orb(at_position + Vector2(0, -20.0))
 
-func _spawn_orb(pos: Vector2) -> void:
+func _spawn_orb(pos: Vector2, static_placement: bool = false) -> void:
+	# static_placement=true면 bounce 스킵 — 분기 보상으로 미리 배치된 orb는 그 자리에 그대로 둠.
 	var orb := Node2D.new()
 	orb.set_script(load("res://scripts/ExpOrb.gd"))
 	var sprite := ColorRect.new()
@@ -1266,6 +1178,56 @@ func _spawn_orb(pos: Vector2) -> void:
 	orb.add_child(sprite)
 	add_child(orb)
 	orb.global_position = pos
+	if static_placement:
+		# bounce 스킵 — 즉시 attract 단계로
+		orb.set("spawn_anim_t", 1.0)
+		orb.set("bounce_velocity", Vector2.ZERO)
+
+func _spawn_hp_orb(pos: Vector2) -> void:
+	# 분기 보상으로 미리 배치된 HP 회복 픽업 (적 처치 드롭과 별개).
+	var orb := Node2D.new()
+	orb.set_script(load("res://scripts/HpOrb.gd"))
+	# 빨간 십자 모양 — 멀리서도 HP 회복임을 인지할 수 있게.
+	var sprite := ColorRect.new()
+	sprite.name = "Sprite"
+	sprite.color = Color(0.95, 0.30, 0.30, 0.0)
+	sprite.size = Vector2.ZERO
+	orb.add_child(sprite)
+	# 십자 가로
+	var bar_h := ColorRect.new()
+	bar_h.color = Color(0.95, 0.30, 0.30)
+	bar_h.position = Vector2(-9.0, -2.0)
+	bar_h.size = Vector2(18.0, 4.0)
+	orb.add_child(bar_h)
+	# 십자 세로
+	var bar_v := ColorRect.new()
+	bar_v.color = Color(0.95, 0.30, 0.30)
+	bar_v.position = Vector2(-2.0, -9.0)
+	bar_v.size = Vector2(4.0, 18.0)
+	orb.add_child(bar_v)
+	# 옅은 후광 (시선 끌기용)
+	var halo := ColorRect.new()
+	halo.color = Color(0.95, 0.30, 0.30, 0.18)
+	halo.position = Vector2(-12.0, -12.0)
+	halo.size = Vector2(24.0, 24.0)
+	halo.z_index = -1
+	orb.add_child(halo)
+	add_child(orb)
+	orb.global_position = pos
+	# 깜빡임 (시선 끌기)
+	var tw := halo.create_tween()
+	tw.set_loops()
+	tw.tween_property(halo, "modulate:a", 0.4, 0.7)
+	tw.tween_property(halo, "modulate:a", 1.0, 0.7)
+
+func _build_rewards() -> void:
+	# MapData에 명시된 분기 보상 (XP 다발 + HP 픽업)을 미리 배치.
+	# 적 처치 드롭과 달리 bounce 없이 그 자리에 그대로 떠 있다 (분기 도달 보상이라 위치가 의미).
+	var rewards: Dictionary = _map_data.get("rewards", {})
+	for pos in rewards.get("xp_orbs", []):
+		_spawn_orb(pos, true)
+	for pos in rewards.get("hp_pickups", []):
+		_spawn_hp_orb(pos)
 
 func _build_goal() -> void:
 	var goal := Area2D.new()
