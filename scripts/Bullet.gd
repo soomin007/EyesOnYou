@@ -55,7 +55,7 @@ func _on_body_entered(body: Node) -> void:
 			return
 		hit_enemies.append(body)
 		if body.has_method("take_damage"):
-			body.take_damage(damage)
+			body.take_damage(damage, global_position.x)
 		if not pierce:
 			queue_free()
 	elif body is StaticBody2D:

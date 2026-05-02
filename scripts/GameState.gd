@@ -59,8 +59,6 @@ func reset() -> void:
 	current_route_reward = 1
 	player_max_hp = 3
 	player_hp = 3
-	player_max_hp = 5
-	player_hp = 5
 	player_xp = 0
 	player_level = 1
 
@@ -104,10 +102,12 @@ func is_high_reward() -> bool:
 	return current_route_reward >= 3
 
 func enemy_count_multiplier() -> float:
+	# 부스 환경에서 너무 빡세지 않게 살짝만 ↑.
+	# 1=0.8 (기존 0.7), 2=1.1 (기존 1.0), 3=1.5 (기존 1.4)
 	match current_route_risk:
-		1: return 0.7
-		3: return 1.4
-	return 1.0
+		1: return 0.8
+		3: return 1.5
+	return 1.1
 
 func add_xp(amount: int) -> bool:
 	player_xp += amount

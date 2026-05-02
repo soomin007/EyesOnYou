@@ -943,19 +943,29 @@ func _hearts(hp: int, max_hp: int) -> String:
 
 func _spawn_enemies() -> void:
 	var tags: Array = GameState.current_route_tags
-	var rng := RandomNumberGenerator.new()
-	rng.seed = GameState.current_stage * 991 + 7
-	var counts := {"patrol": 4, "sniper": 0, "drone": 0}
+	var counts := {"patrol": 4, "sniper": 0, "drone": 0, "bomber": 0, "shield": 0}
 	if "전투" in tags or "근접전" in tags:
 		counts["patrol"] = 6
+		counts["bomber"] = 1
 	if "원거리" in tags or "노출" in tags:
 		counts["sniper"] = 2
 	if "드론" in tags:
 		counts["drone"] = 2
+	if "함정" in tags:
+		# 함정 루트는 좁은 통로에 자폭병 한둘 — 회피 압박
+		counts["bomber"] = max(int(counts["bomber"]), 1)
+	if "전투" in tags:
+		# 전투 루트엔 방패병 등장 — 정면 돌파 차단
+		counts["shield"] = 1
+	# 후반 stage 가중
 	if GameState.current_stage >= 2:
 		counts["sniper"] += 1
 	if GameState.current_stage >= 3:
 		counts["drone"] += 1
+		counts["bomber"] += 1
+	if GameState.current_stage >= 4:
+		counts["shield"] = max(int(counts["shield"]), 1)
+		counts["patrol"] += 1
 	# Risk → 적 수 배율. 0인 항목은 그대로 0(태그 없는 종은 등장 안 함).
 	var mult: float = GameState.enemy_count_multiplier()
 	for k in counts.keys():
@@ -972,6 +982,14 @@ func _spawn_enemies() -> void:
 	for i in counts["drone"]:
 		var x3: float = lerp(1000.0, STAGE_LENGTH - 800.0, float(i + 1) / float(counts["drone"] + 1))
 		_spawn_enemy(2, Vector2(x3, GROUND_Y - 320.0))
+	for i in counts["bomber"]:
+		# 자폭병은 patrol과 다른 위치에 깔아 동선이 겹치지 않게
+		var x4: float = lerp(1100.0, STAGE_LENGTH - 500.0, float(i + 1) / float(counts["bomber"] + 1)) + 120.0
+		_spawn_enemy(3, Vector2(x4, GROUND_Y - 30.0))
+	for i in counts["shield"]:
+		# 방패병은 좁은 통로 / 후반부에 — patrol/bomber 사이에 끼우기
+		var x5: float = lerp(1500.0, STAGE_LENGTH - 700.0, float(i + 1) / float(counts["shield"] + 1)) - 80.0
+		_spawn_enemy(4, Vector2(x5, GROUND_Y - 30.0))
 
 func _spawn_enemy(kind: int, pos: Vector2) -> void:
 	var e := CharacterBody2D.new()
@@ -981,9 +999,14 @@ func _spawn_enemy(kind: int, pos: Vector2) -> void:
 	e.set("enemy_type", kind)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(28.0, 40.0) if kind != 2 else Vector2(32.0, 24.0)
+	# kind: 0=patrol, 1=sniper, 2=drone, 3=bomber, 4=shield
+	if kind == 2:
+		shape.size = Vector2(32.0, 24.0)
+		col.position = Vector2(0, 0)
+	else:
+		shape.size = Vector2(28.0, 40.0)
+		col.position = Vector2(0, -20.0)
 	col.shape = shape
-	col.position = Vector2(0, -20.0) if kind != 2 else Vector2(0, 0)
 	e.add_child(col)
 	add_child(e)
 	e.global_position = pos

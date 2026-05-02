@@ -2,8 +2,9 @@ extends CharacterBody2D
 
 signal killed(at_position: Vector2)
 
-enum EnemyType { PATROL, SNIPER, DRONE }
+enum EnemyType { PATROL, SNIPER, DRONE, BOMBER, SHIELD }
 enum PatrolState { ROAMING, TELEGRAPH, CHARGING, RECOVERING }
+enum BomberState { ROAMING, STALKING, ARMING }
 
 @export var enemy_type: int = EnemyType.PATROL
 @export var patrol_range: float = 140.0
@@ -22,6 +23,23 @@ const PATROL_DETECT_Y: float = 70.0
 const PATROL_TELEGRAPH: float = 0.45
 const PATROL_CHARGE_DURATION: float = 0.6
 const PATROL_RECOVERY: float = 1.0
+
+# Bomber — 천천히 접근 + 근접 시 자폭
+const BOMBER_SPEED: float = 50.0
+const BOMBER_DETECT_X: float = 360.0
+const BOMBER_DETECT_Y: float = 90.0
+const BOMBER_ARM_RANGE: float = 90.0   # 이 거리에 들어오면 카운트다운 시작
+const BOMBER_ARM_TIME: float = 0.7     # 카운트다운 길이
+const BOMBER_BLAST_RADIUS: float = 70.0
+const BOMBER_BLAST_DAMAGE: int = 1
+
+# Shield — 정면 피격 무효, 측면/후면만 통하는 보병
+const SHIELD_SPEED: float = 55.0
+const SHIELD_DETECT_X: float = 180.0
+const SHIELD_DETECT_Y: float = 60.0
+const SHIELD_MELEE_RANGE: float = 42.0
+const SHIELD_TOUCH_DAMAGE: int = 1
+const SHIELD_TOUCH_COOLDOWN: float = 0.8
 
 # Sniper — 시야가 트여 있을 때만 발사
 const SNIPER_FIRE_INTERVAL: float = 2.6
@@ -54,6 +72,9 @@ var aim_los_clear: bool = false
 
 var drone_bomb_cd: float = 0.0
 
+var bomber_state: int = BomberState.ROAMING
+var bomber_state_timer: float = 0.0
+
 var encountered: bool = false
 var visual: Node2D
 
@@ -70,6 +91,12 @@ func _ready() -> void:
 		EnemyType.DRONE:
 			hp = 1
 			visual = CharacterArt.build_drone(self)
+		EnemyType.BOMBER:
+			hp = 1
+			visual = CharacterArt.build_bomber(self)
+		EnemyType.SHIELD:
+			hp = 3
+			visual = CharacterArt.build_shield(self)
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
 
@@ -89,6 +116,8 @@ func _enemy_id() -> String:
 		EnemyType.PATROL: return "patrol"
 		EnemyType.SNIPER: return "sniper"
 		EnemyType.DRONE: return "drone"
+		EnemyType.BOMBER: return "bomber"
+		EnemyType.SHIELD: return "shield"
 	return ""
 
 func _flip_visual(facing_left: bool) -> void:
@@ -108,6 +137,13 @@ func _physics_process(delta: float) -> void:
 			_tick_sniper(delta)
 		EnemyType.DRONE:
 			_tick_drone(delta)
+		EnemyType.BOMBER:
+			_tick_bomber(delta)
+		EnemyType.SHIELD:
+			_tick_shield(delta)
+	# bomber는 자체 폭발만 — 평상시 근접 데미지 없음
+	if enemy_type == EnemyType.BOMBER:
+		return
 	_check_touch_player()
 
 # ─── 도감 첫 조우 ───────────────────────────────────────────
@@ -286,6 +322,140 @@ func _drop_bomb() -> void:
 	b.global_position = global_position + Vector2(0, 8)
 	get_parent().add_child(b)
 
+# ─── Bomber ─────────────────────────────────────────────────
+# 평소엔 천천히 좌우 순찰. 플레이어가 감지 범위에 들어오면 추적.
+# 근거리(BOMBER_ARM_RANGE)에 닿으면 점멸하며 자폭 카운트다운 시작 — 끝나면 폭발.
+# HP 1로 사격 한 번에 처치 가능 (멀리서 잡는 게 정답).
+
+func _tick_bomber(delta: float) -> void:
+	if not is_on_floor():
+		velocity.y = min(velocity.y + GRAVITY * delta, 1100.0)
+	else:
+		velocity.y = 0.0
+
+	var p := _find_player()
+
+	match bomber_state:
+		BomberState.ROAMING:
+			velocity.x = float(dir) * BOMBER_SPEED
+			if global_position.x > origin_x + patrol_range:
+				dir = -1
+			elif global_position.x < origin_x - patrol_range:
+				dir = 1
+			if is_on_wall():
+				dir = -dir
+			if not harmless and p != null and _bomber_in_detect_range(p):
+				bomber_state = BomberState.STALKING
+		BomberState.STALKING:
+			if p == null:
+				bomber_state = BomberState.ROAMING
+			else:
+				dir = 1 if p.global_position.x > global_position.x else -1
+				velocity.x = float(dir) * BOMBER_SPEED * 1.4
+				if is_on_wall():
+					velocity.x = 0.0
+				var d2: float = global_position.distance_to(p.global_position)
+				if d2 <= BOMBER_ARM_RANGE:
+					bomber_state = BomberState.ARMING
+					bomber_state_timer = BOMBER_ARM_TIME
+					velocity.x = 0.0
+				elif not _bomber_in_detect_range(p):
+					bomber_state = BomberState.ROAMING
+		BomberState.ARMING:
+			velocity.x = 0.0
+			bomber_state_timer -= delta
+			# 깜빡임 — 시간이 줄수록 빨라짐
+			if visual != null:
+				var freq: float = lerp(6.0, 18.0, 1.0 - bomber_state_timer / BOMBER_ARM_TIME)
+				if int(bomber_state_timer * freq) % 2 == 0:
+					visual.modulate = Color(1.8, 0.45, 0.45)
+				else:
+					visual.modulate = Color(1, 1, 1)
+			if bomber_state_timer <= 0.0:
+				_bomber_explode()
+				return
+
+	_flip_visual(dir < 0)
+	move_and_slide()
+
+func _bomber_in_detect_range(p: Node2D) -> bool:
+	var dx: float = abs(p.global_position.x - global_position.x)
+	var dy: float = abs(p.global_position.y - global_position.y)
+	return dx <= BOMBER_DETECT_X and dy <= BOMBER_DETECT_Y
+
+func _bomber_explode() -> void:
+	if dead:
+		return
+	# 폭발 데미지 — 반경 안의 플레이어에게
+	var p := _find_player()
+	if p != null and global_position.distance_to(p.global_position) <= BOMBER_BLAST_RADIUS:
+		if p.has_method("take_hit"):
+			p.take_hit(BOMBER_BLAST_DAMAGE)
+	# 시각 효과
+	var blast := Polygon2D.new()
+	blast.color = Color(1.0, 0.55, 0.30, 0.85)
+	blast.z_index = 3
+	var pts: Array = []
+	for i in 24:
+		var a: float = float(i) * TAU / 24.0
+		pts.append(Vector2(cos(a) * BOMBER_BLAST_RADIUS, sin(a) * BOMBER_BLAST_RADIUS))
+	blast.polygon = PackedVector2Array(pts)
+	blast.global_position = global_position
+	blast.scale = Vector2(0.2, 0.2)
+	get_parent().add_child(blast)
+	var tw := blast.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(blast, "scale", Vector2(1.0, 1.0), 0.25)
+	tw.tween_property(blast, "modulate", Color(1, 1, 1, 0), 0.45)
+	tw.chain().tween_callback(blast.queue_free)
+	_die()
+
+# ─── Shield ─────────────────────────────────────────────────
+# 정면(facing dir)에서 오는 사격은 방패가 막는다. 측면/후면에서만 데미지 통함.
+# 근접 시 짧은 휘두르기 — 정면 일정 거리 안의 플레이어에게 1뎀.
+# HP 3 — 단단하지만 측면 잡으면 빠르게 처치 가능.
+
+func _tick_shield(delta: float) -> void:
+	if not is_on_floor():
+		velocity.y = min(velocity.y + GRAVITY * delta, 1100.0)
+	else:
+		velocity.y = 0.0
+
+	var p := _find_player()
+
+	# 플레이어가 같은 높이대 + 사거리 내라면 그쪽으로 천천히 이동 (정면 유지)
+	if not harmless and p != null and _shield_player_nearby(p):
+		dir = 1 if p.global_position.x > global_position.x else -1
+		var d2: float = global_position.distance_to(p.global_position)
+		if d2 > SHIELD_MELEE_RANGE * 0.8:
+			velocity.x = float(dir) * SHIELD_SPEED
+		else:
+			velocity.x = 0.0
+	else:
+		# 평소 순찰
+		velocity.x = float(dir) * SHIELD_SPEED * 0.8
+		if global_position.x > origin_x + patrol_range:
+			dir = -1
+		elif global_position.x < origin_x - patrol_range:
+			dir = 1
+		if is_on_wall():
+			dir = -dir
+
+	_flip_visual(dir < 0)
+	move_and_slide()
+
+func _shield_player_nearby(p: Node2D) -> bool:
+	var dx: float = abs(p.global_position.x - global_position.x)
+	var dy: float = abs(p.global_position.y - global_position.y)
+	return dx <= SHIELD_DETECT_X and dy <= SHIELD_DETECT_Y
+
+func _shield_blocks(from_x: float) -> bool:
+	# from_x가 enemy의 정면(dir 방향)에 있으면 방패가 막음
+	var rel: float = from_x - global_position.x
+	if rel == 0.0:
+		return false
+	return (rel > 0.0 and dir > 0) or (rel < 0.0 and dir < 0)
+
 # ─── 공통 ───────────────────────────────────────────────────
 
 func _find_player() -> Node2D:
@@ -327,19 +497,49 @@ func _check_touch_player() -> void:
 	var player := _find_player()
 	if player == null:
 		return
+	# Shield는 정면(dir 쪽) 근접거리 안에 있을 때만 데미지 — 등 뒤로 돌면 안전
+	if enemy_type == EnemyType.SHIELD:
+		var rel_x: float = player.global_position.x - global_position.x
+		var dy: float = abs(player.global_position.y - global_position.y)
+		var same_side: bool = (rel_x > 0.0 and dir > 0) or (rel_x < 0.0 and dir < 0)
+		if same_side and abs(rel_x) <= SHIELD_MELEE_RANGE and dy <= 42.0:
+			if player.has_method("take_hit"):
+				player.take_hit(SHIELD_TOUCH_DAMAGE)
+				touch_cd = SHIELD_TOUCH_COOLDOWN
+		return
 	if global_position.distance_to(player.global_position) < 36.0:
 		if player.has_method("take_hit"):
 			player.take_hit(TOUCH_DAMAGE)
 			touch_cd = TOUCH_COOLDOWN
 
-func take_damage(amount: int) -> void:
+func take_damage(amount: int, from_x: float = INF) -> void:
 	if dead:
+		return
+	# 방패병 — 정면 피격은 막힘 (시각 피드백만)
+	if enemy_type == EnemyType.SHIELD and from_x != INF and _shield_blocks(from_x):
+		_show_block_spark(from_x)
 		return
 	hp -= amount
 	modulate = Color(1.6, 1.6, 1.6)
 	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.15)
 	if hp <= 0:
 		_die()
+
+func _show_block_spark(from_x: float) -> void:
+	# 방패 막힘 — 노란 짧은 라인이 방패 면에서 튀는 효과
+	var spark := Line2D.new()
+	spark.width = 2.0
+	spark.default_color = Color(1.0, 0.85, 0.30, 0.9)
+	spark.z_index = 4
+	var face_x: float = global_position.x + (1.0 if dir > 0 else -1.0) * 16.0
+	var y0: float = global_position.y - 26.0
+	spark.add_point(Vector2(face_x, y0 - 4.0))
+	spark.add_point(Vector2(face_x + (8.0 if from_x > global_position.x else -8.0), y0))
+	spark.add_point(Vector2(face_x, y0 + 4.0))
+	get_parent().add_child(spark)
+	var tw := spark.create_tween()
+	tw.tween_property(spark, "default_color", Color(1.0, 0.85, 0.30, 0.0), 0.18)
+	tw.tween_callback(spark.queue_free)
 
 func _die() -> void:
 	dead = true

@@ -19,7 +19,7 @@ func _ready() -> void:
 	add_child(col)
 	visual = CharacterArt.build_tutorial_dummy(self)
 
-func take_damage(amount: int) -> void:
+func take_damage(amount: int, _from_x: float = INF) -> void:
 	if dead:
 		return
 	hp -= amount

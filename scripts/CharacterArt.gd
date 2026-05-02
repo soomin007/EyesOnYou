@@ -180,6 +180,112 @@ static func build_drone(parent: Node2D) -> Node2D:
 	root.add_child(rotor_r)
 	return root
 
+static func build_bomber(parent: Node2D) -> Node2D:
+	# 본체 28w × 40h. 어두운 회색 몸체 + 가슴에 빨간 폭탄 표식.
+	var root := Node2D.new()
+	root.name = "Visual"
+	parent.add_child(root)
+
+	root.add_child(_ellipse(Vector2(0, -1), Vector2(16, 4), Color(0, 0, 0, 0.45)))
+
+	var body := Polygon2D.new()
+	body.color = Color(0.32, 0.30, 0.34)
+	body.polygon = PackedVector2Array([
+		Vector2(-10, -34), Vector2(10, -34),
+		Vector2(12, -22), Vector2(11, -10),
+		Vector2(8, 0), Vector2(-8, 0),
+		Vector2(-11, -10), Vector2(-12, -22),
+	])
+	root.add_child(body)
+
+	# 머리
+	var head := Polygon2D.new()
+	head.color = Color(0.42, 0.40, 0.45)
+	head.polygon = PackedVector2Array([
+		Vector2(-7, -38), Vector2(7, -38), Vector2(7, -32), Vector2(-7, -32),
+	])
+	root.add_child(head)
+	# 헬멧 줄무늬
+	var stripe := Polygon2D.new()
+	stripe.color = Color(0.85, 0.30, 0.30, 0.9)
+	stripe.polygon = PackedVector2Array([
+		Vector2(-7, -36), Vector2(7, -36), Vector2(7, -34), Vector2(-7, -34),
+	])
+	root.add_child(stripe)
+
+	# 가슴 폭탄 — 빨간 원 + 흰 십자
+	root.add_child(_circle(Vector2(0, -22), 5, Color(0.85, 0.20, 0.22)))
+	var cross_v := Polygon2D.new()
+	cross_v.color = Color(1, 1, 1, 0.9)
+	cross_v.polygon = PackedVector2Array([
+		Vector2(-1, -26), Vector2(1, -26), Vector2(1, -18), Vector2(-1, -18),
+	])
+	root.add_child(cross_v)
+	var cross_h := Polygon2D.new()
+	cross_h.color = Color(1, 1, 1, 0.9)
+	cross_h.polygon = PackedVector2Array([
+		Vector2(-4, -23), Vector2(4, -23), Vector2(4, -21), Vector2(-4, -21),
+	])
+	root.add_child(cross_h)
+	return root
+
+static func build_shield(parent: Node2D) -> Node2D:
+	# 본체 28w × 40h + 정면 방패. 방패는 dir 방향에 위치 (root.scale.x로 좌우 반전).
+	var root := Node2D.new()
+	root.name = "Visual"
+	parent.add_child(root)
+
+	root.add_child(_ellipse(Vector2(0, -1), Vector2(20, 4), Color(0, 0, 0, 0.5)))
+
+	# 몸체 — 무거운 갑옷 톤
+	var body := Polygon2D.new()
+	body.color = Color(0.30, 0.36, 0.42)
+	body.polygon = PackedVector2Array([
+		Vector2(-10, -34), Vector2(10, -34),
+		Vector2(12, -22), Vector2(11, -10),
+		Vector2(8, 0), Vector2(-8, 0),
+		Vector2(-11, -10), Vector2(-12, -22),
+	])
+	root.add_child(body)
+
+	# 머리
+	root.add_child(_circle(Vector2(0, -36), 5, Color(0.42, 0.46, 0.50)))
+	# 바이저
+	var visor := Polygon2D.new()
+	visor.color = Color(0.85, 0.30, 0.30, 0.9)
+	visor.polygon = PackedVector2Array([
+		Vector2(-3, -37), Vector2(3, -37), Vector2(3, -35), Vector2(-3, -35),
+	])
+	root.add_child(visor)
+
+	# 방패 — 정면 (오른쪽 기본). Shield 노드 명명 — Enemy.gd에서 참조.
+	var shield := Node2D.new()
+	shield.name = "Shield"
+	root.add_child(shield)
+	var plate := Polygon2D.new()
+	plate.color = Color(0.55, 0.60, 0.66)
+	plate.polygon = PackedVector2Array([
+		Vector2(11, -38), Vector2(17, -38),
+		Vector2(17, -4), Vector2(11, -4),
+	])
+	shield.add_child(plate)
+	# 방패 중앙 보스
+	var boss := Polygon2D.new()
+	boss.color = Color(0.78, 0.82, 0.88)
+	boss.polygon = PackedVector2Array([
+		Vector2(13, -24), Vector2(15, -24), Vector2(15, -18), Vector2(13, -18),
+	])
+	shield.add_child(boss)
+	# 방패 가장자리 라인
+	var edge := Polygon2D.new()
+	edge.color = Color(0.20, 0.22, 0.26, 0.9)
+	edge.polygon = PackedVector2Array([
+		Vector2(17, -38), Vector2(17.5, -38),
+		Vector2(17.5, -4), Vector2(17, -4),
+	])
+	shield.add_child(edge)
+	return root
+
 static func build_tutorial_dummy(parent: Node2D) -> Node2D:
 	var root := build_patrol(parent)
 	var ghost := Polygon2D.new()
