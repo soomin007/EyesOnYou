@@ -49,10 +49,17 @@ static func show(host: Node, advice: String, on_picked: Callable) -> CanvasLayer
 		_finish(layer, "", on_picked)
 		return layer
 
+	# VEIL 추천 — trust 우세면 이동/생존, aggression 우세면 전투. 둘이 같으면 추천 없음.
+	var recommended_families: Array = []
+	if GameState.trust_score > GameState.aggression_score:
+		recommended_families = ["이동", "생존"]
+	elif GameState.aggression_score > GameState.trust_score:
+		recommended_families = ["전투"]
+
 	for p in picks:
 		var skill: Dictionary = p
 		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(220, 160)
+		btn.custom_minimum_size = Vector2(220, 170)
 		var family: String = str(skill.get("family", ""))
 		var tier: int = int(skill.get("tier", 1))
 		var tier_tag: String = "T%d" % tier
@@ -61,8 +68,16 @@ static func show(host: Node, advice: String, on_picked: Callable) -> CanvasLayer
 			header = "[%s · %s]" % [family, tier_tag]
 		else:
 			header = "[%s]" % tier_tag
-		btn.text = "%s  %s\n\n%s" % [str(skill.get("name", "")), header, str(skill.get("desc", ""))]
+		var body_text: String = "%s  %s\n\n%s" % [str(skill.get("name", "")), header, str(skill.get("desc", ""))]
+		var is_recommended: bool = family != "" and family in recommended_families
+		if is_recommended:
+			body_text += "\n\n★ VEIL 추천"
+		btn.text = body_text
 		btn.add_theme_font_size_override("font_size", 15)
+		if is_recommended:
+			btn.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
+			btn.add_theme_color_override("font_focus_color", Color(1.0, 0.92, 0.55))
+			btn.add_theme_color_override("font_hover_color", Color(1.0, 0.92, 0.55))
 		btn.process_mode = Node.PROCESS_MODE_ALWAYS
 		var sid: String = str(skill.get("id", ""))
 		btn.pressed.connect(func() -> void: _finish(layer, sid, on_picked))

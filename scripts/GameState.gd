@@ -28,7 +28,7 @@ var player_max_hp: int = 3
 var player_hp: int = 3
 var player_xp: int = 0
 var player_level: int = 1
-const XP_PER_LEVEL: int = 5
+const XP_PER_LEVEL: int = 8
 
 var tutorial_done: bool = false
 var master_volume: float = 1.0
@@ -110,8 +110,12 @@ func enemy_count_multiplier() -> float:
 		3: return 1.5
 	return 1.1
 
-func add_xp(amount: int) -> bool:
-	player_xp += amount
+func add_xp(amount: int, apply_risk_bonus: bool = true) -> bool:
+	# high-risk 루트(risk=3)에서 적 처치 XP +50% (스테이지 클리어 보상은 apply_risk_bonus=false로 호출).
+	var gain: int = amount
+	if apply_risk_bonus and current_route_risk >= 3:
+		gain = int(round(float(amount) * 1.5))
+	player_xp += gain
 	if player_xp >= XP_PER_LEVEL:
 		player_xp -= XP_PER_LEVEL
 		player_level += 1
@@ -161,7 +165,7 @@ func on_stage_clear() -> bool:
 	score += 100 * current_stage
 	var leveled: bool = false
 	if current_route_reward > 0:
-		if add_xp(current_route_reward):
+		if add_xp(current_route_reward, false):
 			leveled = true
 	# regen은 획득 시점에 max_hp +1 효과만 — 매 stage HP 풀 회복이라 heal_player 불필요
 	return leveled

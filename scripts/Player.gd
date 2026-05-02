@@ -77,7 +77,9 @@ func _handle_input(_delta: float) -> void:
 		facing = 1 if dir > 0.0 else -1
 
 	if dash_timer > 0.0:
-		velocity.x = float(facing) * DASH_SPEED
+		# dash_boost T2 = 대시 거리 +30% → 속도 *1.3 (지속시간은 그대로라 거리 늘어남)
+		var dash_speed_mult: float = 1.3 if GameState.get_skill_tier("dash_boost") >= 2 else 1.0
+		velocity.x = float(facing) * DASH_SPEED * dash_speed_mult
 	else:
 		velocity.x = dir * SPEED
 
@@ -124,21 +126,28 @@ func _try_jump() -> void:
 func _try_attack() -> void:
 	if attack_cd > 0.0:
 		return
-	var cd_mult: float = 0.75 if GameState.has_skill("ranged") else 1.0
+	# fire_boost T2 "사격 시 잠깐 가속" → 사격 쿨다운 -25%.
+	var fb_tier: int = GameState.get_skill_tier("fire_boost")
+	var cd_mult: float = 0.75 if fb_tier >= 2 else 1.0
 	attack_cd = ATTACK_COOLDOWN * cd_mult
 	_show_muzzle_flash()
-	var shots: int = 3 if GameState.has_skill("multishot") else 1
+	# multishot T1=3발, T2/T3=5발.
+	var ms_tier: int = GameState.get_skill_tier("multishot")
+	var shots: int = 1
+	if ms_tier == 1:
+		shots = 3
+	elif ms_tier >= 2:
+		shots = 5
 	for i in shots:
 		_spawn_bullet(i, shots)
 
 func _spawn_bullet(idx: int, total: int) -> void:
 	var b := Bullet.new()
 	b.dir = facing
-	b.damage = 2 if GameState.has_skill("melee_boost") else 1
-	b.pierce = GameState.has_skill("piercing")
-	if GameState.has_skill("ranged"):
-		b.speed_mult = 1.5
-		b.lifetime_mult = 1.5
+	# fire_boost: T1=+1, T2=+2, T3=관통(데미지 추가 없음). 베이스 데미지 1.
+	var fb_tier: int = GameState.get_skill_tier("fire_boost")
+	b.damage = 1 + min(fb_tier, 2)  # T0=1, T1=2, T2=3, T3=3
+	b.pierce = fb_tier >= 3
 	var muzzle_x: float = ATTACK_MUZZLE_X * float(facing)
 	var muzzle_y: float = ATTACK_MUZZLE_Y
 	if total > 1:
@@ -160,26 +169,39 @@ func _try_dash() -> void:
 		return
 	if dash_cd > 0.0:
 		return
+	# dash_boost: T1=쿨다운 -20%, T2=거리 +30%(_handle_input의 dash_timer 분기에서 적용),
+	#            T3=대시 후 0.3s 무적 추가.
+	var db_tier: int = GameState.get_skill_tier("dash_boost")
+	var cd_mult: float = 0.8 if db_tier >= 1 else 1.0
 	dash_timer = DASH_DURATION
-	dash_cd = DASH_COOLDOWN
-	invuln = max(invuln, DASH_DURATION)
+	dash_cd = DASH_COOLDOWN * cd_mult
+	var iframe: float = DASH_DURATION
+	if db_tier >= 3:
+		iframe += 0.3
+	invuln = max(invuln, iframe)
 
 func _try_skill() -> void:
-	if not GameState.has_skill("explosive"):
+	# explosive: T1=쿨다운 3.0s, T2=반경+30% 쿨다운 2.5s, T3=2회 충전(B-2에서는 쿨다운만 적용, 충전 미구현).
+	var ex_tier: int = GameState.get_skill_tier("explosive")
+	if ex_tier == 0:
 		return
 	if skill_cd > 0.0:
 		return
-	skill_cd = SKILL_COOLDOWN
+	skill_cd = SKILL_COOLDOWN if ex_tier == 1 else 2.5
 	_spawn_explosion()
 
 func _spawn_explosion() -> void:
 	var center: Vector2 = global_position + Vector2(0, -28)
+	# explosive T2/T3 = 반경 +30%
+	var radius: float = EXPLOSION_RADIUS
+	if GameState.get_skill_tier("explosive") >= 2:
+		radius *= 1.3
 	# 데미지: 반경 안 모든 적
 	for n in get_tree().get_nodes_in_group("enemy"):
 		if not (n is Node2D):
 			continue
 		var enemy := n as Node2D
-		if enemy.global_position.distance_to(center) <= EXPLOSION_RADIUS:
+		if enemy.global_position.distance_to(center) <= radius:
 			if enemy.has_method("take_damage"):
 				enemy.take_damage(EXPLOSION_DAMAGE)
 	# 시각: 확장하며 페이드되는 원
@@ -189,7 +211,7 @@ func _spawn_explosion() -> void:
 	var pts: Array = []
 	for i in 28:
 		var a: float = float(i) * TAU / 28.0
-		pts.append(Vector2(cos(a) * EXPLOSION_RADIUS, sin(a) * EXPLOSION_RADIUS))
+		pts.append(Vector2(cos(a) * radius, sin(a) * radius))
 	blast.polygon = PackedVector2Array(pts)
 	blast.global_position = center
 	blast.scale = Vector2(0.2, 0.2)
@@ -204,19 +226,29 @@ func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
 		return
 	velocity.y = min(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
-	# 공중 글라이드 — 낙하 중 점프 키 누르고 있으면 천천히 떨어진다
-	if GameState.has_skill("glide") and velocity.y > 0.0 and Input.is_action_pressed("jump"):
-		velocity.y = min(velocity.y, GLIDE_FALL_SPEED)
+	# 공중 글라이드 — 낙하 중 점프 키 누르고 있으면 천천히 떨어진다.
+	# T2 "낙하 중 가속": 점프 키를 짧게 떼었다 누르면 가속 (간단히 좌우 입력 시 살짝 가속).
+	# T3 "공중 사격 패널티 제거": 효과는 _try_attack과 무관 — 현재 사격에 패널티 없으므로 보유만 인정.
+	var glide_tier: int = GameState.get_skill_tier("glide")
+	if glide_tier >= 1 and velocity.y > 0.0 and Input.is_action_pressed("jump"):
+		var fall_speed: float = GLIDE_FALL_SPEED
+		# T2 — 좌우 이동 입력 시 낙하 속도 살짝 ↑ (가속 효과)
+		if glide_tier >= 2 and Input.get_axis("move_left", "move_right") != 0.0:
+			fall_speed = GLIDE_FALL_SPEED * 1.6
+		velocity.y = min(velocity.y, fall_speed)
 
 func take_hit(amount: int) -> void:
 	if invuln > 0.0:
 		return
 	GameState.damage_player(amount)
-	invuln = INVULN_AFTER_HIT
+	# hp T2 = 피격 후 1s 무적 (기본 0.8보다 길게)
+	var hp_tier: int = GameState.get_skill_tier("hp")
+	invuln = 1.0 if hp_tier >= 2 else INVULN_AFTER_HIT
 	emit_signal("damaged")
-	# 비상 방어막 — 쓰러질 때 1회 한정 부활
-	if GameState.is_dead() and GameState.has_skill("shield"):
-		GameState.player_hp = 1
+	# 비상 방어막 — T1: HP 1로 부활, T2: HP 2로 부활. 발동 시 라인 erase (T3 재충전은 미구현).
+	var sh_tier: int = GameState.get_skill_tier("shield")
+	if GameState.is_dead() and sh_tier >= 1:
+		GameState.player_hp = 2 if sh_tier >= 2 else 1
 		GameState.skills.erase("shield")
 		_show_shield_flash()
 		return
