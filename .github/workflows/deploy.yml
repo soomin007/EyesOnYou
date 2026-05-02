@@ -5,10 +5,17 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# GitHub Actions로 Pages에 직접 배포 (Branch 방식 아님).
+# repo Settings → Pages → Source: 'GitHub Actions' 선택 필요.
+
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 env:
   GODOT_VERSION: 4.6-stable
@@ -48,7 +55,7 @@ jobs:
           set -e
           TPZ_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
           curl -L -o templates.tpz "$TPZ_URL"
-          # 버전 폴더는 점(.)으로 구분 — "4.6-stable" → "4.6.stable"
+          # 템플릿 폴더는 점(.)으로 구분 — "4.6-stable" → "4.6.stable"
           TEMPLATE_VERSION="${GODOT_VERSION/-/.}"
           TARGET="$HOME/.local/share/godot/export_templates/${TEMPLATE_VERSION}"
           mkdir -p "$TARGET"
@@ -58,7 +65,7 @@ jobs:
       - name: Verify export preset exists
         run: |
           if [ ! -f "export_presets.cfg" ]; then
-            echo "::error::export_presets.cfg가 없어요. Godot 에디터에서 'Web' 프리셋을 만들고(Threads Support 끄기) 커밋해야 합니다."
+            echo "::error::export_presets.cfg가 없어요. Godot 에디터에서 '${EXPORT_PRESET}' 프리셋을 만들고(Threads Support 끄기) 커밋해야 합니다."
             exit 1
           fi
           if ! grep -q "name=\"${EXPORT_PRESET}\"" export_presets.cfg; then
@@ -75,10 +82,21 @@ jobs:
           touch "${BUILD_DIR}/.nojekyll"
           ls -la "${BUILD_DIR}"
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./${{ env.BUILD_DIR }}
-          publish_branch: gh-pages
-          force_orphan: true
+          path: ./${{ env.BUILD_DIR }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -107,7 +107,9 @@ EoY/
 ├── DESIGN_growth_system.md     성장 시스템 확정 설계 + 구현 계획 (Phase B/C 완료)
 ├── BRIEF_map_redesign.md       맵 재설계 1차 의뢰 (platform 좌표 단계 — 완료)
 ├── DESIGN_map_layout.md        맵 재설계 1차 답변 (platform 좌표 명세, 일부 폐기 예정)
-├── BRIEF_room_variety.md       맵 구조 v2 + 특수 방 의뢰 (Phase E 진입 직전)
+├── BRIEF_room_variety.md       맵 구조 v2 + 특수 방 의뢰 (P2-ε-2 P0 완료)
+├── DESIGN_world_layout.md      맵 구조 v2 외부 답변 (4 템플릿 + 11맵 + 보스/이스터에그 명세)
+├── DEPLOY.md                   GitHub Pages 자동 배포 셋업 가이드
 ├── icon.svg
 ├── assets/                      (배경 이미지·폰트 — P2)
 ├── scenes/
@@ -185,8 +187,10 @@ EoY/
 - ✅ **P2-γ (적 확장)** — 자폭병/방패병 추가 (총 5종), 기본 HP 3 정책, 적 수 미세 상향
 - ✅ **P2-δ (성장 시스템 + 7스테이지 확장)** — 3계열×3티어 스킬 트리, 11개 맵, TOTAL_STAGES=7. [`DESIGN_growth_system.md`](DESIGN_growth_system.md) 참조
 - ✅ **P2-ε-1 (맵 platform 재설계 1차)** — 11맵 platform/적/보상 좌표 명시화 (`MapData.gd`). 그러나 모든 맵이 동일 4400×720 박스 안 — 단조로움 미해결.
-- 📋 **P2-ε-2 (맵 세계 구조 v2 + 특수 방)** — 맵별 세계 형태 차별화(가로/세로/아레나 등) + 보스/도전/이스터에그 방. [`BRIEF_room_variety.md`](BRIEF_room_variety.md) 참조
-- 🚧 **P3 (마무리)** — 한글 폰트 번들, 배경 이미지, SFX, Web Export, 배포
+- ✅ **P2-ε-2 P0 (맵 세계 구조 v2)** — 4 템플릿(HORIZONTAL/VERTICAL_UP/VERTICAL_DOWN/ARENA), 11맵 새 좌표, 카메라/골/월드 차원 동적. [`DESIGN_world_layout.md`](DESIGN_world_layout.md) 참조
+- 📋 **P2-ε-2 P1 (특수 방 메커닉)** — 보스 SENTINEL, 웨이브 시스템, 이스터에그 5초 트리거, 도전 방, ??? 단말기 다회차
+- ✅ **P3 배포 자동화** — GitHub Pages Actions 워크플로. main 푸시 → 자동 빌드 → 배포. [`DEPLOY.md`](DEPLOY.md) 참조
+- 🚧 **P3 잔여** — 한글 폰트 번들, 배경 이미지, SFX, itch.io 별도 배포
 
 상세 우선순위는 [`PRD.md`](PRD.md) §6, 구현 디테일은 [`EYES_ON_YOU_v2_spec.md`](EYES_ON_YOU_v2_spec.md), 스토리 캐논과 인게임 텍스트는 [`STORY.md`](STORY.md) 참조.
 
