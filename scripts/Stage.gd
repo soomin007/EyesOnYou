@@ -1266,14 +1266,24 @@ func _hearts(hp: int, max_hp: int) -> String:
 	return s
 
 func _spawn_enemies() -> void:
-	# MapData spawn guide 기반 — 각 적이 지형(분기/층)에 맞춰 미리 명시된 좌표에 배치된다.
-	# 명세 없으면 폴백 (구 RNG 흩기 로직).
+	# 웨이브 모드 (datacenter 등): waves 필드가 있으면 첫 웨이브만 즉시 spawn.
+	# 이후 웨이브는 _on_enemy_killed에서 트리거 조건 검사 후 spawn.
+	var waves: Array = _map_data.get("waves", [])
+	if not waves.is_empty():
+		_init_waves(waves)
+		_spawn_wave(0)
+		return
+	# 일반 모드 — 모든 적 즉시 spawn.
 	var enemies: Dictionary = _map_data.get("enemies", {})
 	if enemies.is_empty():
 		_spawn_enemies_fallback()
 		return
+	_spawn_from_enemies_dict(enemies, -1)
+
+# 웨이브 모드 / 일반 모드 공통 — enemies 딕셔너리에서 risk 배율 적용해 spawn.
+# wave_idx: 0+ 면 wave에 속한 적 (kill 시 wave 카운트 감소), -1이면 일반 적.
+func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
 	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4}
-	# Risk 배율 — 가이드 좌표 수에 비례해서 가감. risk=1=0.8, 2=1.1, 3=1.5.
 	var mult: float = GameState.enemy_count_multiplier()
 	for kind_name in enemies.keys():
 		var positions: Array = enemies[kind_name]
@@ -1282,18 +1292,112 @@ func _spawn_enemies() -> void:
 		var kind_int: int = int(kind_map.get(kind_name, 0))
 		var target: int = int(round(float(positions.size()) * mult))
 		target = clamp(target, 0, positions.size() * 2)
-		# 가이드 좌표는 우선 다 spawn — sample 부족하면 일부 생략, 더 필요하면 중복 spawn(약간 오프셋).
 		if target >= positions.size():
 			for p in positions:
-				_spawn_enemy(kind_int, p)
+				_spawn_enemy(kind_int, p, wave_idx)
 			var extra: int = target - positions.size()
 			for i in extra:
 				var base_p: Vector2 = positions[i % positions.size()]
-				_spawn_enemy(kind_int, base_p + Vector2(randf_range(-120.0, 120.0), 0.0))
+				_spawn_enemy(kind_int, base_p + Vector2(randf_range(-120.0, 120.0), 0.0), wave_idx)
 		else:
-			# 줄여야 할 때는 앞쪽 좌표만 — 후반부 적이 빠지면 진행이 더 편해짐.
 			for i in target:
-				_spawn_enemy(kind_int, positions[i])
+				_spawn_enemy(kind_int, positions[i], wave_idx)
+
+# ─── ARENA 웨이브 시스템 ───
+# datacenter (DESIGN_world_layout §2.8) 처럼 단계 spawn이 필요한 ARENA 전용.
+# trigger:
+#   "immediate"  — 즉시
+#   "prev_half"  — 직전 웨이브 절반(올림) 처치 시
+#   "prev_clear" — 직전 웨이브 전원 처치 시
+var _waves_data: Array = []
+var _wave_initial_count: Array = []  # 각 웨이브 spawn 직후 적 수 (risk mult 반영)
+var _wave_alive_count: Array = []    # 현재 살아있는 적 수
+var _wave_spawned: Array = []        # bool — spawn 이미 됐는지
+var _wave_banners_played: Array = [] # bool — 배너 표시 여부
+
+func _init_waves(waves: Array) -> void:
+	_waves_data = waves
+	_wave_initial_count.clear()
+	_wave_alive_count.clear()
+	_wave_spawned.clear()
+	_wave_banners_played.clear()
+	for i in waves.size():
+		_wave_initial_count.append(0)
+		_wave_alive_count.append(0)
+		_wave_spawned.append(false)
+		_wave_banners_played.append(false)
+
+func _spawn_wave(idx: int) -> void:
+	if idx < 0 or idx >= _waves_data.size():
+		return
+	if _wave_spawned[idx]:
+		return
+	_wave_spawned[idx] = true
+	var before: int = get_tree().get_nodes_in_group("enemy").size()
+	var wave: Dictionary = _waves_data[idx]
+	var enemies: Dictionary = wave.get("enemies", {})
+	_spawn_from_enemies_dict(enemies, idx)
+	# 실제 spawn된 수 — group 차이로 계산 (mult 적용 후 정확)
+	var after: int = get_tree().get_nodes_in_group("enemy").size()
+	var spawned: int = after - before
+	_wave_initial_count[idx] = spawned
+	_wave_alive_count[idx] = spawned
+	# ARENA enemy_clear 카운트 갱신 — _setup_arena_clear_tracking이 wave 0 직후 측정한 값에
+	# 후속 웨이브 spawn 수를 누적. (idx==0은 _setup이 측정 전이라 카운트 누적 X)
+	if idx >= 1:
+		_enemies_remaining += spawned
+	# 웨이브 배너 (idx 0은 입장 직후라 생략, idx>=1만 표시)
+	if idx >= 1 and not _wave_banners_played[idx]:
+		_wave_banners_played[idx] = true
+		_show_wave_banner(str(wave.get("banner", "WAVE %d" % (idx + 1))))
+
+func _show_wave_banner(text: String) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 22
+	add_child(layer)
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 32)
+	l.add_theme_color_override("font_color", Color(0.95, 0.85, 0.30))
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	l.add_theme_constant_override("outline_size", 5)
+	l.position = Vector2(140, 200)
+	l.size = Vector2(1000, 50)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.modulate.a = 0.0
+	layer.add_child(l)
+	var tw := l.create_tween()
+	tw.tween_property(l, "modulate:a", 1.0, 0.4)
+	tw.tween_interval(1.2)
+	tw.tween_property(l, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(layer.queue_free)
+
+# 웨이브 진행 검사 — 적 처치 시점에 호출. 트리거 충족 시 다음 웨이브 spawn.
+func _check_wave_progress(killed_wave_idx: int) -> void:
+	if killed_wave_idx < 0 or killed_wave_idx >= _wave_alive_count.size():
+		return
+	# 다음 웨이브 트리거 검사
+	var next_idx: int = killed_wave_idx + 1
+	if next_idx >= _waves_data.size():
+		return
+	if _wave_spawned[next_idx]:
+		return
+	var next_wave: Dictionary = _waves_data[next_idx]
+	var trig: String = str(next_wave.get("trigger", "prev_clear"))
+	var should_spawn: bool = false
+	match trig:
+		"immediate":
+			should_spawn = true
+		"prev_half":
+			# 직전 웨이브가 절반 이상 처치됐는가
+			var initial: int = _wave_initial_count[killed_wave_idx]
+			var alive: int = _wave_alive_count[killed_wave_idx]
+			var killed: int = initial - alive
+			should_spawn = killed >= int(ceil(float(initial) * 0.5))
+		"prev_clear":
+			should_spawn = _wave_alive_count[killed_wave_idx] <= 0
+	if should_spawn:
+		_spawn_wave(next_idx)
 
 func _spawn_enemies_fallback() -> void:
 	# MapData 명세가 없을 때 (디버그/플레이그라운드 등) 단순 흩기 폴백.
@@ -1302,7 +1406,7 @@ func _spawn_enemies_fallback() -> void:
 		var x: float = lerp(400.0, STAGE_LENGTH - 300.0, float(i + 1) / float(counts["patrol"] + 1))
 		_spawn_enemy(0, Vector2(x, GROUND_Y - 30.0))
 
-func _spawn_enemy(kind: int, pos: Vector2) -> void:
+func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var e := CharacterBody2D.new()
 	e.set_script(load("res://scripts/Enemy.gd"))
 	e.collision_layer = 4
@@ -1321,15 +1425,33 @@ func _spawn_enemy(kind: int, pos: Vector2) -> void:
 	e.add_child(col)
 	add_child(e)
 	e.global_position = pos
-	e.killed.connect(_on_enemy_killed)
+	if wave_idx >= 0:
+		e.set_meta("wave_idx", wave_idx)
+	e.killed.connect(_on_enemy_killed.bind(wave_idx))
 
-func _on_enemy_killed(at_position: Vector2) -> void:
+func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1) -> void:
 	_spawn_orb(at_position + Vector2(0, -20.0))
-	# ARENA enemy_clear 모드 — 카운트 감소 시 0이 되면 클리어 트리거
+	# 웨이브 모드: 처치된 적의 웨이브 카운트 감소 + 다음 웨이브 트리거 검사
+	if wave_idx >= 0 and wave_idx < _wave_alive_count.size():
+		_wave_alive_count[wave_idx] -= 1
+		_check_wave_progress(wave_idx)
+	# ARENA enemy_clear 모드 — 모든 웨이브 spawn + 적 0이면 클리어
 	if _goal_type == "ENEMY_CLEAR":
 		_enemies_remaining -= 1
-		if _enemies_remaining <= 0:
+		if _can_arena_clear():
 			call_deferred("_on_arena_cleared")
+
+# 웨이브가 있을 때는 모든 웨이브가 spawn된 뒤에야 클리어 가능.
+# 일반 ARENA에서는 _enemies_remaining만 보면 됨.
+func _can_arena_clear() -> bool:
+	if _enemies_remaining > 0:
+		return false
+	if _waves_data.is_empty():
+		return true
+	for spawned in _wave_spawned:
+		if not bool(spawned):
+			return false
+	return true
 
 func _spawn_orb(pos: Vector2, static_placement: bool = false) -> void:
 	# static_placement=true면 bounce 스킵 — 분기 보상으로 미리 배치된 orb는 그 자리에 그대로 둠.

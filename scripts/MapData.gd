@@ -388,6 +388,8 @@ static func _ward() -> Dictionary:
 
 # ─── 8. 데이터 센터 (ARENA, 웨이브) ───────────────────────────
 # 지면 → step → mid(서버 랙) → step → 상층(드론) 단계화로 도달성 보장.
+# waves 필드가 있으면 Stage._spawn_enemies가 웨이브 모드로 동작 (enemies는 폴백용).
+# 웨이브 트리거: w2=w1 절반 처치 후, w3=w2 전원 처치 후. 모두 처치 시 ENEMY_CLEAR.
 static func _datacenter() -> Dictionary:
 	return {
 		"world_type":   "ARENA",
@@ -422,9 +424,36 @@ static func _datacenter() -> Dictionary:
 			{"pos": Vector2(500, 820),  "w": 100.0},
 			{"pos": Vector2(1100, 820), "w": 100.0},
 		],
+		# waves: 트리거 조건과 함께 웨이브 단위 spawn.
+		"waves": [
+			{
+				"trigger": "immediate",  # 진입 즉시
+				"banner":  "WAVE 1",
+				"enemies": {
+					"patrol": [Vector2(400, 790.0), Vector2(1200, 790.0), Vector2(1700, 790.0)],
+				},
+			},
+			{
+				"trigger": "prev_half",  # 직전 웨이브 절반 처치 시
+				"banner":  "WAVE 2",
+				"enemies": {
+					"sniper": [Vector2(200, 550.0), Vector2(1700, 550.0)],
+					"drone":  [Vector2(960, 200.0)],
+				},
+			},
+			{
+				"trigger": "prev_clear",  # 직전 웨이브 전원 처치 시
+				"banner":  "FINAL WAVE",
+				"enemies": {
+					"bomber": [Vector2(600, 790.0), Vector2(1400, 790.0)],
+					"shield": [Vector2(960, 790.0)],
+				},
+			},
+		],
+		# 폴백 enemies (waves 미인식 환경에서도 비슷한 도전이 되도록 합집합 유지)
 		"enemies": {
 			"patrol": [Vector2(400, 790.0), Vector2(1200, 790.0), Vector2(1700, 790.0)],
-			"sniper": [Vector2(200, 550.0), Vector2(1700, 550.0)],  # 서버 랙 위
+			"sniper": [Vector2(200, 550.0), Vector2(1700, 550.0)],
 			"drone":  [Vector2(960, 200.0)],
 			"bomber": [Vector2(600, 790.0), Vector2(1400, 790.0)],
 			"shield": [Vector2(960, 790.0)],
