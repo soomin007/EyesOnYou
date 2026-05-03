@@ -1,0 +1,243 @@
+class_name ArcturusDocumentOverlay
+extends Node
+
+# 이스터에그 ARCTURUS 아카이브 — 풀스크린 문서 연출.
+# 종이 한 장에 위에서부터 줄들이 타이핑되며 나타나고, 카메라(종이)가 자동 스크롤.
+# 시간 정지 + 스페이스/클릭으로 현재 줄 즉시 완성 + 다음 줄로.
+#
+# 사용:
+#   var doc = ArcturusDocumentOverlay.new()
+#   parent.add_child(doc)
+#   doc.finished.connect(_on_done)
+#   doc.show_doc(lines)   # lines: Array of {text: String, kind: "title"/"body"/"speaker", delay: float}
+
+signal finished
+
+const TYPE_INTERVAL: float = 0.035
+const PAPER_WIDTH: float = 720.0
+const MARGIN_TOP: float = 80.0
+const MARGIN_SIDE: float = 36.0
+const LINE_HEIGHT_BODY: float = 32.0
+const LINE_HEIGHT_TITLE: float = 48.0
+const LINE_HEIGHT_BLANK: float = 18.0
+const VIEWPORT_W: float = 1280.0
+const VIEWPORT_H: float = 720.0
+const SCROLL_LERP: float = 0.085  # 카메라 부드럽게 따라옴
+
+var layer: CanvasLayer
+var bg: ColorRect
+var paper: Control
+var paper_visual: ColorRect
+var labels: Array = []   # Label 배열, 입력 lines와 1:1
+var lines_data: Array = []
+var current_line: int = 0
+var revealed: int = 0
+var typing: bool = false
+var t: float = 0.0
+var pause_after_line: float = 0.0
+var done: bool = false
+var paper_target_y: float = 0.0
+
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
+func show_doc(input_lines: Array) -> void:
+	lines_data = input_lines
+	layer = CanvasLayer.new()
+	layer.layer = 25
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(layer)
+	# 풀스크린 어두운 배경
+	bg = ColorRect.new()
+	bg.color = Color(0.02, 0.02, 0.04, 0.0)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(bg)
+	# 종이 컨테이너 (화면 가운데 가로 정렬)
+	paper = Control.new()
+	paper.position = Vector2((VIEWPORT_W - PAPER_WIDTH) * 0.5, MARGIN_TOP)
+	paper.size = Vector2(PAPER_WIDTH, _calc_paper_height())
+	paper.modulate.a = 0.0
+	layer.add_child(paper)
+	# 종이 본체 — 옅은 크림색
+	paper_visual = ColorRect.new()
+	paper_visual.color = Color(0.92, 0.90, 0.84, 0.96)
+	paper_visual.position = Vector2(-MARGIN_SIDE, -40.0)
+	paper_visual.size = paper.size + Vector2(MARGIN_SIDE * 2.0, 80.0)
+	paper.add_child(paper_visual)
+	# 종이 옆 가는 그림자 라인 (저격 같은 디테일)
+	var shadow := ColorRect.new()
+	shadow.color = Color(0.0, 0.0, 0.0, 0.18)
+	shadow.position = Vector2(-MARGIN_SIDE - 6.0, -40.0 + 6.0)
+	shadow.size = paper_visual.size
+	shadow.z_index = -1
+	paper.add_child(shadow)
+	# 줄들 미리 배치 (alpha=0)
+	var y: float = 0.0
+	for entry in lines_data:
+		var d: Dictionary = entry
+		var kind: String = str(d.get("kind", "body"))
+		var lbl := Label.new()
+		lbl.text = ""
+		lbl.position = Vector2(0.0, y)
+		lbl.size = Vector2(PAPER_WIDTH, _line_height_for(kind))
+		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbl.modulate.a = 0.0
+		match kind:
+			"title":
+				lbl.add_theme_font_size_override("font_size", 22)
+				lbl.add_theme_color_override("font_color", Color(0.18, 0.20, 0.28))
+			"speaker":
+				lbl.add_theme_font_size_override("font_size", 14)
+				lbl.add_theme_color_override("font_color", Color(0.45, 0.45, 0.55))
+			"blank":
+				lbl.add_theme_font_size_override("font_size", 14)
+			_:
+				lbl.add_theme_font_size_override("font_size", 17)
+				lbl.add_theme_color_override("font_color", Color(0.10, 0.12, 0.18))
+		paper.add_child(lbl)
+		labels.append(lbl)
+		y += _line_height_for(kind)
+	# 페이드 인 → 타이핑 시작
+	get_tree().paused = true
+	var tw_bg := bg.create_tween()
+	tw_bg.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw_bg.tween_property(bg, "color:a", 0.92, 0.6)
+	var tw_paper := paper.create_tween()
+	tw_paper.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw_paper.tween_property(paper, "modulate:a", 1.0, 0.7)
+	tw_paper.tween_callback(_start_typing)
+
+func _calc_paper_height() -> float:
+	var h: float = 0.0
+	for entry in lines_data:
+		var d: Dictionary = entry
+		h += _line_height_for(str(d.get("kind", "body")))
+	return max(h, VIEWPORT_H - MARGIN_TOP * 2.0)
+
+func _line_height_for(kind: String) -> float:
+	match kind:
+		"title":
+			return LINE_HEIGHT_TITLE
+		"blank":
+			return LINE_HEIGHT_BLANK
+	return LINE_HEIGHT_BODY
+
+func _start_typing() -> void:
+	current_line = 0
+	revealed = 0
+	t = 0.0
+	if labels.size() > 0:
+		typing = true
+		labels[0].modulate.a = 1.0
+
+func _process(delta: float) -> void:
+	if done:
+		return
+	# 종이 부드럽게 스크롤 (현재 줄을 화면 중앙 ~40%에 위치)
+	paper.position.y = lerp(paper.position.y, paper_target_y, SCROLL_LERP)
+	if current_line >= lines_data.size():
+		return
+	if typing:
+		t += delta
+		if t >= TYPE_INTERVAL:
+			t = 0.0
+			revealed += 1
+			var line: Dictionary = lines_data[current_line]
+			var full: String = str(line.get("text", ""))
+			var label: Label = labels[current_line]
+			if revealed >= full.length():
+				revealed = full.length()
+				label.text = full
+				typing = false
+				pause_after_line = float(line.get("delay", 0.4))
+			else:
+				label.text = full.substr(0, revealed)
+		_update_scroll_target()
+		return
+	# 줄 사이 침묵 → 다음 줄로
+	pause_after_line -= delta
+	if pause_after_line <= 0.0:
+		current_line += 1
+		if current_line >= lines_data.size():
+			_start_finalize()
+		else:
+			revealed = 0
+			t = 0.0
+			typing = true
+			labels[current_line].modulate.a = 1.0
+			# blank 줄은 텍스트 없어 즉시 통과
+			var ln: Dictionary = lines_data[current_line]
+			if str(ln.get("kind", "body")) == "blank":
+				typing = false
+				pause_after_line = float(ln.get("delay", 0.2))
+			_update_scroll_target()
+
+func _update_scroll_target() -> void:
+	# 현재 줄의 종이 내부 y 좌표
+	if current_line >= labels.size():
+		return
+	var lbl_y: float = labels[current_line].position.y
+	# paper의 절대 좌표가 (VIEWPORT_H * 0.42 - lbl_y)일 때 그 줄이 화면 약 42% 위치.
+	var target: float = VIEWPORT_H * 0.42 - lbl_y
+	# 종이가 너무 위로 올라가지 않게 clamp (최대 상단 = MARGIN_TOP)
+	if target > MARGIN_TOP:
+		target = MARGIN_TOP
+	paper_target_y = target
+
+func _input(event: InputEvent) -> void:
+	if done:
+		return
+	var pressed: bool = false
+	if event.is_action_pressed("jump") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack"):
+		pressed = true
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		pressed = true
+	if not pressed:
+		return
+	get_viewport().set_input_as_handled()
+	if current_line >= lines_data.size():
+		_start_finalize()
+		return
+	if typing:
+		# 현재 줄 즉시 완성
+		var full: String = str(lines_data[current_line].get("text", ""))
+		labels[current_line].text = full
+		revealed = full.length()
+		typing = false
+		pause_after_line = 0.0
+	else:
+		# 다음 줄로 스킵
+		current_line += 1
+		if current_line >= lines_data.size():
+			_start_finalize()
+			return
+		revealed = 0
+		t = 0.0
+		typing = true
+		labels[current_line].modulate.a = 1.0
+		var ln: Dictionary = lines_data[current_line]
+		if str(ln.get("kind", "body")) == "blank":
+			typing = false
+			pause_after_line = 0.0
+		_update_scroll_target()
+
+func _start_finalize() -> void:
+	if done:
+		return
+	done = true
+	var tw := bg.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_interval(1.4)
+	tw.tween_property(bg, "color:a", 0.0, 0.9)
+	var tw_p := paper.create_tween()
+	tw_p.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw_p.tween_interval(1.4)
+	tw_p.tween_property(paper, "modulate:a", 0.0, 0.9)
+	tw_p.tween_callback(_emit_done)
+
+func _emit_done() -> void:
+	get_tree().paused = false
+	emit_signal("finished")
+	if layer != null and is_instance_valid(layer):
+		layer.queue_free()

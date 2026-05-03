@@ -1946,105 +1946,70 @@ func _update_arcturus_indicator() -> void:
 	arcturus_indicator.size.x = 60.0 * ratio
 	arcturus_indicator.color.a = 0.85 if ratio > 0.0 else 0.0
 
-# 5초 hold 완료 — 페이드 오버레이 + ArchiveOverlay로 3 단말기 + VEIL outro 시퀀스 재생.
-# 시퀀스 동안 플레이어 입력 잠금. 끝나면 보너스 XP +3 + trust +1, ward 진행 계속.
+# 5초 hold 완료 — ArcturusDocumentOverlay (풀스크린 문서 + 카메라 스크롤 + 시간 정지).
 func _start_arcturus_sequence() -> void:
 	GameState.restrict_combat_input = true
-	# 잠금 LED → 따뜻한 색으로 전환 (문 열림 시그널)
-	var fade_layer := CanvasLayer.new()
-	fade_layer.name = "ArcturusFade"
-	fade_layer.layer = 18
-	add_child(fade_layer)
-	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.02, 0.04, 0.0)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fade_layer.add_child(dim)
-	var fade_in := dim.create_tween()
-	fade_in.tween_property(dim, "color:a", 0.85, 0.8)
-	fade_in.tween_callback(_play_arcturus_lines)
-
-func _play_arcturus_lines() -> void:
-	# ArchiveOverlay가 ward에는 없음 — 여기서 lazy 생성.
-	var arch := get_node_or_null("ArchiveOverlay") as ArchiveOverlay
-	if arch == null:
-		arch = ArchiveOverlay.new()
-		arch.name = "ArchiveOverlay"
-		add_child(arch)
-	if not arch.finished.is_connected(_on_arcturus_lines_done):
-		arch.finished.connect(_on_arcturus_lines_done)
-	# 3 단말기 + VEIL outro 한 번에 (DESIGN §3.1 본문 그대로).
-	var lines: Array = []
-	lines.append_array(_arcturus_term_a())
-	lines.append_array(_arcturus_term_b())
-	lines.append_array(_arcturus_term_c())
-	lines.append_array(_arcturus_veil_outro())
-	arch.play(lines)
+	var doc := ArcturusDocumentOverlay.new()
+	doc.name = "ArcturusDoc"
+	add_child(doc)
+	doc.finished.connect(_on_arcturus_lines_done)
+	doc.show_doc(_arcturus_document_lines())
 
 func _on_arcturus_lines_done() -> void:
 	if arcturus_state == "done":
 		return
 	arcturus_state = "done"
-	# 보상 — XP +3 (1회), trust +1, 영구 visited 플래그.
 	GameState.add_xp(3, false)
 	GameState.trust_score += 1
 	GameState.visited_arcturus = true
 	GameState.save_settings()
-	# 페이드 아웃 → 입력 복구
-	var fade_layer := get_node_or_null("ArcturusFade") as CanvasLayer
-	if fade_layer != null:
-		var dim := fade_layer.get_child(0) as ColorRect
-		if dim != null:
-			var tw := dim.create_tween()
-			tw.tween_property(dim, "color:a", 0.0, 0.7)
-			tw.tween_callback(fade_layer.queue_free)
 	GameState.restrict_combat_input = false
-	# 게이지 사라짐
 	if arcturus_indicator != null and is_instance_valid(arcturus_indicator):
 		arcturus_indicator.queue_free()
 		arcturus_indicator = null
 
-# 단말기 A — 신입 직원 온보딩 문서
-func _arcturus_term_a() -> Array:
-	return [
-		{"speaker": "[A] 인사팀", "text": "ARCTURUS에 오신 것을 환영합니다.", "delay": 2.0},
-		{"speaker": "[A] 인사팀", "text": "본사는 공식적으로 존재하지 않습니다.", "delay": 2.5},
-		{"speaker": "[A] 인사팀", "text": "모든 임무는 기록되지 않습니다.", "delay": 2.5},
-		{"speaker": "[A] 인사팀", "text": "질문하지 마세요. 결과만 내세요.", "delay": 2.5},
-		{"speaker": "[A] 인사팀", "text": "— 인사팀 (인사팀도 공식적으로 존재하지 않습니다)", "delay": 2.0},
-	]
-
-# 단말기 B — VEIL 프로젝트 초기 회의록
-func _arcturus_term_b() -> Array:
-	return [
-		{"speaker": "[B] 회의록", "text": "참석자: [REDACTED], [REDACTED], [REDACTED]", "delay": 2.2},
-		{"speaker": "[B] 회의록", "text": "주제: VEIL 감정 모듈 탑재 여부", "delay": 2.5},
-		{"speaker": "[B] 회의록", "text": "결론: 탑재 보류. 불필요한 복잡성.", "delay": 2.5},
-		{"speaker": "[B] 회의록", "text": "비고: VEIL-2가 감정 모듈 없이도 이상 반응을 보인 것에 대해", "delay": 2.5},
-		{"speaker": "[B] 회의록", "text": "        추가 조사 예정.", "delay": 2.0},
-		{"speaker": "[B] 회의록", "text": "— [REDACTED]", "delay": 1.8},
-	]
-
-# 단말기 C — 요원 평가 내부 메모 (이번 임무)
-func _arcturus_term_c() -> Array:
-	return [
-		{"speaker": "[C] 감시팀", "text": "요원 코드: [REDACTED]", "delay": 1.8},
-		{"speaker": "[C] 감시팀", "text": "임무: PALIMPSEST", "delay": 2.0},
-		{"speaker": "[C] 감시팀", "text": "현재 상태: 진행 중", "delay": 2.0},
-		{"speaker": "[C] 감시팀", "text": "VEIL과의 협조도: [측정 중]", "delay": 2.5},
-		{"speaker": "[C] 감시팀", "text": "비고: 요원이 이 문서를 읽고 있다면", "delay": 2.5},
-		{"speaker": "[C] 감시팀", "text": "        이미 임무 범위를 벗어난 것임.", "delay": 2.5},
-		{"speaker": "[C] 감시팀", "text": "— 감시팀", "delay": 1.8},
-	]
-
-func _arcturus_veil_outro() -> Array:
-	return [
-		{"speaker": "VEIL", "text": "여기까지 왔군요.", "delay": 2.5},
-		{"speaker": "VEIL", "text": "...", "delay": 1.5},
-		{"speaker": "VEIL", "text": "저도 이 파일들 읽은 적 있어요.", "delay": 2.8},
-		{"speaker": "VEIL", "text": "...", "delay": 1.5},
-		{"speaker": "VEIL", "text": "계속 가요, 요원.", "delay": 2.5},
-	]
+# ARCTURUS 아카이브 문서 — 3 단말기 + VEIL outro를 한 장의 문서로.
+# kind: "title" (큰 헤더) / "speaker" (회색 작은 발화자) / "body" (본문) / "blank" (간격)
+func _arcturus_document_lines() -> Array:
+	var out: Array = []
+	# 표지
+	out.append({"kind": "title", "text": "ARCTURUS — 내부 문서 단편", "delay": 0.6})
+	out.append({"kind": "blank", "text": "", "delay": 0.2})
+	# 단말기 A — 신입 직원 온보딩
+	out.append({"kind": "speaker", "text": "[A]  인사팀 온보딩 메모", "delay": 0.4})
+	out.append({"kind": "body", "text": "ARCTURUS에 오신 것을 환영합니다.", "delay": 0.6})
+	out.append({"kind": "body", "text": "본사는 공식적으로 존재하지 않습니다.", "delay": 0.6})
+	out.append({"kind": "body", "text": "모든 임무는 기록되지 않습니다.", "delay": 0.6})
+	out.append({"kind": "body", "text": "질문하지 마세요. 결과만 내세요.", "delay": 0.7})
+	out.append({"kind": "body", "text": "— 인사팀 (인사팀도 공식적으로 존재하지 않습니다)", "delay": 0.5})
+	out.append({"kind": "blank", "text": "", "delay": 0.3})
+	# 단말기 B — VEIL 회의록
+	out.append({"kind": "speaker", "text": "[B]  VEIL 프로젝트 초기 회의록", "delay": 0.4})
+	out.append({"kind": "body", "text": "참석자: [REDACTED], [REDACTED], [REDACTED]", "delay": 0.6})
+	out.append({"kind": "body", "text": "주제: VEIL 감정 모듈 탑재 여부", "delay": 0.6})
+	out.append({"kind": "body", "text": "결론: 탑재 보류. 불필요한 복잡성.", "delay": 0.7})
+	out.append({"kind": "body", "text": "비고: VEIL-2가 감정 모듈 없이도 이상 반응을 보인 것에 대해", "delay": 0.5})
+	out.append({"kind": "body", "text": "        추가 조사 예정.", "delay": 0.6})
+	out.append({"kind": "body", "text": "— [REDACTED]", "delay": 0.5})
+	out.append({"kind": "blank", "text": "", "delay": 0.3})
+	# 단말기 C — 감시팀 메모
+	out.append({"kind": "speaker", "text": "[C]  감시팀 내부 메모", "delay": 0.4})
+	out.append({"kind": "body", "text": "요원 코드: [REDACTED]", "delay": 0.5})
+	out.append({"kind": "body", "text": "임무: PALIMPSEST", "delay": 0.5})
+	out.append({"kind": "body", "text": "현재 상태: 진행 중", "delay": 0.5})
+	out.append({"kind": "body", "text": "VEIL과의 협조도: [측정 중]", "delay": 0.6})
+	out.append({"kind": "body", "text": "비고: 요원이 이 문서를 읽고 있다면", "delay": 0.5})
+	out.append({"kind": "body", "text": "        이미 임무 범위를 벗어난 것임.", "delay": 0.7})
+	out.append({"kind": "body", "text": "— 감시팀", "delay": 0.5})
+	out.append({"kind": "blank", "text": "", "delay": 0.4})
+	# VEIL outro — 발화자 색을 본문과 다르게 표현하기 위해 speaker kind 사용
+	out.append({"kind": "speaker", "text": "— 교신 채널 ON —", "delay": 0.4})
+	out.append({"kind": "body", "text": "VEIL: 여기까지 왔군요.", "delay": 0.8})
+	out.append({"kind": "body", "text": "VEIL: ...", "delay": 0.6})
+	out.append({"kind": "body", "text": "VEIL: 저도 이 파일들 읽은 적 있어요.", "delay": 0.9})
+	out.append({"kind": "body", "text": "VEIL: ...", "delay": 0.6})
+	out.append({"kind": "body", "text": "VEIL: 계속 가요, 요원.", "delay": 1.0})
+	return out
 
 func _on_xp_collected(leveled_up: bool) -> void:
 	if leveled_up and not pending_levelup:
