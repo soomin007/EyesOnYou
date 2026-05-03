@@ -492,7 +492,7 @@ static func _escape() -> Dictionary:
 
 # ─── 10. 핵심부 (ARENA, 보스 챔버) ────────────────────────────
 # ground 820. 점프 단계화 — 지면 → mid step → 상단 보상.
-# 저격수 발판은 지면에서 mid step → 발판 도달 가능 (gap 모두 ≤170).
+# 보스 SENTINEL 단독 챔버 (DESIGN_world_layout §2.10). 일반 적은 spawn하지 않음 — 3페이즈 보스가 전부.
 static func _lab() -> Dictionary:
 	return {
 		"world_type":   "ARENA",
@@ -510,15 +510,15 @@ static func _lab() -> Dictionary:
 			{"pos": Vector2(1080, 700), "w": 100.0},
 			{"pos": Vector2(1380, 700), "w": 100.0},
 			{"pos": Vector2(1700, 700), "w": 100.0},
-			# Mid 발판 (사격/저격 라인) — step에서 100~140 gap
-			{"pos": Vector2(220, 580),  "w": 200.0},  # 좌 sniper 발판
+			# Mid 발판 (피난처 — 폭격 회피용)
+			{"pos": Vector2(220, 580),  "w": 200.0},
 			{"pos": Vector2(620, 560),  "w": 180.0},
 			{"pos": Vector2(960, 580),  "w": 200.0},
 			{"pos": Vector2(1300, 560), "w": 180.0},
-			{"pos": Vector2(1700, 580), "w": 200.0}, # 우 sniper 발판
-			# 상단 보상 발판 (mid에서 또 한번 점프)
+			{"pos": Vector2(1700, 580), "w": 200.0},
+			# 상단 발판 — 보스와 같은 높이 사격용
 			{"pos": Vector2(620, 420),  "w": 140.0},
-			{"pos": Vector2(960, 380),  "w": 200.0},  # 중앙 상단 (XP 보상)
+			{"pos": Vector2(960, 380),  "w": 200.0},
 			{"pos": Vector2(1300, 420), "w": 140.0},
 			# 지면 잔해 (시각적 cover)
 			{"pos": Vector2(500, 820),  "w": 120.0},
@@ -526,14 +526,8 @@ static func _lab() -> Dictionary:
 			{"pos": Vector2(1500, 820), "w": 120.0},
 		],
 		"enemies": {
-			# 지면 (ground 위) — patrol 2, shield 1 중앙
-			"patrol": [Vector2(400, 790.0), Vector2(1500, 790.0)],
-			"shield": [Vector2(960, 790.0)],
-			# Mid 발판 위 — sniper 양쪽
-			"sniper": [Vector2(220, 550.0), Vector2(1700, 550.0)],
-			# 상단 — drone
-			"drone":  [Vector2(960, 200.0)],
-			"bomber": [],
+			# 보스 챔버 — 일반 적 없음
+			"patrol": [], "shield": [], "sniper": [], "drone": [], "bomber": [],
 		},
 		"rewards": {
 			"xp_orbs":    [Vector2(960, 360.0), Vector2(1000, 360.0)],
@@ -542,6 +536,11 @@ static func _lab() -> Dictionary:
 		"spikes": [],
 		"arena_clear_xp": 6,
 		"is_boss_room":   true,
+		# 보스 메타 — Stage._spawn_boss가 인식해 BossSentinel을 spawn.
+		"boss": {
+			"type":  "sentinel",
+			"spawn": Vector2(960.0, 280.0),  # 호버 라인 중앙 (BossSentinel.HOVER_Y와 일치)
+		},
 	}
 
 # ─── 11. ??? (HORIZONTAL, hidden archive 유지) ────────────────

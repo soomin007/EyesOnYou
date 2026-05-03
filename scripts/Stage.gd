@@ -1266,6 +1266,11 @@ func _hearts(hp: int, max_hp: int) -> String:
 	return s
 
 func _spawn_enemies() -> void:
+	# 보스 모드 (lab 등): boss 필드가 있으면 보스만 spawn (일반 적 + 웨이브 무시).
+	var boss_meta: Dictionary = _map_data.get("boss", {})
+	if not boss_meta.is_empty():
+		_spawn_boss(boss_meta)
+		return
 	# 웨이브 모드 (datacenter 등): waves 필드가 있으면 첫 웨이브만 즉시 spawn.
 	# 이후 웨이브는 _on_enemy_killed에서 트리거 조건 검사 후 spawn.
 	var waves: Array = _map_data.get("waves", [])
@@ -1405,6 +1410,135 @@ func _spawn_enemies_fallback() -> void:
 	for i in counts["patrol"]:
 		var x: float = lerp(400.0, STAGE_LENGTH - 300.0, float(i + 1) / float(counts["patrol"] + 1))
 		_spawn_enemy(0, Vector2(x, GROUND_Y - 30.0))
+
+# ─── 보스 SENTINEL spawn + UI + 페이즈/자폭 hook ───
+# DESIGN_world_layout §2.10. lab 챔버에서 단독 등장.
+
+var boss: Node = null
+var boss_hp_bar_layer: CanvasLayer = null
+var boss_hp_bar_fill: ColorRect = null
+var boss_hp_label: Label = null
+var boss_self_destruct_layer: CanvasLayer = null
+var boss_self_destruct_label: Label = null
+var boss_self_destruct_timer_t: float = 0.0
+var boss_clear_dialogue_played: bool = false
+
+func _spawn_boss(boss_meta: Dictionary) -> void:
+	var btype: String = str(boss_meta.get("type", "sentinel"))
+	if btype != "sentinel":
+		return
+	var spawn_pos: Vector2 = boss_meta.get("spawn", Vector2(960.0, 280.0))
+	boss = BossSentinel.new()
+	boss.global_position = spawn_pos
+	add_child(boss)
+	# 시그널 연결 — 같은 killed 시그널을 ARENA enemy_clear가 인식하도록.
+	boss.killed.connect(_on_boss_killed)
+	boss.phase_changed.connect(_on_boss_phase_changed)
+	boss.self_destruct_started.connect(_on_boss_self_destruct_started)
+	boss.self_destruct_disarmed.connect(_on_boss_self_destruct_disarmed)
+	_build_boss_hp_bar()
+
+func _build_boss_hp_bar() -> void:
+	# 화면 상단 중앙 — 보스 HP 게이지. 12칸 단위로 표시.
+	boss_hp_bar_layer = CanvasLayer.new()
+	boss_hp_bar_layer.layer = 21
+	add_child(boss_hp_bar_layer)
+	var holder := Control.new()
+	holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	boss_hp_bar_layer.add_child(holder)
+	boss_hp_label = Label.new()
+	boss_hp_label.text = "SENTINEL"
+	boss_hp_label.add_theme_font_size_override("font_size", 14)
+	boss_hp_label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.55))
+	boss_hp_label.position = Vector2(560.0, 60.0)
+	boss_hp_label.size = Vector2(160.0, 20.0)
+	boss_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	holder.add_child(boss_hp_label)
+	var bg := ColorRect.new()
+	bg.color = Color(0.08, 0.06, 0.08, 0.85)
+	bg.position = Vector2(440.0, 84.0)
+	bg.size = Vector2(400.0, 8.0)
+	holder.add_child(bg)
+	boss_hp_bar_fill = ColorRect.new()
+	boss_hp_bar_fill.color = Color(0.95, 0.30, 0.30)
+	boss_hp_bar_fill.position = Vector2(440.0, 84.0)
+	boss_hp_bar_fill.size = Vector2(400.0, 8.0)
+	holder.add_child(boss_hp_bar_fill)
+
+func _refresh_boss_hp_bar() -> void:
+	if boss == null or not is_instance_valid(boss):
+		return
+	if boss_hp_bar_fill == null:
+		return
+	var ratio: float = clamp(float(boss.get("hp")) / float(BossSentinel.HP_MAX), 0.0, 1.0)
+	boss_hp_bar_fill.size.x = 400.0 * ratio
+	# 페이즈에 따라 색 변화
+	var ph: int = int(boss.get("phase"))
+	match ph:
+		1: boss_hp_bar_fill.color = Color(0.95, 0.30, 0.30)
+		2: boss_hp_bar_fill.color = Color(0.95, 0.55, 0.20)
+		3: boss_hp_bar_fill.color = Color(1.0, 0.18, 0.18)
+
+func _on_boss_phase_changed(new_phase: int) -> void:
+	# HP 8 도달: 잠깐 정지 + 붉은 플래시 (BossSentinel가 phase_freeze 처리)
+	# HP 4 도달: 화면 흔들림 + VEIL 대사
+	_screen_flash(Color(1.0, 0.20, 0.22, 0.55), 0.06, 0.45)
+	if new_phase == 3:
+		_camera_shake(10.0, 0.4)
+		_show_veil_subtitle("자폭하려고 해요. 빠르게 처치해요, 요원.", 3.0)
+
+func _on_boss_self_destruct_started() -> void:
+	# 화면 전체 경고 — 큰 카운트다운 라벨
+	boss_self_destruct_timer_t = 0.0
+	boss_self_destruct_layer = CanvasLayer.new()
+	boss_self_destruct_layer.layer = 24
+	add_child(boss_self_destruct_layer)
+	# 붉은 비네트
+	var rect := ColorRect.new()
+	rect.color = Color(0.95, 0.20, 0.20, 0.18)
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_self_destruct_layer.add_child(rect)
+	# 펄스 — 위험 신호
+	var tw := rect.create_tween()
+	tw.set_loops()
+	tw.tween_property(rect, "color:a", 0.32, 0.4)
+	tw.tween_property(rect, "color:a", 0.10, 0.4)
+	# 카운트다운 라벨
+	boss_self_destruct_label = Label.new()
+	boss_self_destruct_label.text = "SENTINEL OVERLOAD — 5.0"
+	boss_self_destruct_label.add_theme_font_size_override("font_size", 28)
+	boss_self_destruct_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.30))
+	boss_self_destruct_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	boss_self_destruct_label.add_theme_constant_override("outline_size", 5)
+	boss_self_destruct_label.position = Vector2(140.0, 240.0)
+	boss_self_destruct_label.size = Vector2(1000.0, 50.0)
+	boss_self_destruct_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_self_destruct_layer.add_child(boss_self_destruct_label)
+
+func _on_boss_self_destruct_disarmed() -> void:
+	if boss_self_destruct_layer != null and is_instance_valid(boss_self_destruct_layer):
+		boss_self_destruct_layer.queue_free()
+		boss_self_destruct_layer = null
+
+func _on_boss_killed(at_position: Vector2) -> void:
+	# Boss는 ARENA enemy_clear에 자연스럽게 잡히도록 wave_idx=-1로 처리하되,
+	# 추가로 VEIL 보스 처치 대사 시퀀스를 깔아준다.
+	_on_enemy_killed(at_position, -1)
+	if boss_clear_dialogue_played:
+		return
+	boss_clear_dialogue_played = true
+	# 보스 HP 바 페이드아웃
+	if boss_hp_bar_layer != null and is_instance_valid(boss_hp_bar_layer):
+		var holder := boss_hp_bar_layer.get_child(0) as Control
+		if holder != null:
+			var tw := holder.create_tween()
+			tw.tween_property(holder, "modulate:a", 0.0, 0.6)
+			tw.tween_callback(boss_hp_bar_layer.queue_free)
+	# DESIGN §2.10 보스 처치 대사
+	_show_veil_subtitle("처리됐어요, 요원.", 2.0)
+	_show_veil_subtitle("이게 마지막 관문이었어요.", 1.0)
+	_show_veil_subtitle("서버실이 바로 앞이에요.", 2.0)
 
 func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var e := CharacterBody2D.new()
@@ -1675,6 +1809,18 @@ func _camera_shake(magnitude: float, duration: float) -> void:
 func _process(delta: float) -> void:
 	_refresh_hud()
 	_tick_arcturus(delta)
+	_tick_boss(delta)
+
+func _tick_boss(delta: float) -> void:
+	if boss == null or not is_instance_valid(boss):
+		return
+	_refresh_boss_hp_bar()
+	# 자폭 카운트다운 라벨 갱신
+	if boss_self_destruct_label != null and is_instance_valid(boss_self_destruct_label):
+		if bool(boss.get("self_destruct_active")):
+			boss_self_destruct_timer_t = float(boss.get("self_destruct_t"))
+			var remaining: float = max(0.0, BossSentinel.SELF_DESTRUCT_TIME - boss_self_destruct_timer_t)
+			boss_self_destruct_label.text = "SENTINEL OVERLOAD — %.1f" % remaining
 
 # ─── ARCTURUS 아카이브 5초 hold 로직 ───
 func _tick_arcturus(delta: float) -> void:
