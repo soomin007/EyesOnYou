@@ -104,51 +104,51 @@
 
 ```
 EoY/
-├── project.godot                Godot 4.6 프로젝트 설정 (AutoLoad: GameState)
-├── PRD.md                       제품 요구사항 (의사결정·우선순위·성공 기준)
-├── EYES_ON_YOU_v2_spec.md       구현 사양 (씬 구조·대사 풀·결말 연출)
-├── STORY.md                    스토리 캐논 + 게임 텍스트 인벤토리 (단일 진실)
-├── DESIGN_growth_system.md     성장 시스템 확정 설계 + 구현 계획 (Phase B/C 완료)
-├── BRIEF_map_redesign.md       맵 재설계 1차 의뢰 (platform 좌표 단계 — 완료)
-├── DESIGN_map_layout.md        맵 재설계 1차 답변 (platform 좌표 명세, 일부 폐기 예정)
-├── BRIEF_room_variety.md       맵 구조 v2 + 특수 방 의뢰 (P2-ε-2 P0 완료)
-├── DESIGN_world_layout.md      맵 구조 v2 외부 답변 (4 템플릿 + 11맵 + 보스/이스터에그 명세)
-├── DEPLOY.md                   GitHub Pages 자동 배포 셋업 가이드
+├── README.md                   이 문서 (게임 소개·진행 상태·구조 요약)
+├── CLAUDE.md                   에이전트(Claude Code) 작업 규칙
+├── DEPLOY.md                   GitHub Pages 자동 배포 가이드
+├── PRD.md                      제품 요구사항 (제품 결정·우선순위·성공 기준)
+├── project.godot               Godot 4.6 프로젝트 설정 (AutoLoad: GameState)
 ├── icon.svg
-├── assets/                      (배경 이미지·폰트 — P2)
-├── scenes/
-│   ├── main.tscn                부트 — Settings 로드 후 Title 전환
-│   ├── title.tscn
-│   ├── tutorial.tscn            5단계 튜토리얼 (이동→점프→사격→레벨업→대시)
-│   ├── briefing.tscn            VEIL 첫 교신
-│   ├── route_map.tscn           루트 선택 (Slay the Spire 스타일)
-│   ├── stage.tscn               횡스크롤 스테이지 (절차적 빌드)
-│   ├── death.tscn               VEIL 데스 브리핑
-│   ├── ending.tscn              4종 결말 분기
-│   └── settings.tscn            키바인드 / 사운드 / 디버그(연습장)
+├── docs/
+│   ├── SPEC.md                 구현 사양 (씬 구조·시스템 도식·인게임 텍스트 인벤토리)
+│   ├── STORY.md                스토리 캐논 + 게임 텍스트 (단일 진실)
+│   └── design/
+│       ├── growth_system.md    스킬 트리 3계열×3티어 + 7스테이지 확장 설계
+│       ├── world_layout.md     맵 4 템플릿 + 11맵 좌표 + 보스/이스터에그 명세
+│       └── show_dont_tell.md   "글로 명시 < 체험으로 체득" 톤 원칙 + 적용 후보
+├── assets/
+│   └── fonts/Pretendard-Regular.otf   (한글 default font, OFL)
+├── scenes/                     절차적 빌드 — .tscn은 최소 트리만, Stage.gd 등이 코드로 채움
+│   ├── main / title / tutorial / briefing / route_map
+│   ├── stage / death / ending
+│   └── settings                키바인드 + 디버그(연습장) 탭
 ├── scripts/
-│   ├── GameState.gd             AutoLoad — 진행도/점수/스킬/루트/도감 영속
-│   ├── SceneRouter.gd           씬 전환 헬퍼
-│   ├── RouteData.gd             루트 풀 (id/risk/reward/tags/available_stages)
-│   ├── VeilDialogue.gd          4상황별 대사 풀
-│   ├── SkillSystem.gd           8종 스킬 풀 + 레벨업 3중 1 (베이스라인 dash/double_jump)
-│   ├── EndingResolver.gd        두 축 점수 → 결말 결정
-│   ├── Player.gd                이동/점프/대시/사격/플랫폼 드롭/액티브 스킬
-│   ├── Enemy.gd                 5종 — 정찰병/저격수/드론/자폭병/방패병
-│   ├── Bullet.gd                플레이어 사격
-│   ├── Bomb.gd                  드론 투하 폭탄 (광역)
-│   ├── ExpOrb.gd                경험치 오브
-│   ├── CharacterArt.gd          벡터 캐릭터 빌더 (코드 생성)
-│   ├── BestiaryData.gd          적 도감 텍스트 데이터
-│   ├── BestiaryOverlay.gd       첫 조우 시 도감 카드
-│   ├── ArchiveOverlay.gd        ??? 맵 단말기 자막 시퀀스 (타자기 + 발화자 색)
-│   ├── LevelUpOverlay.gd        스킬 3중 1 카드
-│   ├── PlaygroundOverlay.gd     디버그 연습장 패널 (HUD에 토글)
-│   ├── PauseHelper.gd           ESC 일시정지 메뉴
+│   ├── GameState.gd            AutoLoad — 진행도/점수/스킬/루트/도감 영속
+│   ├── SceneRouter.gd
+│   ├── RouteData.gd            루트 풀 (id/risk/reward/tags/available_stages)
+│   ├── MapData.gd              11맵 + 도전방 좌표 + 보스/웨이브/이스터에그 메타
+│   ├── SkillTreeData.gd        스킬 트리 3계열×다라인×3티어 정의
+│   ├── SkillSystem.gd          레벨업 3중 1 카드 풀 빌더
+│   ├── VeilDialogue.gd         ACT별 브리핑/사망/레벨업 대사 풀
+│   ├── EndingResolver.gd       trust/aggression → 결말 결정
+│   ├── Player.gd               이동/점프/대시/사격/barrier 등
+│   ├── Enemy.gd                5종 + 가장자리 raycast + spawn snap
+│   ├── BossSentinel.gd         핵심부 보스 (3페이즈 + 자폭)
+│   ├── BossMissile.gd          보스 측면 미사일 (약한 유도)
+│   ├── Bullet.gd / Bomb.gd / ExpOrb.gd / HpOrb.gd
+│   ├── CharacterArt.gd         벡터 캐릭터 빌더 (코드 생성)
+│   ├── BestiaryData.gd         적 관찰 메모 (행동 키워드만)
+│   ├── BestiaryOverlay.gd      첫 조우 카드 (RichText + 키워드 강조)
+│   ├── ArchiveOverlay.gd       ??? 맵 단말기 자막 (타자기 패널)
+│   ├── ArcturusDocumentOverlay.gd   이스터에그 풀스크린 문서 + 자동 스크롤
+│   ├── LevelUpOverlay.gd       스킬 3중 1 카드
+│   ├── PlaygroundOverlay.gd    디버그 연습장 패널
+│   ├── PauseHelper.gd
 │   ├── Tutorial.gd / TutorialDummy.gd
-│   ├── Settings.gd              키바인드 + 디버그 탭 (연습장 진입)
+│   ├── Settings.gd
 │   └── Main.gd / Title.gd / Briefing.gd / RouteMap.gd / Stage.gd / Death.gd / Ending.gd
-└── session_logs/                일자별 작업 로그
+└── session_logs/               일자별 작업 로그
 ```
 
 ### 주요 설계 결정
@@ -170,7 +170,7 @@ EoY/
 
 ### Web Export
 
-`Project → Export → Add → Web` 프리셋으로 빌드. 한글 폰트는 추후 `assets/fonts/`에 NotoSansKR / Pretendard를 번들 예정.
+`Project → Export → Add → Web` 프리셋(이름 "Web")으로 빌드, Threads Support 끄기. 자세한 절차는 [`DEPLOY.md`](DEPLOY.md). 한글 폰트는 `assets/fonts/Pretendard-Regular.otf`로 번들 — `gui/theme/custom_font` 등록.
 
 ---
 
@@ -189,14 +189,15 @@ EoY/
 - ✅ **튜토리얼** — 5단계 점진 학습
 - ✅ **P2-β (스토리/콘텐츠)** — SILO-7 컨텍스트 6개 맵, ACT별 VEIL 대사 풀, ??? 단말기 시퀀스, 결말 4종 갱신
 - ✅ **P2-γ (적 확장)** — 자폭병/방패병 추가 (총 5종), 기본 HP 3 정책, 적 수 미세 상향
-- ✅ **P2-δ (성장 시스템 + 7스테이지 확장)** — 3계열×3티어 스킬 트리, 11개 맵, TOTAL_STAGES=7. [`DESIGN_growth_system.md`](DESIGN_growth_system.md) 참조
-- ✅ **P2-ε-1 (맵 platform 재설계 1차)** — 11맵 platform/적/보상 좌표 명시화 (`MapData.gd`). 그러나 모든 맵이 동일 4400×720 박스 안 — 단조로움 미해결.
-- ✅ **P2-ε-2 P0 (맵 세계 구조 v2)** — 4 템플릿(HORIZONTAL/VERTICAL_UP/VERTICAL_DOWN/ARENA), 11맵 새 좌표, 카메라/골/월드 차원 동적. [`DESIGN_world_layout.md`](DESIGN_world_layout.md) 참조
-- 📋 **P2-ε-2 P1 (특수 방 메커닉)** — 보스 SENTINEL, 웨이브 시스템, 이스터에그 5초 트리거, 도전 방, ??? 단말기 다회차
-- ✅ **P3 배포 자동화** — GitHub Pages Actions 워크플로. main 푸시 → 자동 빌드 → 배포. [`DEPLOY.md`](DEPLOY.md) 참조
-- 🚧 **P3 잔여** — 한글 폰트 번들, 배경 이미지, SFX, itch.io 별도 배포
+- ✅ **P2-δ (성장 시스템 + 7스테이지 확장)** — 3계열×3티어 스킬 트리, 11개 맵, TOTAL_STAGES=7. [`docs/design/growth_system.md`](docs/design/growth_system.md) 참조
+- ✅ **P2-ε (맵 세계 구조 v2)** — 4 템플릿(HORIZONTAL/VERTICAL_UP/VERTICAL_DOWN/ARENA), 11맵 좌표, 카메라/골/월드 차원 동적. [`docs/design/world_layout.md`](docs/design/world_layout.md) 참조
+- ✅ **P2-ε P1 (특수 방 메커닉)** — 보스 SENTINEL 3페이즈+자폭, datacenter 웨이브, 이스터에그 ARCTURUS 문서, 도전 방 "블랙아웃 런", ??? 단말기 다회차 풀
+- ✅ **P3 배포 자동화** — GitHub Pages Actions 워크플로. main 푸시 → 자동 빌드 → 배포. [`DEPLOY.md`](DEPLOY.md)
+- ✅ **한글 폰트 번들** — Pretendard Regular OTF (1.5MB, OFL)
+- ✅ **show-don't-tell 톤 적용** — 도감/오프닝/보스 알림 단순화. [`docs/design/show_dont_tell.md`](docs/design/show_dont_tell.md)
+- 🚧 **잔여** — 배경 이미지, SFX, itch.io 별도 배포, 튜토리얼·결말 톤 추가 적용
 
-상세 우선순위는 [`PRD.md`](PRD.md) §6, 구현 디테일은 [`EYES_ON_YOU_v2_spec.md`](EYES_ON_YOU_v2_spec.md), 스토리 캐논과 인게임 텍스트는 [`STORY.md`](STORY.md) 참조.
+상세 우선순위는 [`PRD.md`](PRD.md) §6, 구현 디테일은 [`docs/SPEC.md`](docs/SPEC.md), 스토리 캐논은 [`docs/STORY.md`](docs/STORY.md) 참조.
 
 ---
 

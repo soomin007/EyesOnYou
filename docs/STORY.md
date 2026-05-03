@@ -298,7 +298,7 @@ VEIL: 외곽부터 시작해요.
 | route_lab | 핵심부 | 서버실이 있는 시설 중심부. 드론이 상시 순찰한다. | 드론이 위에서 와요. 보상은 그만큼 커요. |
 | route_hidden | ??? | 도면에 없는 구역. 정보 없음. | 저도 모르겠어요. 미안해요. |
 
-> 7스테이지 확장 시 5개 신규 맵(냉각 시설/감시탑/격리 병동/데이터 센터/비상 탈출로) 추가 예정 — `DESIGN_growth_system.md` 참조.
+> 7스테이지 확장 시 5개 신규 맵(냉각 시설/감시탑/격리 병동/데이터 센터/비상 탈출로) 추가 — [`design/growth_system.md`](design/growth_system.md) 참조.
 
 ## 3. Stage 브리핑 풀 (VeilDialogue.gd)
 

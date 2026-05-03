@@ -2,7 +2,7 @@ class_name MapData
 extends RefCounted
 
 # 11개 맵의 세계 형태 + platform/적 spawn/보상/함정 통합 명세.
-# DESIGN_world_layout.md (외부 클로드 v2 답변) 기반.
+# 명세: docs/design/world_layout.md
 #
 # 각 layout 반환 구조:
 #   "world_type":   String  ("HORIZONTAL" / "VERTICAL_UP" / "VERTICAL_DOWN" / "ARENA")
@@ -500,7 +500,7 @@ static func _escape() -> Dictionary:
 
 # ─── 10. 핵심부 (ARENA, 보스 챔버) ────────────────────────────
 # ground 820. 점프 단계화 — 지면 → mid step → 상단 보상.
-# 보스 SENTINEL 단독 챔버 (DESIGN_world_layout §2.10). 일반 적은 spawn하지 않음 — 3페이즈 보스가 전부.
+# 보스 SENTINEL 단독 챔버 (world_layout §2.10). 일반 적은 spawn하지 않음 — 3페이즈 보스가 전부.
 static func _lab() -> Dictionary:
 	return {
 		"world_type":   "ARENA",
@@ -552,7 +552,7 @@ static func _lab() -> Dictionary:
 	}
 
 # ─── 12. 도전 방 — 블랙아웃 런 (HORIZONTAL, 짧음, 노 데미지 30s) ──
-# DESIGN_world_layout §3.2. Stage 4 분기 의도적 선택지.
+# world_layout §3.2. Stage 4 분기 의도적 선택지.
 # 강화: 좁은 발판(60~120px) + 가시 함정 + drone/bomber 압박 + 직선상 patrol 5.
 # 1 hit fail이라 어떤 데미지도 즉시 실패 — "긴장감"은 정밀 이동 + 시야 제한에서 나옴.
 static func _blackout() -> Dictionary:

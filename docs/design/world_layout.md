@@ -1,8 +1,7 @@
-# 맵 세계 구조 v2 + 특수 방 — DESIGN_world_layout.md
+# 맵 세계 구조 + 특수 방 명세
 
-> BRIEF_room_variety.md §3 결정사항 답변.
-> 이 문서가 확정되면 Claude Code가 Stage.gd + MapData.gd 재구현.
-> DESIGN_map_layout.md의 platform 좌표는 새 좌표계로 재배치됨 (구 좌표 폐기).
+> 11맵의 세계 형태(4 템플릿) + 보스/이스터에그/도전 방/웨이브 메커닉 정의.
+> Stage.gd + MapData.gd가 이 문서를 따라 동작한다.
 
 ---
 

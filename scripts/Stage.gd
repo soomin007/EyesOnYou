@@ -5,7 +5,7 @@ var STAGE_LENGTH: float = 4400.0
 var GROUND_Y: float = 600.0
 var PLAYER_START: Vector2 = Vector2(140.0, 540.0)
 
-# DESIGN_world_layout 템플릿 시스템 — _ready에서 MapData에서 읽음
+# world_layout 템플릿 시스템 — _ready에서 MapData에서 읽음
 var _world_type: String = "HORIZONTAL"
 var _world_size: Vector2 = Vector2(4400.0, 720.0)
 var _camera_mode: String = "HORIZONTAL"
@@ -407,7 +407,7 @@ func _veil2_lines() -> Array:
 		{"speaker": "VEIL-2", "text": "지금 VEIL은 괜찮아요?", "delay": 2.5},
 	]
 
-# ─── ??? 다회차 보강 — 추가 단말기 3종 (DESIGN_world_layout §3.3) ───
+# ─── ??? 다회차 보강 — 추가 단말기 3종 (world_layout §3.3) ───
 # 다회차에 첫 단말기(VEIL-1 자리)에서 무작위 1개로 교체된다.
 # 발화자 색은 ArchiveOverlay가 speaker 문자열로 분기 — VEIL-1=빨강, VEIL-2=노랑, VEIL=시안, 기타=회색.
 
@@ -468,7 +468,7 @@ func _build_world() -> void:
 var locked_door_triggered: bool = false
 
 # ─── 이스터에그(ARCTURUS 아카이브) 5초 hold 트리거 상태 ───
-# DESIGN_world_layout §3.1. 격리 병동에서만 등장.
+# world_layout §3.1. 격리 병동에서만 등장.
 # idle: 대기 / holding: 영역에 머무는 중 / sequencing: 시퀀스 재생 중 / done: 완료(재트리거 안 됨)
 var arcturus_state: String = "idle"
 var arcturus_hold_t: float = 0.0
@@ -687,7 +687,7 @@ func _build_ground() -> void:
 var _map_data: Dictionary = {}
 
 func _build_platforms() -> void:
-	# DESIGN_map_layout.md 기반 — MapData에서 platform/적/보상/함정 통합 명세를 가져온다.
+	# MapData에서 platform/적/보상/함정 통합 명세를 가져온다 (docs/design/world_layout.md).
 	_map_data = MapData.get_layout(GameState.current_route_id)
 	if _map_data.is_empty():
 		# 폴백 — 디버그/플레이그라운드 환경에서 route_id가 없을 때.
@@ -1310,7 +1310,7 @@ func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
 				_spawn_enemy(kind_int, positions[i], wave_idx)
 
 # ─── ARENA 웨이브 시스템 ───
-# datacenter (DESIGN_world_layout §2.8) 처럼 단계 spawn이 필요한 ARENA 전용.
+# datacenter (world_layout §2.8) 처럼 단계 spawn이 필요한 ARENA 전용.
 # trigger:
 #   "immediate"  — 즉시
 #   "prev_half"  — 직전 웨이브 절반(올림) 처치 시
@@ -1413,7 +1413,7 @@ func _spawn_enemies_fallback() -> void:
 		_spawn_enemy(0, Vector2(x, GROUND_Y - 30.0))
 
 # ─── 보스 SENTINEL spawn + UI + 페이즈/자폭 hook ───
-# DESIGN_world_layout §2.10. lab 챔버에서 단독 등장.
+# world_layout §2.10. lab 챔버에서 단독 등장.
 
 var boss: Node = null
 var boss_hp_bar_layer: CanvasLayer = null
@@ -1843,7 +1843,7 @@ func _process(delta: float) -> void:
 	_tick_boss(delta)
 	_tick_challenge(delta)
 
-# ─── 도전 방(블랙아웃 런) — DESIGN_world_layout §3.2 ───
+# ─── 도전 방(블랙아웃 런) — world_layout §3.2 ───
 # 30s 타이머 + 1 hit 실패 + 좁은 시야. 실패해도 stage는 그냥 스킵 (페널티 없음).
 var challenge_active: bool = false
 var challenge_time_remaining: float = 30.0

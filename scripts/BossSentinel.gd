@@ -1,7 +1,7 @@
 class_name BossSentinel
 extends CharacterBody2D
 
-# 핵심부(lab) ARENA 보스. DESIGN_world_layout §2.10.
+# 핵심부(lab) ARENA 보스. 명세: docs/design/world_layout.md §2.10
 # 3페이즈 구조 — HP 12 → 8(P2 전환) → 4(P3 전환) → 0(자폭 카운트다운).
 # 적 그룹("enemy")에 추가돼서 ARENA enemy_clear 카운트에 자연스럽게 포함된다.
 # Stage가 killed 시그널을 받아 클리어 처리.

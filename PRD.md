@@ -1,6 +1,6 @@
 # Eyes on You — PRD (Product Requirements Document)
 
-> 본 문서는 `EYES_ON_YOU_v2_spec.md`(구현 계획서)를 제품 관점에서 재정리한 PRD다.
+> 본 문서는 `docs/SPEC.md`(구현 계획서)를 제품 관점에서 재정리한 PRD다.
 > 구현 세부 사양은 spec 문서를, 제품 결정/우선순위/성공 기준은 본 문서를 참조한다.
 
 ---
@@ -112,7 +112,7 @@
 - 5스테이지 → 7스테이지, 6맵 → 11맵 (cooling/watchtower/ward/datacenter/escape 신규)
 - 격리 병동(ward)은 Stage 3~4 후보 풀에 보장 (??? 맵 복선 트리거)
 - 임계값 3 → 4 비례 상향, XP_PER_LEVEL 5 → 8, high-risk 적 처치 XP +50%
-- 자세한 내용: `DESIGN_growth_system.md`
+- 자세한 내용: `docs/design/growth_system.md`
 
 ### P2-ε-1 — 맵 platform 재설계 1차 (✅ 완료)
 - 11맵 platform/적/보상/함정 좌표를 `MapData.gd`로 명시화
@@ -122,14 +122,14 @@
 
 ### P2-ε-2 P0 — 맵 세계 구조 v2 (✅ 완료)
 P2-ε-1로 platform 단계의 차별화는 됐지만 세계 자체가 모두 같아 단조로움 미해결인 점을
-4가지 템플릿 시스템으로 풂. 자세한 내용: `DESIGN_world_layout.md`
+4가지 템플릿 시스템으로 풂. 자세한 내용: `docs/design/world_layout.md`
 - 템플릿 4종: HORIZONTAL / VERTICAL_UP / VERTICAL_DOWN / ARENA
 - 11맵 새 좌표 — 옥상=수직 1280×3200 climb, 사거=수직 하강, 핵심부=고정 아레나 1920×900 등
 - Stage.gd 템플릿 분기: world_size / camera_mode / goal_type 동적
 - ARENA용 enemy_clear 카운트 시스템 + 보너스 XP
 
 ### P2-ε-2 P1 — 특수 방 메커닉 (📋 다음 단계)
-세계 구조 위에 얹는 콘텐츠 메커닉. `DESIGN_world_layout.md` §3 참조
+세계 구조 위에 얹는 콘텐츠 메커닉. `docs/design/world_layout.md` §3 참조
 - 보스 SENTINEL (핵심부) — 3페이즈, 폭격/측면 미사일/자폭 카운트다운
 - 웨이브 시스템 (데이터 센터) — 처치율 기반 다음 웨이브
 - 이스터에그 방 (격리 병동 잠긴 문 5초) — ARCTURUS 아카이브 단말기 3개
@@ -258,13 +258,11 @@ aggression_score # 전투 루트(우회 대신)를 선택할 때마다 +1
 
 ## 13. 참조 문서
 
-- `EYES_ON_YOU_v2_spec.md` — 구현 세부 사양 (씬 구조, 스크립트 시그니처, 대사 풀, 결말 연출 전문)
-- `STORY.md` — 스토리 캐논 + 게임 텍스트 인벤토리 (이전 FULL_STORY/GAME_TEXT/STORY_BRIEF 통합본)
-- `DESIGN_growth_system.md` — 성장 시스템 확정 설계 + 구현 계획 (Phase B/C 완료)
-- `BRIEF_map_redesign.md` — 맵 재설계 1차 의뢰 (platform 좌표 단계, 완료)
-- `DESIGN_map_layout.md` — 맵 재설계 1차 답변 (platform 명세, P2-ε-2에서 일부 폐기 예정)
-- `BRIEF_room_variety.md` — 맵 세계 구조 v2 + 특수 방 의뢰 (P0 완료, P1 보류)
-- `DESIGN_world_layout.md` — 맵 구조 v2 외부 답변 (4 템플릿 + 11맵 + 보스/이스터에그 명세)
+- `docs/SPEC.md` — 구현 세부 사양 (씬 구조, 스크립트 시그니처, 대사 풀, 결말 연출 전문)
+- `docs/STORY.md` — 스토리 캐논 + 게임 텍스트 인벤토리 (단일 진실)
+- `docs/design/growth_system.md` — 성장 시스템 (3계열 × 다라인 × 3티어 + 7스테이지 확장)
+- `docs/design/world_layout.md` — 맵 4 템플릿 + 11맵 좌표 + 보스/이스터에그 명세
+- `docs/design/show_dont_tell.md` — "글로 명시 < 체험으로 체득" 톤 원칙
 - `DEPLOY.md` — GitHub Pages Actions 자동 배포 셋업 가이드
 - `README.md` — 프로젝트 개요 + 조작 + 진행 상태
 - 본 문서(PRD.md) — 제품 의사결정 / 우선순위 / 성공 기준
