@@ -34,6 +34,7 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_escape":     return _escape()
 		"route_lab":        return _lab()
 		"route_hidden":     return _hidden()
+		"route_blackout":   return _blackout()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -541,6 +542,35 @@ static func _lab() -> Dictionary:
 			"type":  "sentinel",
 			"spawn": Vector2(960.0, 280.0),  # 호버 라인 중앙 (BossSentinel.HOVER_Y와 일치)
 		},
+	}
+
+# ─── 12. 도전 방 — 블랙아웃 런 (HORIZONTAL, 짧음, 노 데미지 30s) ──
+# DESIGN_world_layout §3.2. Stage 4 분기 의도적 선택지.
+static func _blackout() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2400.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2280.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(400, 520),  "w": 180.0},
+			{"pos": Vector2(800, 460),  "w": 180.0},
+			{"pos": Vector2(1200, 520), "w": 180.0},
+			{"pos": Vector2(1600, 460), "w": 180.0},
+			{"pos": Vector2(2000, 520), "w": 180.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(500, 600), Vector2(900, 600), Vector2(1400, 600), Vector2(1900, 600)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {"xp_orbs": [], "hp_pickups": []},
+		"spikes": [],
+		# Stage가 인식해 블랙아웃 + 30s 타이머 + 1 hit fail 적용.
+		"challenge":          true,
+		"challenge_time":     30.0,
+		"challenge_xp_clear": 5,
 	}
 
 # ─── 11. ??? (HORIZONTAL, hidden archive 유지) ────────────────

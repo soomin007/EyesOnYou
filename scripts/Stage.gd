@@ -50,6 +50,7 @@ func _ready() -> void:
 	_build_rewards()
 	_build_goal()
 	_setup_veil_mistakes()
+	_setup_challenge_mode()
 	if GameState.playground_active:
 		add_child(PlaygroundOverlay.new())
 
@@ -1696,6 +1697,10 @@ func _on_goal_reached(body: Node) -> void:
 		return
 	if not (body is CharacterBody2D and body == player):
 		return
+	# 도전 방: 실패 상태에선 골 도달해도 보너스 없음 (이미 fail 분기로 처리됨)
+	if challenge_active and not challenge_failed:
+		GameState.add_xp(challenge_xp_on_clear, false)
+		_show_veil_subtitle("혼자 해냈네요, 요원.", 2.5)
 	goal_reached = true
 	_trigger_stage_clear()
 
@@ -1765,9 +1770,32 @@ func _on_player_died() -> void:
 	get_tree().change_scene_to_file(SceneRouter.DEATH)
 
 func _on_player_damaged() -> void:
+	# 도전 방: 1 hit fail — 즉시 stage 스킵 처리.
+	if challenge_active and not challenge_failed and not goal_reached:
+		_challenge_fail("피격")
+		return
 	# 피격 — 화면 가장자리 짧은 붉은 플래시 + 가벼운 카메라 흔들림
 	_screen_flash(Color(1.0, 0.18, 0.22, 0.55), 0.06, 0.32)
 	_camera_shake(6.0, 0.18)
+
+func _challenge_fail(_reason: String) -> void:
+	if challenge_failed:
+		return
+	challenge_failed = true
+	# 잔여 데미지로 인한 사망 방지: HP 리필 + 긴 invuln (대기 중 죽으면 데스 씬으로 새버림).
+	GameState.player_hp = GameState.player_max_hp
+	if player != null and is_instance_valid(player):
+		player.set("invuln", 5.0)
+	# VEIL 실패 대사 + 조용히 다음 stage로 (보상 0, 페널티 없음).
+	_show_veil_subtitle("괜찮아요. 다음 구역으로 가요.", 2.5)
+	await get_tree().create_timer(2.8).timeout
+	if goal_reached:
+		return
+	goal_reached = true
+	# 보상/레벨업 없이 stage 카운트만 증가시킨 뒤 다음 씬으로.
+	GameState.current_stage += 1
+	GameState.player_hp = GameState.player_max_hp
+	_transition_after_clear()
 
 func _on_player_revived() -> void:
 	# 부활 — 강한 흰 플래시 (전체 화면이 잠깐 밝아짐)
@@ -1810,6 +1838,80 @@ func _process(delta: float) -> void:
 	_refresh_hud()
 	_tick_arcturus(delta)
 	_tick_boss(delta)
+	_tick_challenge(delta)
+
+# ─── 도전 방(블랙아웃 런) — DESIGN_world_layout §3.2 ───
+# 30s 타이머 + 1 hit 실패 + 좁은 시야. 실패해도 stage는 그냥 스킵 (페널티 없음).
+var challenge_active: bool = false
+var challenge_time_remaining: float = 30.0
+var challenge_failed: bool = false
+var challenge_xp_on_clear: int = 5
+var challenge_timer_label: Label = null
+var challenge_dark_layer: CanvasLayer = null
+
+func _setup_challenge_mode() -> void:
+	if not bool(_map_data.get("challenge", false)):
+		return
+	challenge_active = true
+	challenge_time_remaining = float(_map_data.get("challenge_time", 30.0))
+	challenge_xp_on_clear = int(_map_data.get("challenge_xp_clear", 5))
+	_build_challenge_blackout()
+	_build_challenge_timer_hud()
+
+func _build_challenge_blackout() -> void:
+	# 화면 강 dim — 짙은 검정 70%, 가장자리 더 진한 비네트.
+	# 정확한 원형 cutout보다 단순화: 강한 dim + 중앙 밝은 사각으로 시야 좁아진 느낌.
+	challenge_dark_layer = CanvasLayer.new()
+	challenge_dark_layer.layer = 17
+	add_child(challenge_dark_layer)
+	# 풀스크린 dim
+	var full_dim := ColorRect.new()
+	full_dim.color = Color(0, 0, 0, 0.55)
+	full_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	full_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	challenge_dark_layer.add_child(full_dim)
+	# 가장자리 비네트 (좌/우/상/하 각각 짙은 띠)
+	for side_data in [
+		{"pos": Vector2(0, 0), "size": Vector2(1280, 80)},                # 상
+		{"pos": Vector2(0, 640), "size": Vector2(1280, 80)},              # 하
+		{"pos": Vector2(0, 0), "size": Vector2(160, 720)},                # 좌
+		{"pos": Vector2(1120, 0), "size": Vector2(160, 720)},             # 우
+	]:
+		var d: Dictionary = side_data
+		var v := ColorRect.new()
+		v.color = Color(0, 0, 0, 0.55)
+		v.position = d["pos"]
+		v.size = d["size"]
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		challenge_dark_layer.add_child(v)
+
+func _build_challenge_timer_hud() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "ChallengeTimer"
+	layer.layer = 22
+	add_child(layer)
+	challenge_timer_label = Label.new()
+	challenge_timer_label.text = "TIME  30.0"
+	challenge_timer_label.add_theme_font_size_override("font_size", 22)
+	challenge_timer_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.30))
+	challenge_timer_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	challenge_timer_label.add_theme_constant_override("outline_size", 4)
+	challenge_timer_label.position = Vector2(540.0, 36.0)
+	challenge_timer_label.size = Vector2(200.0, 28.0)
+	challenge_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	layer.add_child(challenge_timer_label)
+
+func _tick_challenge(delta: float) -> void:
+	if not challenge_active or challenge_failed or goal_reached:
+		return
+	challenge_time_remaining = max(0.0, challenge_time_remaining - delta)
+	if challenge_timer_label != null and is_instance_valid(challenge_timer_label):
+		challenge_timer_label.text = "TIME  %.1f" % challenge_time_remaining
+		# 5초 이하면 빨강 점멸
+		if challenge_time_remaining <= 5.0:
+			challenge_timer_label.add_theme_color_override("font_color", Color(1.0, 0.30, 0.30))
+	if challenge_time_remaining <= 0.0:
+		_challenge_fail("타이머 초과")
 
 func _tick_boss(delta: float) -> void:
 	if boss == null or not is_instance_valid(boss):

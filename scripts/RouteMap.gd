@@ -43,10 +43,12 @@ func _build_node_buttons() -> void:
 func _format_button_text(route: Dictionary, recommended: bool) -> String:
 	var route_name: String = route.get("name", "?")
 	var hidden: bool = route.get("hidden", false)
+	var challenge: bool = route.get("challenge", false)
 	var risk_str: String = "?" if hidden else _dots(route.get("risk", 0))
 	var reward_str: String = "?" if hidden else _dots(route.get("reward", 0))
+	var prefix: String = "[도전]\n" if challenge else ""
 	var rec: String = "  ★" if recommended else ""
-	return "%s%s\n\n위험  %s\n보상  %s" % [route_name, rec, risk_str, reward_str]
+	return "%s%s%s\n\n위험  %s\n보상  %s" % [prefix, route_name, rec, risk_str, reward_str]
 
 func _dots(n: int) -> String:
 	var s: String = ""

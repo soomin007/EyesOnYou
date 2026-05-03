@@ -143,6 +143,21 @@ const ALL_ROUTES: Array = [
 		"stage_color": Color(0.22, 0.18, 0.18),
 	},
 	{
+		"id": "route_blackout",
+		"name": "블랙아웃 런",
+		"description": "교신이 차단된 짧은 구역. 어둡고, 한 대 맞으면 끝.",
+		"risk": 2,
+		"reward": 3,
+		"hidden": false,
+		"unique": true,
+		"challenge": true,
+		"available_stages": [4],
+		"guaranteed_in_stages": [4],
+		"tags": ["도전", "어두운_환경"],
+		"veil_comment": "[도전] 교신이 차단된 구역이에요. 혼자 가야 해요.",
+		"stage_color": Color(0.02, 0.02, 0.04),
+	},
+	{
 		"id": "route_hidden",
 		"name": "???",
 		"description": "도면에 없는 구역. 정보 없음.",
@@ -206,6 +221,9 @@ static func choose_veil_recommendation(pool: Array) -> String:
 	for r in pool:
 		var route: Dictionary = r
 		if route.get("hidden", false):
+			continue
+		# 도전 루트는 의도적 선택 — VEIL 추천에서 제외 (교신 차단 컨셉)
+		if route.get("challenge", false):
 			continue
 		var s: float = float(route.get("reward", 0)) - 0.4 * float(route.get("risk", 0))
 		if s > best_score:
