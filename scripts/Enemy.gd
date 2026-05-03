@@ -7,7 +7,9 @@ enum PatrolState { ROAMING, TELEGRAPH, CHARGING, RECOVERING }
 enum BomberState { ROAMING, STALKING, ARMING }
 
 @export var enemy_type: int = EnemyType.PATROL
-@export var patrol_range: float = 140.0
+# 좁은 발판에 spawn돼도 떨어지지 않도록 보수적으로 작게.
+# 발판 가장자리 감지 raycast가 우선 — patrol_range는 보조 한계만.
+@export var patrol_range: float = 90.0
 @export var hp: int = 2
 @export var harmless: bool = false
 
@@ -67,16 +69,18 @@ var dead: bool = false
 
 # 가장자리 감지 — 발 앞쪽에 ground/platform이 없으면 떨어지지 않게 dir 반전.
 # 수직 맵에서 적이 작은 발판에서 떨어져 바닥에 모이는 문제 방지.
-const EDGE_LOOKAHEAD_X: float = 24.0
+# 일반 ROAMING은 36px 앞을 보고, 빠른 상태(CHARGING/STALKING)는 더 멀리(80px) 봐야 안전.
+const EDGE_LOOKAHEAD_X: float = 36.0
+const EDGE_LOOKAHEAD_X_FAST: float = 80.0
 const EDGE_LOOKAHEAD_Y: float = 80.0
 const EDGE_FLIP_COOLDOWN: float = 0.15
 var edge_flip_cd: float = 0.0
 
-func _has_ground_ahead(check_dir: int) -> bool:
-	# 발 앞 EDGE_LOOKAHEAD_X 위치에서 아래 EDGE_LOOKAHEAD_Y 안에 ground/platform이 있는가.
+func _has_ground_ahead(check_dir: int, lookahead: float = EDGE_LOOKAHEAD_X) -> bool:
+	# 발 앞 lookahead 위치에서 아래 EDGE_LOOKAHEAD_Y 안에 ground/platform이 있는가.
 	# 발판 위에 있을 때만 의미 있음 — 공중에선 호출하지 말 것.
 	var space := get_world_2d().direct_space_state
-	var origin: Vector2 = global_position + Vector2(float(check_dir) * EDGE_LOOKAHEAD_X, -6.0)
+	var origin: Vector2 = global_position + Vector2(float(check_dir) * lookahead, -6.0)
 	var target: Vector2 = origin + Vector2(0.0, EDGE_LOOKAHEAD_Y)
 	var query := PhysicsRayQueryParameters2D.create(origin, target)
 	query.collision_mask = 1  # ground + platform 레이어
@@ -125,6 +129,26 @@ func _ready() -> void:
 			visual = CharacterArt.build_shield(self)
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
+	# 지면형 적은 spawn pos가 발판 살짝 위/아래여도 발판 top에 정확히 붙도록 snap.
+	# (drone은 공중 상시라 snap 안 함. 첫 frame 뒤로 미루기 위해 call_deferred)
+	if enemy_type != EnemyType.DRONE:
+		call_deferred("_snap_to_floor")
+
+func _snap_to_floor() -> void:
+	if not is_inside_tree():
+		return
+	var space := get_world_2d().direct_space_state
+	var origin: Vector2 = global_position + Vector2(0.0, -20.0)
+	var target: Vector2 = global_position + Vector2(0.0, 240.0)
+	var query := PhysicsRayQueryParameters2D.create(origin, target)
+	query.collision_mask = 1
+	query.exclude = [self]
+	var hit: Dictionary = space.intersect_ray(query)
+	if not hit.is_empty():
+		var ground_y: float = float(hit.position.y)
+		# 발 위치(global_position.y)가 ground top 바로 위 1px 안에 들어오게.
+		global_position.y = ground_y - 1.0
+		origin_x = global_position.x
 
 # Risk 3 루트에서는 적이 더 빨리 반응한다.
 # 수치는 보수적으로 잡았으니 플레이테스트 후 조정 필요 (상의 항목).
@@ -243,8 +267,8 @@ func _tick_patrol(delta: float) -> void:
 		PatrolState.CHARGING:
 			velocity.x = float(dir) * PATROL_CHARGE_SPEED
 			patrol_state_timer -= delta
-			# 가장자리 도달 시 즉시 RECOVERING — 발판에서 안 떨어지게
-			var charge_edge_fall: bool = is_on_floor() and not _has_ground_ahead(dir)
+			# 가장자리 도달 시 즉시 RECOVERING — 빠른 속도라 lookahead 80px
+			var charge_edge_fall: bool = is_on_floor() and not _has_ground_ahead(dir, EDGE_LOOKAHEAD_X_FAST)
 			if is_on_wall() or charge_edge_fall or patrol_state_timer <= 0.0:
 				patrol_state = PatrolState.RECOVERING
 				patrol_state_timer = PATROL_RECOVERY
@@ -401,8 +425,8 @@ func _tick_bomber(delta: float) -> void:
 				velocity.x = float(dir) * BOMBER_SPEED * 1.4
 				if is_on_wall():
 					velocity.x = 0.0
-				# 가장자리 — 떨어지지 않게 정지 (자폭병이라도 ARMING은 거리에 도달해야 시작)
-				if is_on_floor() and not _has_ground_ahead(dir):
+				# 가장자리 — STALKING 빠름 → fast lookahead
+				if is_on_floor() and not _has_ground_ahead(dir, EDGE_LOOKAHEAD_X_FAST):
 					velocity.x = 0.0
 				var d2: float = global_position.distance_to(p.global_position)
 				if d2 <= BOMBER_ARM_RANGE:
