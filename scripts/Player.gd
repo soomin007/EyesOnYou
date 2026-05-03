@@ -18,6 +18,12 @@ const INVULN_AFTER_HIT: float = 0.8
 const SKILL_COOLDOWN: float = 3.0  # explosive 재사용 대기
 const DROP_THROUGH_DURATION: float = 0.25  # 플랫폼 통과 예외 유지 시간
 
+# 충전형 방패(barrier) — SkillTreeData.barrier 라인.
+# T1: 10초 충전 후 1회 피격 무효 / T2: 6초 충전 / T3: 무효 직후 0.6s 무적.
+const BARRIER_CHARGE_T1: float = 10.0
+const BARRIER_CHARGE_T2: float = 6.0
+const BARRIER_INVULN_T3: float = 0.6
+
 const ATTACK_MUZZLE_X: float = 14.0
 const ATTACK_MUZZLE_Y: float = -38.0  # 총구 높이 (가슴)
 const EXPLOSION_RADIUS: float = 180.0
@@ -34,6 +40,11 @@ var invuln: float = 0.0
 var visual: Node2D
 var muzzle_flash: ColorRect
 
+# barrier 상태
+var barrier_ready: bool = false
+var barrier_charge_t: float = 0.0
+var barrier_indicator: ColorRect = null
+
 func _ready() -> void:
 	add_to_group("player")
 	z_index = 2
@@ -45,6 +56,14 @@ func _ready() -> void:
 	muzzle_flash.position = Vector2(ATTACK_MUZZLE_X, ATTACK_MUZZLE_Y - 4.0)
 	muzzle_flash.visible = false
 	add_child(muzzle_flash)
+	# barrier indicator — 머리 위 작은 점, 충전 완료 시 푸른빛.
+	barrier_indicator = ColorRect.new()
+	barrier_indicator.name = "BarrierIndicator"
+	barrier_indicator.color = Color(0.45, 0.75, 1.0, 0.0)
+	barrier_indicator.size = Vector2(6.0, 6.0)
+	barrier_indicator.position = Vector2(-3.0, -64.0)
+	barrier_indicator.pivot_offset = Vector2(3.0, 3.0)
+	add_child(barrier_indicator)
 
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
@@ -71,6 +90,34 @@ func _tick_timers(delta: float) -> void:
 		if muzzle_flash.modulate.a <= 0.05:
 			muzzle_flash.visible = false
 			muzzle_flash.modulate.a = 1.0
+	_tick_barrier(delta)
+
+func _tick_barrier(delta: float) -> void:
+	# barrier 라인 미보유 시 indicator 숨김.
+	if not GameState.has_skill("barrier"):
+		if barrier_indicator != null:
+			barrier_indicator.color.a = 0.0
+		return
+	if barrier_ready:
+		# 충전 완료 — 푸른빛 펄스
+		if barrier_indicator != null:
+			barrier_indicator.color.a = 0.85 + 0.15 * sin(Time.get_ticks_msec() * 0.005)
+		return
+	# 충전 진행
+	var charge_max: float = BARRIER_CHARGE_T2 if GameState.get_skill_tier("barrier") >= 2 else BARRIER_CHARGE_T1
+	barrier_charge_t += delta
+	# 충전 비율에 따라 indicator alpha 가늘게 (0.05 → 0.4)
+	if barrier_indicator != null:
+		var ratio: float = clamp(barrier_charge_t / charge_max, 0.0, 1.0)
+		barrier_indicator.color.a = lerp(0.05, 0.4, ratio)
+	if barrier_charge_t >= charge_max:
+		barrier_ready = true
+		barrier_charge_t = 0.0
+		# 충전 완료 시 짧은 펄스 + 작은 후광
+		if barrier_indicator != null:
+			var tw := barrier_indicator.create_tween()
+			barrier_indicator.scale = Vector2(2.6, 2.6)
+			tw.tween_property(barrier_indicator, "scale", Vector2(1.0, 1.0), 0.25)
 
 func _handle_input(_delta: float) -> void:
 	var dir: float = Input.get_axis("move_left", "move_right")
@@ -259,6 +306,17 @@ func _apply_gravity(delta: float) -> void:
 
 func take_hit(amount: int) -> void:
 	if invuln > 0.0:
+		return
+	# barrier 충전 완료 상태면 1회 무효화 + 충전 리셋. T3는 후속 무적.
+	if GameState.has_skill("barrier") and barrier_ready:
+		barrier_ready = false
+		barrier_charge_t = 0.0
+		if barrier_indicator != null:
+			barrier_indicator.color.a = 0.0
+		_show_shield_flash()
+		if GameState.get_skill_tier("barrier") >= 3:
+			invuln = max(invuln, BARRIER_INVULN_T3)
+		emit_signal("damaged")  # 화면 플래시·shake 트리거 (시각 피드백 유지)
 		return
 	GameState.damage_player(amount)
 	# hp T2 = 피격 후 1s 무적 (기본 0.8보다 길게)

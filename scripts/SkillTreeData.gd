@@ -73,6 +73,14 @@ const LINES: Array = [
 			{"name": "방어막 재충전", "desc": "30s 후 방어막 재무장",          "active": false},
 		],
 	},
+	{
+		"id": "barrier", "family": FAMILY_SURVIVAL,
+		"tiers": [
+			{"name": "에너지 방어막",  "desc": "10초 충전 후 1회 피격 무효",      "active": false},
+			{"name": "방어막 가속",   "desc": "충전 시간 6초로 단축",           "active": false},
+			{"name": "방어막 잔향",   "desc": "무효 직후 0.6초 무적",           "active": false},
+		],
+	},
 ]
 
 # 베이스라인 스킬 (트리 외, 시작 시 자동 보유).
