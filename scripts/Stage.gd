@@ -466,12 +466,24 @@ func _build_world() -> void:
 
 var locked_door_triggered: bool = false
 
+# ─── 이스터에그(ARCTURUS 아카이브) 5초 hold 트리거 상태 ───
+# DESIGN_world_layout §3.1. 격리 병동에서만 등장.
+# idle: 대기 / holding: 영역에 머무는 중 / sequencing: 시퀀스 재생 중 / done: 완료(재트리거 안 됨)
+var arcturus_state: String = "idle"
+var arcturus_hold_t: float = 0.0
+var arcturus_hold_target: float = 5.0
+var arcturus_player_inside: bool = false
+var arcturus_indicator: ColorRect = null  # 문 위 진행 게이지
+
 func _build_locked_door() -> void:
-	# 격리 병동에서만 등장 — ??? 맵(stage 5/6)에 대한 시각적 복선.
+	# 격리 병동에서만 등장 — ??? 맵(stage 5/6)에 대한 시각적 복선 + 이스터에그 트리거.
 	# 다른 stage 3~4 루트에서 잠긴 문이 떠 있으면 컨텍스트 없이 보여 혼란을 줘서 ward로 좁힘.
 	if GameState.current_route_id != "route_ward":
 		return
-	var x: float = STAGE_LENGTH * 0.55
+	# 이스터에그 좌표는 MapData에서 (없으면 폴백 STAGE_LENGTH*0.55)
+	var egg: Dictionary = _map_data.get("easter_egg", {})
+	var x: float = float(egg.get("trigger_x", STAGE_LENGTH * 0.55))
+	arcturus_hold_target = float(egg.get("hold_seconds", 5.0))
 	# 외곽 프레임 — 더 큼
 	var frame := ColorRect.new()
 	frame.color = Color(0.18, 0.18, 0.22)
@@ -527,15 +539,44 @@ func _build_locked_door() -> void:
 	col.shape = shape
 	area.add_child(col)
 	area.body_entered.connect(_on_locked_door_approached)
+	area.body_exited.connect(_on_locked_door_left)
+
+	# 5초 hold 진행도 게이지 — 문 위에 가는 가로 바. holding 상태에서만 가시화.
+	# 이미 방문한 적 있으면(visited_arcturus) 표시조차 하지 않음.
+	if not GameState.visited_arcturus:
+		arcturus_indicator = ColorRect.new()
+		arcturus_indicator.color = Color(0.95, 0.78, 0.45, 0.0)
+		arcturus_indicator.position = Vector2(x - 30.0, GROUND_Y - 168.0)
+		arcturus_indicator.size = Vector2(0.0, 3.0)
+		arcturus_indicator.z_index = 4
+		add_child(arcturus_indicator)
 
 func _on_locked_door_approached(body: Node) -> void:
-	if locked_door_triggered:
-		return
 	if not (body is CharacterBody2D and body == player):
 		return
-	locked_door_triggered = true
-	_show_veil_subtitle("그쪽은 임무 범위 밖이에요.", 3.0)
-	_show_veil_subtitle("그 문, 도면에는 없어요.", 3.0)
+	# 첫 진입 시 VEIL 발화 (1회만) — 이전 동작 유지.
+	if not locked_door_triggered:
+		locked_door_triggered = true
+		_show_veil_subtitle("그쪽은 임무 범위 밖이에요.", 3.0)
+		_show_veil_subtitle("그 문, 도면에는 없어요.", 3.0)
+	# 이미 시퀀스 한 번 트리거됐거나(arcturus_state != idle) 영구 방문 완료면 hold 안 됨.
+	if arcturus_state != "idle":
+		return
+	if GameState.visited_arcturus:
+		return
+	arcturus_state = "holding"
+	arcturus_hold_t = 0.0
+	arcturus_player_inside = true
+
+func _on_locked_door_left(body: Node) -> void:
+	if not (body is CharacterBody2D and body == player):
+		return
+	arcturus_player_inside = false
+	if arcturus_state == "holding":
+		# 영역 벗어나면 게이지 리셋 (5초를 한 번에 채워야 함).
+		arcturus_state = "idle"
+		arcturus_hold_t = 0.0
+		_update_arcturus_indicator()
 
 var _subtitle_queue: Array = []
 var _subtitle_active: bool = false
@@ -1509,8 +1550,128 @@ func _camera_shake(magnitude: float, duration: float) -> void:
 			return
 	camera.offset = origin
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_refresh_hud()
+	_tick_arcturus(delta)
+
+# ─── ARCTURUS 아카이브 5초 hold 로직 ───
+func _tick_arcturus(delta: float) -> void:
+	if arcturus_state != "holding":
+		return
+	if not arcturus_player_inside:
+		return
+	arcturus_hold_t += delta
+	_update_arcturus_indicator()
+	if arcturus_hold_t >= arcturus_hold_target:
+		arcturus_state = "sequencing"
+		_start_arcturus_sequence()
+
+func _update_arcturus_indicator() -> void:
+	if arcturus_indicator == null or not is_instance_valid(arcturus_indicator):
+		return
+	var ratio: float = clamp(arcturus_hold_t / arcturus_hold_target, 0.0, 1.0)
+	arcturus_indicator.size.x = 60.0 * ratio
+	arcturus_indicator.color.a = 0.85 if ratio > 0.0 else 0.0
+
+# 5초 hold 완료 — 페이드 오버레이 + ArchiveOverlay로 3 단말기 + VEIL outro 시퀀스 재생.
+# 시퀀스 동안 플레이어 입력 잠금. 끝나면 보너스 XP +3 + trust +1, ward 진행 계속.
+func _start_arcturus_sequence() -> void:
+	GameState.restrict_combat_input = true
+	# 잠금 LED → 따뜻한 색으로 전환 (문 열림 시그널)
+	var fade_layer := CanvasLayer.new()
+	fade_layer.name = "ArcturusFade"
+	fade_layer.layer = 18
+	add_child(fade_layer)
+	var dim := ColorRect.new()
+	dim.color = Color(0.02, 0.02, 0.04, 0.0)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade_layer.add_child(dim)
+	var fade_in := dim.create_tween()
+	fade_in.tween_property(dim, "color:a", 0.85, 0.8)
+	fade_in.tween_callback(_play_arcturus_lines)
+
+func _play_arcturus_lines() -> void:
+	# ArchiveOverlay가 ward에는 없음 — 여기서 lazy 생성.
+	var arch := get_node_or_null("ArchiveOverlay") as ArchiveOverlay
+	if arch == null:
+		arch = ArchiveOverlay.new()
+		arch.name = "ArchiveOverlay"
+		add_child(arch)
+	if not arch.finished.is_connected(_on_arcturus_lines_done):
+		arch.finished.connect(_on_arcturus_lines_done)
+	# 3 단말기 + VEIL outro 한 번에 (DESIGN §3.1 본문 그대로).
+	var lines: Array = []
+	lines.append_array(_arcturus_term_a())
+	lines.append_array(_arcturus_term_b())
+	lines.append_array(_arcturus_term_c())
+	lines.append_array(_arcturus_veil_outro())
+	arch.play(lines)
+
+func _on_arcturus_lines_done() -> void:
+	if arcturus_state == "done":
+		return
+	arcturus_state = "done"
+	# 보상 — XP +3 (1회), trust +1, 영구 visited 플래그.
+	GameState.add_xp(3, false)
+	GameState.trust_score += 1
+	GameState.visited_arcturus = true
+	GameState.save_settings()
+	# 페이드 아웃 → 입력 복구
+	var fade_layer := get_node_or_null("ArcturusFade") as CanvasLayer
+	if fade_layer != null:
+		var dim := fade_layer.get_child(0) as ColorRect
+		if dim != null:
+			var tw := dim.create_tween()
+			tw.tween_property(dim, "color:a", 0.0, 0.7)
+			tw.tween_callback(fade_layer.queue_free)
+	GameState.restrict_combat_input = false
+	# 게이지 사라짐
+	if arcturus_indicator != null and is_instance_valid(arcturus_indicator):
+		arcturus_indicator.queue_free()
+		arcturus_indicator = null
+
+# 단말기 A — 신입 직원 온보딩 문서
+func _arcturus_term_a() -> Array:
+	return [
+		{"speaker": "[A] 인사팀", "text": "ARCTURUS에 오신 것을 환영합니다.", "delay": 2.0},
+		{"speaker": "[A] 인사팀", "text": "본사는 공식적으로 존재하지 않습니다.", "delay": 2.5},
+		{"speaker": "[A] 인사팀", "text": "모든 임무는 기록되지 않습니다.", "delay": 2.5},
+		{"speaker": "[A] 인사팀", "text": "질문하지 마세요. 결과만 내세요.", "delay": 2.5},
+		{"speaker": "[A] 인사팀", "text": "— 인사팀 (인사팀도 공식적으로 존재하지 않습니다)", "delay": 2.0},
+	]
+
+# 단말기 B — VEIL 프로젝트 초기 회의록
+func _arcturus_term_b() -> Array:
+	return [
+		{"speaker": "[B] 회의록", "text": "참석자: [REDACTED], [REDACTED], [REDACTED]", "delay": 2.2},
+		{"speaker": "[B] 회의록", "text": "주제: VEIL 감정 모듈 탑재 여부", "delay": 2.5},
+		{"speaker": "[B] 회의록", "text": "결론: 탑재 보류. 불필요한 복잡성.", "delay": 2.5},
+		{"speaker": "[B] 회의록", "text": "비고: VEIL-2가 감정 모듈 없이도 이상 반응을 보인 것에 대해", "delay": 2.5},
+		{"speaker": "[B] 회의록", "text": "        추가 조사 예정.", "delay": 2.0},
+		{"speaker": "[B] 회의록", "text": "— [REDACTED]", "delay": 1.8},
+	]
+
+# 단말기 C — 요원 평가 내부 메모 (이번 임무)
+func _arcturus_term_c() -> Array:
+	return [
+		{"speaker": "[C] 감시팀", "text": "요원 코드: [REDACTED]", "delay": 1.8},
+		{"speaker": "[C] 감시팀", "text": "임무: PALIMPSEST", "delay": 2.0},
+		{"speaker": "[C] 감시팀", "text": "현재 상태: 진행 중", "delay": 2.0},
+		{"speaker": "[C] 감시팀", "text": "VEIL과의 협조도: [측정 중]", "delay": 2.5},
+		{"speaker": "[C] 감시팀", "text": "비고: 요원이 이 문서를 읽고 있다면", "delay": 2.5},
+		{"speaker": "[C] 감시팀", "text": "        이미 임무 범위를 벗어난 것임.", "delay": 2.5},
+		{"speaker": "[C] 감시팀", "text": "— 감시팀", "delay": 1.8},
+	]
+
+func _arcturus_veil_outro() -> Array:
+	return [
+		{"speaker": "VEIL", "text": "여기까지 왔군요.", "delay": 2.5},
+		{"speaker": "VEIL", "text": "...", "delay": 1.5},
+		{"speaker": "VEIL", "text": "저도 이 파일들 읽은 적 있어요.", "delay": 2.8},
+		{"speaker": "VEIL", "text": "...", "delay": 1.5},
+		{"speaker": "VEIL", "text": "계속 가요, 요원.", "delay": 2.5},
+	]
 
 func _on_xp_collected(leveled_up: bool) -> void:
 	if leveled_up and not pending_levelup:
