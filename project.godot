@@ -80,6 +80,10 @@ pause={
 ]
 }
 
+[gui]
+
+theme/custom_font="res://assets/fonts/Pretendard-Regular.otf"
+
 [layer_names]
 
 2d_physics/layer_1="World"
