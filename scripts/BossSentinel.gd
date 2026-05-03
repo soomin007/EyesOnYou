@@ -42,6 +42,12 @@ const HOVER_Y: float = 280.0  # 호버 라인 (lab ground 820 기준 위쪽)
 const HOVER_RANGE_X: Vector2 = Vector2(160.0, 1760.0)  # 좌/우 한계 (lab 1920 기준)
 const TRACK_DEAD_ZONE: float = 80.0  # P2/P3 추적 시 dead zone
 
+# 페이즈 전환 시 좌/우에서 소환되는 잔당 — 보스 본체에 묶이지 않은 압박.
+# P2는 drone 2(천장 폭격), P3는 patrol 2(지면 추격)로 페이즈 차별화.
+const SUMMON_OFFSET_X: float = 760.0
+const SUMMON_DRONE_HP: int = 1
+const SUMMON_PATROL_HP: int = 2
+
 var hp: int = HP_MAX
 var phase: int = 1
 var dir: int = 1  # 1=우, -1=좌
@@ -57,6 +63,7 @@ var pending_missile_dir: int = 0
 var self_destruct_active: bool = false
 var self_destruct_t: float = 0.0
 var phase_freeze_t: float = 0.0  # 페이즈 전환 시 잠깐 정지 (시각적 강조)
+var summoned_minions: Array = []  # 페이즈 소환 잔당 — 보스 처치 시 함께 정리.
 
 # 텔레그래프 시각 노드
 var bomb_dot: ColorRect = null
@@ -266,7 +273,50 @@ func _transition_to(new_phase: int) -> void:
 			2: visual.self_modulate = Color(1.2, 0.85, 0.65)  # 주황 tint
 			3: visual.self_modulate = Color(1.4, 0.55, 0.55)  # 빨강 tint
 			_: visual.self_modulate = Color(1, 1, 1)
+	_summon_minions(new_phase)
 	emit_signal("phase_changed", new_phase)
+
+# 페이즈 전환 시 좌/우 화면 가장자리 위쪽에서 잔당 2마리 spawn.
+# P2 = drone 2 (천장 폭격으로 지상 압박), P3 = patrol 2 (지면 추격으로 회피 동선 좁힘).
+# freeze 1.2s 동안 spawn되니까 플레이어가 인지할 시간 있음.
+func _summon_minions(new_phase: int) -> void:
+	# 0=patrol, 2=drone (Stage._spawn_enemy의 kind와 일치)
+	var kind: int = 2 if new_phase == 2 else 0
+	var hp_for: int = SUMMON_DRONE_HP if kind == 2 else SUMMON_PATROL_HP
+	# drone은 호버 라인 부근, patrol은 지면 위로 spawn.
+	var y: float = HOVER_Y if kind == 2 else (global_position.y + 280.0)
+	var positions: Array = [
+		Vector2(global_position.x - SUMMON_OFFSET_X, y),
+		Vector2(global_position.x + SUMMON_OFFSET_X, y),
+	]
+	for pos in positions:
+		var m: CharacterBody2D = _spawn_minion(kind, pos, hp_for)
+		if m != null:
+			summoned_minions.append(m)
+
+func _spawn_minion(kind: int, pos: Vector2, hp_value: int) -> CharacterBody2D:
+	var parent: Node = get_parent()
+	if parent == null:
+		return null
+	var e := CharacterBody2D.new()
+	e.set_script(load("res://scripts/Enemy.gd"))
+	e.collision_layer = 4
+	e.collision_mask = 1
+	e.set("enemy_type", kind)
+	e.set("hp", hp_value)
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	if kind == 2:
+		shape.size = Vector2(32.0, 24.0)
+		col.position = Vector2(0, 0)
+	else:
+		shape.size = Vector2(28.0, 40.0)
+		col.position = Vector2(0, -20.0)
+	col.shape = shape
+	e.add_child(col)
+	parent.add_child(e)
+	e.global_position = pos
+	return e
 
 func _arm_self_destruct() -> void:
 	self_destruct_active = true
@@ -315,6 +365,11 @@ func _die() -> void:
 	if dead:
 		return
 	dead = true
+	# 보스가 죽으면 소환된 잔당도 함께 정리 — ARENA에 잔존 적이 남아 클리어 흐름이 어색해지는 것 방지.
+	for m in summoned_minions:
+		if is_instance_valid(m):
+			m.queue_free()
+	summoned_minions.clear()
 	emit_signal("self_destruct_disarmed")
 	emit_signal("killed", global_position)
 	# 시각적 사라짐

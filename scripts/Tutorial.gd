@@ -45,12 +45,11 @@ var camera: Camera2D
 var hud_label: Label
 var hint_label: Label
 
-var sign_move: Label
-var sign_jump: Label
-var sign_attack: Label
-var sign_levelup: Label
-var sign_dash: Label
-var sign_done: Label
+var sign_move: Control
+var sign_jump: Control
+var sign_attack: Control
+var sign_levelup: Label  # 레벨업 후 스킬 이름이 표시되는 텍스트라 텍스트 라벨 유지
+var sign_dash: Control
 
 var jump_pickup: Area2D
 var attack_dummy: TutorialDummy
@@ -237,31 +236,75 @@ func _make_platform(x: float, y: float, w: float) -> void:
 # ─── 표지판 / HUD ──────────────────────────────────────────────
 
 func _build_signs() -> void:
-	sign_move = _make_sign("A  D 키로 이동\n(또는 ← → 화살표)", Vector2(280.0, GROUND_Y - 200.0))
-	sign_jump = _make_sign("W 키로 점프\n공중에서 한 번 더 누르면 이중 점프", Vector2(950.0, GROUND_Y - 280.0))
-	sign_attack = _make_sign("마우스 좌클릭으로 사격\n(또는 J 키)", Vector2(1750.0, GROUND_Y - 200.0))
-	sign_levelup = _make_sign("적 처치 → 경험치 → 레벨업\n3개 중 1개의 스킬을 골라요", Vector2(2480.0, GROUND_Y - 280.0))
-	sign_dash = _make_sign("SHIFT — 대시\n무적 상태로 가시 구간 통과", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
-	sign_done = _make_sign("본편엔 더 다양한 적이 등장합니다\n처음 마주치면 도감 카드로 소개돼요", Vector2(GOAL_X - 180.0, GROUND_Y - 200.0))
+	# show-don't-tell — 키캡(둥근 박스 + 큰 글자) + 한 단어. 부연 설명은 환경/연출에 맡김.
+	# 이중 점프는 PLATFORM_3가 1단 한계 위에 있어 자연 학습되므로 별도 안내 안 함.
+	sign_move = _make_keycap_sign(["A", "D"], "이동", Vector2(280.0, GROUND_Y - 200.0))
+	sign_jump = _make_keycap_sign(["W"], "점프", Vector2(950.0, GROUND_Y - 280.0))
+	sign_attack = _make_keycap_sign(["좌클릭"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
+	sign_dash = _make_keycap_sign(["SHIFT"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
+	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
+	sign_levelup = Label.new()
+	sign_levelup.add_theme_font_size_override("font_size", 17)
+	sign_levelup.add_theme_color_override("font_color", Color(0.95, 0.92, 0.55))
+	sign_levelup.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	sign_levelup.add_theme_constant_override("outline_size", 4)
+	sign_levelup.position = Vector2(2480.0, GROUND_Y - 280.0) - Vector2(160, 32)
+	sign_levelup.size = Vector2(320, 64)
+	sign_levelup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sign_levelup.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	add_child(sign_levelup)
+	sign_levelup.visible = false
 	sign_jump.visible = false
 	sign_attack.visible = false
-	sign_levelup.visible = false
 	sign_dash.visible = false
-	sign_done.visible = false
 
-func _make_sign(text: String, pos: Vector2) -> Label:
+func _make_keycap_sign(keys: Array, label_text: String, pos: Vector2) -> Control:
+	var holder := Control.new()
+	holder.position = pos - Vector2(160, 60)
+	holder.size = Vector2(320, 96)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(holder)
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 10)
+	hbox.position = Vector2(0, 0)
+	hbox.size = Vector2(320, 56)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	holder.add_child(hbox)
+	for k in keys:
+		hbox.add_child(_make_keycap(str(k)))
+	var l := Label.new()
+	l.text = label_text
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", Color(0.62, 0.68, 0.78))
+	l.position = Vector2(0, 64)
+	l.size = Vector2(320, 24)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	holder.add_child(l)
+	return holder
+
+func _make_keycap(text: String) -> Control:
+	var box := PanelContainer.new()
+	box.custom_minimum_size = Vector2(48, 48)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.10, 0.12, 0.16, 0.92)
+	sb.border_color = Color(0.65, 0.72, 0.85, 0.85)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(6)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	box.add_theme_stylebox_override("panel", sb)
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 17)
-	l.add_theme_color_override("font_color", Color(0.95, 0.92, 0.55))
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	l.add_theme_constant_override("outline_size", 4)
-	l.position = pos - Vector2(160, 32)
-	l.size = Vector2(320, 64)
+	# 키캡 글자 — "SHIFT"/"좌클릭"처럼 긴 라벨도 들어갈 수 있어 폭에 맞춰 줄어듦.
+	var fs: int = 22 if text.length() <= 2 else 16
+	l.add_theme_font_size_override("font_size", fs)
+	l.add_theme_color_override("font_color", Color(0.96, 0.96, 0.96))
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	add_child(l)
-	return l
+	box.add_child(l)
+	return box
 
 func _build_hud() -> void:
 	var hud := CanvasLayer.new()
@@ -482,14 +525,13 @@ func _advance_to(next: int) -> void:
 		Step.DASH:
 			sign_dash.visible = true
 		Step.DONE:
+			# 골 빛이 충분한 시각 유도 — 별도 안내문 없음.
 			if barrier != null:
 				barrier.queue_free()
 				barrier = null
 			if barrier_visual != null:
 				barrier_visual.queue_free()
 				barrier_visual = null
-			if sign_done != null:
-				sign_done.visible = true
 	_refresh_hud()
 
 func _physics_process(_delta: float) -> void:

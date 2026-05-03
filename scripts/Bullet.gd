@@ -18,7 +18,8 @@ var hit_enemies: Array = []
 var angle: float = 0.0
 # multishot T3 — 가장 가까운 적 방향으로 약하게 휨.
 var tracking: bool = false
-const TRACKING_BLEND: float = 0.06  # 매 프레임 현재 방향과 타깃 방향을 lerp하는 비율
+const TRACKING_BLEND: float = 0.03  # 매 프레임 현재 방향과 타깃 방향을 lerp하는 비율
+const TRACKING_MAX_ANGLE: float = 0.21  # ~12도. 이전 25도는 보스전 밸런스 붕괴로 축소.
 
 func _ready() -> void:
 	collision_layer = 0
@@ -75,8 +76,7 @@ func _apply_tracking(_delta: float) -> void:
 	var dy: float = (nearest.global_position.y - 28.0) - global_position.y  # 적 가슴 높이
 	# 새 angle 계산: 진행 방향(+dir 쪽)에서 dy/dx 비율로 기울기.
 	var target_angle: float = atan2(dy, abs(dx))
-	# 너무 급하게 꺾이지 않게 clamp (±25도 안)
-	target_angle = clamp(target_angle, -0.43, 0.43)
+	target_angle = clamp(target_angle, -TRACKING_MAX_ANGLE, TRACKING_MAX_ANGLE)
 	angle = lerp(angle, target_angle, TRACKING_BLEND)
 
 func _find_nearest_enemy() -> Node2D:
