@@ -44,6 +44,13 @@ var restrict_combat_input: bool = false
 # 게임 reset()에서는 비우지 않음 (한 번 본 적은 다음 런에서도 본 거).
 var seen_enemies: Array = []
 
+# ??? 맵 누적 방문 횟수 — settings.cfg에 영속.
+# 첫 방문(0): 기존 VEIL-1/VEIL-2/VEIL 고백 고정.
+# 이후 방문(>=1): 추가 풀에서 1개 랜덤 교체 (VEIL-1 단말기 자리).
+var hidden_visit_count: int = 0
+# 이스터에그 방(ARCTURUS 아카이브) 방문 여부 — 1회만 트리거되도록 영속.
+var visited_arcturus: bool = false
+
 func reset() -> void:
 	current_stage = 0
 	death_count = 0
@@ -198,6 +205,8 @@ func load_settings() -> void:
 	seen_enemies = []
 	for v in cf.get_value("flags", "seen_enemies", []):
 		seen_enemies.append(str(v))
+	hidden_visit_count = int(cf.get_value("flags", "hidden_visit_count", 0))
+	visited_arcturus = bool(cf.get_value("flags", "visited_arcturus", false))
 	if version < SETTINGS_VERSION:
 		# 구 스키마 — 키바인드 폐기, project.godot + Main.gd 기본값 유지
 		return
@@ -227,6 +236,8 @@ func save_settings() -> void:
 	cf.set_value("meta", "version", SETTINGS_VERSION)
 	cf.set_value("flags", "tutorial_done", tutorial_done)
 	cf.set_value("flags", "seen_enemies", seen_enemies)
+	cf.set_value("flags", "hidden_visit_count", hidden_visit_count)
+	cf.set_value("flags", "visited_arcturus", visited_arcturus)
 	cf.set_value("audio", "master", master_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
 	for action in KEYBIND_ACTIONS:

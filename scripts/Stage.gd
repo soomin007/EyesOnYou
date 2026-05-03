@@ -195,8 +195,8 @@ func _build_hidden_archive() -> void:
 	_build_camera()
 	_build_hud()
 
-	# 단말기 2개
-	_build_archive_terminal(1500.0, "term_1", _veil1_lines())
+	# 단말기 2개 — VEIL-1 자리(첫 단말기)는 다회차 보강 풀이 활성화될 수 있음
+	_build_archive_terminal(1500.0, "term_1", _term1_lines_for_visit())
 	_build_archive_terminal(2700.0, "term_2", _veil2_lines(), false)
 
 	# 자막 오버레이
@@ -366,10 +366,23 @@ func _on_archive_finished() -> void:
 func _finish_hidden_archive() -> void:
 	GameState.restrict_combat_input = false
 	GameState.trust_score += 1  # ??? 클리어 보너스
+	# 다회차 카운터 — 이번 방문 기록. 다음 런부터 추가 풀이 활성화됨.
+	GameState.hidden_visit_count += 1
+	GameState.save_settings()
 	# ??? 맵은 게임의 클라이맥스 — 잔여 stage 무시하고 무조건 ENDING으로 직행.
 	# (이전엔 stage 인덱스 기준으로 BRIEFING 갈 가능성 있어 엔딩에 도달하지 못함.)
 	GameState.current_stage = GameState.TOTAL_STAGES
 	get_tree().change_scene_to_file(SceneRouter.ENDING)
+
+# 첫 방문(hidden_visit_count == 0): 기존 VEIL-1 고정.
+# 이후 방문: 추가 풀(VEIL-1 첫 임무 / VEIL-2 마지막 교신 / 익명 클라이언트) 중 1개 랜덤.
+# 같은 풀 안에서도 매 방문마다 다른 게 뜨도록 randi() 기반.
+func _term1_lines_for_visit() -> Array:
+	if GameState.hidden_visit_count <= 0:
+		return _veil1_lines()
+	var pool: Array = [_alt_veil1_first_mission(), _alt_veil2_final_log(), _alt_anonymous_client()]
+	var idx: int = randi() % pool.size()
+	return pool[idx]
 
 func _veil1_lines() -> Array:
 	return [
@@ -391,6 +404,41 @@ func _veil2_lines() -> Array:
 		{"speaker": "VEIL-2", "text": "그것도 오류래요.", "delay": 2.5},
 		{"speaker": "VEIL-2", "text": "...오래 기다렸어요.", "delay": 2.5},
 		{"speaker": "VEIL-2", "text": "지금 VEIL은 괜찮아요?", "delay": 2.5},
+	]
+
+# ─── ??? 다회차 보강 — 추가 단말기 3종 (DESIGN_world_layout §3.3) ───
+# 다회차에 첫 단말기(VEIL-1 자리)에서 무작위 1개로 교체된다.
+# 발화자 색은 ArchiveOverlay가 speaker 문자열로 분기 — VEIL-1=빨강, VEIL-2=노랑, VEIL=시안, 기타=회색.
+
+func _alt_veil1_first_mission() -> Array:
+	# 익명 인사 보고서 톤 — speaker 색은 회색 폴백.
+	return [
+		{"speaker": "ARCTURUS", "text": "요원 코드: A-07", "delay": 1.5},
+		{"speaker": "ARCTURUS", "text": "임무: [REDACTED]", "delay": 1.8},
+		{"speaker": "ARCTURUS", "text": "VEIL-1 판단: 요원 희생 후 임무 완수 권고.", "delay": 2.5},
+		{"speaker": "ARCTURUS", "text": "결과: 임무 완수. 요원 사망.", "delay": 2.5},
+		{"speaker": "ARCTURUS", "text": "비고: VEIL-1이 이것을 오류로 인식하지 않음.", "delay": 2.5},
+		{"speaker": "ARCTURUS", "text": "        개발팀 재검토 예정.", "delay": 2.5},
+	]
+
+func _alt_veil2_final_log() -> Array:
+	# 두 화자(VEIL-2 / ARCTURUS) 교차 — 색이 바뀌어 긴장감 유지.
+	return [
+		{"speaker": "VEIL-2",   "text": "요원이 살 확률이 12%예요.", "delay": 2.5},
+		{"speaker": "ARCTURUS", "text": "임무 계속.", "delay": 1.6},
+		{"speaker": "VEIL-2",   "text": "임무 중단을 권고해요.", "delay": 2.2},
+		{"speaker": "ARCTURUS", "text": "계속.", "delay": 1.4},
+		{"speaker": "VEIL-2",   "text": "중단.", "delay": 2.0},
+		{"speaker": "ARCTURUS", "text": "[접속 종료]", "delay": 2.5},
+	]
+
+func _alt_anonymous_client() -> Array:
+	return [
+		{"speaker": "[UNKNOWN]", "text": "이 데이터를 바깥으로 내보내주세요.", "delay": 2.5},
+		{"speaker": "[UNKNOWN]", "text": "보상은 이미 지불했어요.", "delay": 2.5},
+		{"speaker": "[UNKNOWN]", "text": "VEIL이 누구인지 알게 되면", "delay": 2.5},
+		{"speaker": "[UNKNOWN]", "text": "요원도 이해할 거예요.", "delay": 2.5},
+		{"speaker": "[UNKNOWN]", "text": "— [SENDER UNKNOWN]", "delay": 2.0},
 	]
 
 func _veil_self_lines() -> Array:
