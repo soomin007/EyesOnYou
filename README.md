@@ -2,6 +2,10 @@
 
 > **"AI 파트너 VEIL과 함께 7개 임무를 해치우는 횡스크롤 로그라이트. 마지막에 VEIL이 누구였는지가 드러난다."**
 
+### ▶ [브라우저에서 바로 플레이](https://soomin007.github.io/EyesOnYou/)
+
+> GitHub Pages 자동 배포 (main 푸시 시 갱신). 데스크톱 Chrome/Firefox 권장. 첫 로딩 ~10s.
+
 근미래 민간 보안기업의 현장 요원이 되어, 상황실 AI 파트너 **VEIL**의 조언을 들으며(혹은 무시하며) 7개의 짧은 횡스크롤 스테이지를 클리어한다. 누적된 선택(VEIL 조언 수용 여부 × 전투/우회 비율)이 4종 결말 중 하나를 결정한다.
 
 - **엔진**: Godot 4.6 (GL Compatibility, physics interpolation 활성)
