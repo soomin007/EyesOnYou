@@ -1894,27 +1894,27 @@ func _setup_challenge_mode() -> void:
 	_build_challenge_timer_hud()
 
 func _build_challenge_blackout() -> void:
-	# 화면 강 dim — 짙은 검정 70%, 가장자리 더 진한 비네트.
-	# 정확한 원형 cutout보다 단순화: 강한 dim + 중앙 밝은 사각으로 시야 좁아진 느낌.
+	# 화면 강 dim — 짙은 검정. 더 진하게(0.72), 가장자리 비네트도 더 두껍게.
+	# 시야 압박: 가시 함정 / drone 폭탄 그림자 / bomber 점멸이 잘 안 보임.
 	challenge_dark_layer = CanvasLayer.new()
 	challenge_dark_layer.layer = 17
 	add_child(challenge_dark_layer)
 	# 풀스크린 dim
 	var full_dim := ColorRect.new()
-	full_dim.color = Color(0, 0, 0, 0.55)
+	full_dim.color = Color(0, 0, 0, 0.72)
 	full_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	full_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	challenge_dark_layer.add_child(full_dim)
-	# 가장자리 비네트 (좌/우/상/하 각각 짙은 띠)
+	# 가장자리 비네트 (좌/우/상/하 각각 짙은 띠 — 두껍게)
 	for side_data in [
-		{"pos": Vector2(0, 0), "size": Vector2(1280, 80)},                # 상
-		{"pos": Vector2(0, 640), "size": Vector2(1280, 80)},              # 하
-		{"pos": Vector2(0, 0), "size": Vector2(160, 720)},                # 좌
-		{"pos": Vector2(1120, 0), "size": Vector2(160, 720)},             # 우
+		{"pos": Vector2(0, 0), "size": Vector2(1280, 140)},               # 상
+		{"pos": Vector2(0, 580), "size": Vector2(1280, 140)},             # 하
+		{"pos": Vector2(0, 0), "size": Vector2(220, 720)},                # 좌
+		{"pos": Vector2(1060, 0), "size": Vector2(220, 720)},             # 우
 	]:
 		var d: Dictionary = side_data
 		var v := ColorRect.new()
-		v.color = Color(0, 0, 0, 0.55)
+		v.color = Color(0, 0, 0, 0.72)
 		v.position = d["pos"]
 		v.size = d["size"]
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -588,6 +588,8 @@ static func _lab() -> Dictionary:
 
 # ─── 12. 도전 방 — 블랙아웃 런 (HORIZONTAL, 짧음, 노 데미지 30s) ──
 # DESIGN_world_layout §3.2. Stage 4 분기 의도적 선택지.
+# 강화: 좁은 발판(60~120px) + 가시 함정 + drone/bomber 압박 + 직선상 patrol 5.
+# 1 hit fail이라 어떤 데미지도 즉시 실패 — "긴장감"은 정밀 이동 + 시야 제한에서 나옴.
 static func _blackout() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
@@ -597,18 +599,34 @@ static func _blackout() -> Dictionary:
 		"goal_pos":     Vector2(2280.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
-			{"pos": Vector2(400, 520),  "w": 180.0},
-			{"pos": Vector2(800, 460),  "w": 180.0},
-			{"pos": Vector2(1200, 520), "w": 180.0},
-			{"pos": Vector2(1600, 460), "w": 180.0},
-			{"pos": Vector2(2000, 520), "w": 180.0},
+			# 짧은 발판 7개 — 폭 줄여 정밀 점프 강제. gap 80~95.
+			{"pos": Vector2(320, 540),  "w": 120.0},
+			{"pos": Vector2(560, 480),  "w": 80.0},   # 매우 좁음 (정밀)
+			{"pos": Vector2(820, 520),  "w": 100.0},
+			{"pos": Vector2(1080, 460), "w": 80.0},   # 매우 좁음
+			{"pos": Vector2(1340, 520), "w": 100.0},
+			{"pos": Vector2(1620, 480), "w": 100.0},
+			{"pos": Vector2(1900, 540), "w": 140.0},
+			{"pos": Vector2(2160, 520), "w": 140.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(500, 600), Vector2(900, 600), Vector2(1400, 600), Vector2(1900, 600)],
-			"sniper": [], "drone": [], "bomber": [], "shield": [],
+			# 지면 patrol 5 + bomber 1 압박 + 천장 drone 2 (폭탄 투하)
+			"patrol": [
+				Vector2(400, 600), Vector2(750, 600), Vector2(1100, 600),
+				Vector2(1500, 600), Vector2(1850, 600),
+			],
+			"bomber": [Vector2(1300, 600)],
+			"drone":  [Vector2(700, 100), Vector2(1700, 100)],
+			"sniper": [], "shield": [],
 		},
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
-		"spikes": [],
+		# 발판 사이 갭 + 지면에 가시 (어두워서 잘 안 보임 → 시야 압박)
+		"spikes": [
+			{"x": 480.0, "y": 660.0},   # 지면 1
+			{"x": 950.0, "y": 660.0},   # 지면 2
+			{"x": 1450.0, "y": 660.0},  # 지면 3
+			{"x": 1750.0, "y": 660.0},  # 지면 4
+		],
 		# Stage가 인식해 블랙아웃 + 30s 타이머 + 1 hit fail 적용.
 		"challenge":          true,
 		"challenge_time":     30.0,
