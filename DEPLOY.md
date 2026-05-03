@@ -94,6 +94,42 @@ https://<user>.github.io/EyesOnYou/ 에서 서빙
 
 ---
 
+## Manual Export (Godot 에디터에서 직접 빌드할 때)
+
+> **평소엔 manual export 할 일 없음** — `git push origin main`만 하면 GitHub Actions가 자동 빌드/배포한다.
+> Manual은 itch.io 업로드용이나 로컬에서 빌드 결과 확인할 때만.
+
+### 핵심 룰: Export Path를 반드시 `build/index.html`로
+
+Godot 에디터 `Project → Export` 창에서 "Web" 프리셋 선택 후 **하단의 Export Path를 `build/index.html`로 지정**한 뒤 "Export Project" 클릭.
+
+```
+Export Path:  build/index.html        ← 이렇게
+              ^^^^^^^^^^^^^^^^^^^^
+              (절대 비워두거나 루트에 그대로 export 하지 말 것)
+```
+
+**왜**: 비워두면 산출물 12개 파일(`Eyes on You.html` / `.wasm` ~36MB / `.pck` / `.js` / `.import` 등)이 프로젝트 루트에 깔리고, 매번 청소해야 한다.
+`build/` 폴더로 export하면 `.gitignore`에 이미 잡혀 있어 git이 자동으로 무시한다.
+
+### itch.io 업로드 흐름
+
+1. Export Path = `build/index.html`로 export
+2. `build/` 안의 모든 파일을 zip으로 묶음
+3. itch.io 프로젝트 페이지에 업로드
+4. itch는 "SharedArrayBuffer" 옵션 켜서 Threads ON 빌드 가능 → 성능 ↑.
+   GitHub Pages용(Threads OFF)과 itch용(Threads ON) 두 프리셋을 따로 만들어 두면 편하다.
+
+### 만약 루트가 이미 `Eyes on You.*`로 어지러워졌다면
+
+```bash
+rm "Eyes on You."*
+```
+
+`.gitignore`로 이미 막혀 있어 git에는 영향 없다. 안심하고 삭제.
+
+---
+
 ## 같은 패턴을 enigma에도 적용하려면
 
 1. enigma repo에 동일한 `.github/workflows/deploy.yml` 복사
