@@ -80,6 +80,9 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	v.add_child(btn)
 	btn.grab_focus.call_deferred()
 
+	host.add_child(layer)
+	return layer
+
 # 행동 단서 단어를 노란색으로 강조 — 정보를 글로 풀지 않고 시선만 유도.
 static func _highlight_keywords(text: String) -> String:
 	var keywords: Array = [
@@ -91,9 +94,6 @@ static func _highlight_keywords(text: String) -> String:
 		var word: String = str(k)
 		result = result.replace(word, "[color=#f5d873]%s[/color]" % word)
 	return result
-
-	host.add_child(layer)
-	return layer
 
 static func _close(layer: CanvasLayer) -> void:
 	_active = false
