@@ -65,6 +65,25 @@ var dir: int = 1
 var touch_cd: float = 0.0
 var dead: bool = false
 
+# 가장자리 감지 — 발 앞쪽에 ground/platform이 없으면 떨어지지 않게 dir 반전.
+# 수직 맵에서 적이 작은 발판에서 떨어져 바닥에 모이는 문제 방지.
+const EDGE_LOOKAHEAD_X: float = 24.0
+const EDGE_LOOKAHEAD_Y: float = 80.0
+const EDGE_FLIP_COOLDOWN: float = 0.15
+var edge_flip_cd: float = 0.0
+
+func _has_ground_ahead(check_dir: int) -> bool:
+	# 발 앞 EDGE_LOOKAHEAD_X 위치에서 아래 EDGE_LOOKAHEAD_Y 안에 ground/platform이 있는가.
+	# 발판 위에 있을 때만 의미 있음 — 공중에선 호출하지 말 것.
+	var space := get_world_2d().direct_space_state
+	var origin: Vector2 = global_position + Vector2(float(check_dir) * EDGE_LOOKAHEAD_X, -6.0)
+	var target: Vector2 = origin + Vector2(0.0, EDGE_LOOKAHEAD_Y)
+	var query := PhysicsRayQueryParameters2D.create(origin, target)
+	query.collision_mask = 1  # ground + platform 레이어
+	query.exclude = [self]
+	var hit: Dictionary = space.intersect_ray(query)
+	return not hit.is_empty()
+
 var patrol_state: int = PatrolState.ROAMING
 var patrol_state_timer: float = 0.0
 
@@ -195,6 +214,13 @@ func _tick_patrol(delta: float) -> void:
 				dir = 1
 			if is_on_wall():
 				dir = -dir
+			# 발판 가장자리 감지 — 떨어지지 않게 진행 방향에 ground 없으면 반전
+			if edge_flip_cd > 0.0:
+				edge_flip_cd -= delta
+			elif is_on_floor() and not _has_ground_ahead(dir):
+				dir = -dir
+				edge_flip_cd = EDGE_FLIP_COOLDOWN
+				velocity.x = float(dir) * PATROL_SPEED
 			if not harmless and p != null and _player_in_charge_range(p):
 				dir = 1 if p.global_position.x > global_position.x else -1
 				patrol_state = PatrolState.TELEGRAPH
@@ -217,7 +243,9 @@ func _tick_patrol(delta: float) -> void:
 		PatrolState.CHARGING:
 			velocity.x = float(dir) * PATROL_CHARGE_SPEED
 			patrol_state_timer -= delta
-			if is_on_wall() or patrol_state_timer <= 0.0:
+			# 가장자리 도달 시 즉시 RECOVERING — 발판에서 안 떨어지게
+			var charge_edge_fall: bool = is_on_floor() and not _has_ground_ahead(dir)
+			if is_on_wall() or charge_edge_fall or patrol_state_timer <= 0.0:
 				patrol_state = PatrolState.RECOVERING
 				patrol_state_timer = PATROL_RECOVERY
 				velocity.x = 0.0
@@ -356,6 +384,13 @@ func _tick_bomber(delta: float) -> void:
 				dir = 1
 			if is_on_wall():
 				dir = -dir
+			# 발판 가장자리 감지
+			if edge_flip_cd > 0.0:
+				edge_flip_cd -= delta
+			elif is_on_floor() and not _has_ground_ahead(dir):
+				dir = -dir
+				edge_flip_cd = EDGE_FLIP_COOLDOWN
+				velocity.x = float(dir) * BOMBER_SPEED
 			if not harmless and p != null and _bomber_in_detect_range(p):
 				bomber_state = BomberState.STALKING
 		BomberState.STALKING:
@@ -365,6 +400,9 @@ func _tick_bomber(delta: float) -> void:
 				dir = 1 if p.global_position.x > global_position.x else -1
 				velocity.x = float(dir) * BOMBER_SPEED * 1.4
 				if is_on_wall():
+					velocity.x = 0.0
+				# 가장자리 — 떨어지지 않게 정지 (자폭병이라도 ARMING은 거리에 도달해야 시작)
+				if is_on_floor() and not _has_ground_ahead(dir):
 					velocity.x = 0.0
 				var d2: float = global_position.distance_to(p.global_position)
 				if d2 <= BOMBER_ARM_RANGE:
@@ -462,6 +500,9 @@ func _tick_shield(delta: float) -> void:
 			velocity.x = float(dir) * SHIELD_SPEED * 0.8
 		if is_on_wall():
 			velocity.x = 0.0
+	# 가장자리 — 추격이든 순찰이든 떨어지지 않게 정지 (방패병은 정면 잠김이라 dir 반전 어색).
+	if is_on_floor() and not _has_ground_ahead(dir):
+		velocity.x = 0.0
 
 	_flip_visual(dir < 0)
 	move_and_slide()
