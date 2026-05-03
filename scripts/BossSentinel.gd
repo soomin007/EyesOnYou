@@ -18,8 +18,10 @@ const HP_SELF_DESTRUCT: int = 1  # 이 값 이하 시 자폭 카운트다운 시
 const PHASE_FREEZE_DURATION: float = 1.2  # 페이즈 전환 시 정지 + 무적 시간
 
 const SELF_DESTRUCT_TIME: float = 5.0
-const SELF_DESTRUCT_RADIUS: float = 2200.0  # ARENA 전체 커버
+const SELF_DESTRUCT_INNER: float = 380.0   # 이 안: full 데미지
+const SELF_DESTRUCT_OUTER: float = 1200.0  # 이 너머: 1뎀 (멀리 있으면 약한 회피)
 const SELF_DESTRUCT_DAMAGE: int = 3
+const SELF_DESTRUCT_DAMAGE_MIN: int = 1
 
 const TOUCH_DAMAGE: int = 1
 const TOUCH_COOLDOWN: float = 1.0
@@ -272,14 +274,22 @@ func _arm_self_destruct() -> void:
 	emit_signal("self_destruct_started")
 
 func _detonate() -> void:
-	# 5초 안에 못 잡으면 광역 데미지 3 (즉사 수준).
+	# 거리 감쇠: inner 안=full 3뎀, outer 너머=1뎀, 그 사이는 lerp.
+	# ARENA 1920에서 끝까지 도망쳐도 거리 ≈1700이라 1뎀 회피 가능.
 	for n in get_tree().get_nodes_in_group("player"):
 		if not (n is Node2D):
 			continue
 		var p := n as Node2D
-		if p.global_position.distance_to(global_position) <= SELF_DESTRUCT_RADIUS:
-			if p.has_method("take_hit"):
-				p.take_hit(SELF_DESTRUCT_DAMAGE)
+		var dist: float = p.global_position.distance_to(global_position)
+		var dmg: int = SELF_DESTRUCT_DAMAGE
+		if dist >= SELF_DESTRUCT_OUTER:
+			dmg = SELF_DESTRUCT_DAMAGE_MIN
+		elif dist > SELF_DESTRUCT_INNER:
+			# inner~outer 사이에서 3 → 1로 선형 감쇠
+			var t_lerp: float = (dist - SELF_DESTRUCT_INNER) / (SELF_DESTRUCT_OUTER - SELF_DESTRUCT_INNER)
+			dmg = int(round(lerp(float(SELF_DESTRUCT_DAMAGE), float(SELF_DESTRUCT_DAMAGE_MIN), t_lerp)))
+		if p.has_method("take_hit"):
+			p.take_hit(dmg)
 	# 거대한 폭발 시각 효과
 	var blast := Polygon2D.new()
 	blast.color = Color(1.0, 0.35, 0.20, 0.9)
