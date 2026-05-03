@@ -11,10 +11,11 @@ signal phase_changed(new_phase: int)
 signal self_destruct_started
 signal self_destruct_disarmed
 
-const HP_MAX: int = 12
-const HP_PHASE2: int = 8  # 이 값 이하 들어오면 P2
-const HP_PHASE3: int = 4  # 이 값 이하 들어오면 P3
+const HP_MAX: int = 24
+const HP_PHASE2: int = 16  # 이 값 이하 들어오면 P2
+const HP_PHASE3: int = 8   # 이 값 이하 들어오면 P3
 const HP_SELF_DESTRUCT: int = 1  # 이 값 이하 시 자폭 카운트다운 시작
+const PHASE_FREEZE_DURATION: float = 1.2  # 페이즈 전환 시 정지 + 무적 시간
 
 const SELF_DESTRUCT_TIME: float = 5.0
 const SELF_DESTRUCT_RADIUS: float = 2200.0  # ARENA 전체 커버
@@ -222,6 +223,9 @@ func _find_player() -> Node2D:
 func take_damage(amount: int, _from_dir: int = 0) -> void:
 	if dead or self_destruct_active:
 		return
+	# 페이즈 전환 동안은 무적 — 플레이어가 페이즈 연출을 인지할 시간 보장.
+	if phase_freeze_t > 0.0:
+		return
 	hp = max(0, hp - amount)
 	_flash_hit()
 	# 페이즈 전환 검사
@@ -244,7 +248,22 @@ func _flash_hit() -> void:
 
 func _transition_to(new_phase: int) -> void:
 	phase = new_phase
-	phase_freeze_t = 0.4
+	phase_freeze_t = PHASE_FREEZE_DURATION
+	# 텔레그래프 노드 리셋 — 전환 직후 잔존 점등이 어색.
+	bomb_telegraph_t = 0.0
+	missile_telegraph_t = 0.0
+	if bomb_dot != null:
+		bomb_dot.color.a = 0.0
+	if wing_l != null:
+		wing_l.color.a = 0.0
+	if wing_r != null:
+		wing_r.color.a = 0.0
+	# 페이즈별 visual tint — 색으로 인지 보강
+	if visual != null:
+		match new_phase:
+			2: visual.self_modulate = Color(1.2, 0.85, 0.65)  # 주황 tint
+			3: visual.self_modulate = Color(1.4, 0.55, 0.55)  # 빨강 tint
+			_: visual.self_modulate = Color(1, 1, 1)
 	emit_signal("phase_changed", new_phase)
 
 func _arm_self_destruct() -> void:
