@@ -51,14 +51,13 @@ const BRIEFINGS: Array = [
 ]
 
 # 첫 임무 시작 화면 — Briefing.gd가 stage 0 진입 시 한 번만 표시.
-# VEIL 발화가 아닌 시스템 텍스트 (의뢰인/목표/지원 정보).
-const INTRO_SYSTEM: String = "ARCTURUS SECURE CHANNEL\nOPERATION PALIMPSEST\n\n의뢰인: 익명\n목표: SILO-7 침투. 서버실 데이터 드라이브 회수. 흔적 없이 철수.\n지원: VEIL (상황실 파트너)\n\n[교신 연결 중...]"
+# VEIL 발화가 아닌 시스템 텍스트. 짧고 차갑게 — 자세한 컨텍스트는 게임 안에서 체감.
+const INTRO_SYSTEM: String = "OPERATION PALIMPSEST\nSILO-7 — 데이터 회수.\n\n[교신 연결 중...]"
 
-# 시스템 텍스트 직후 VEIL 첫 마디 (한 번만, stage 0 진입 시)
+# 시스템 텍스트 직후 VEIL 첫 마디 (한 번만, stage 0 진입 시) — 짧고 자연스럽게.
 const INTRO_VEIL: Array[String] = [
-	"요원, 들려요?",
-	"저는 VEIL이에요. 오늘 임무 지원할게요.",
-	"외곽부터 시작해요.",
+	"...연결됐어요.",
+	"외곽부터 가요, 요원.",
 ]
 
 # 레벨업 fallback (랜덤 6개)

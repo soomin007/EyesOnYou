@@ -1481,47 +1481,15 @@ func _refresh_boss_hp_bar() -> void:
 		3: boss_hp_bar_fill.color = Color(1.0, 0.18, 0.18)
 
 func _on_boss_phase_changed(new_phase: int) -> void:
-	# 화면 플래시 + 카메라 흔들림. 큰 페이즈 라벨로 인지 보강.
-	_screen_flash(Color(1.0, 0.20, 0.22, 0.65), 0.08, 0.55)
-	_camera_shake(8.0 if new_phase == 2 else 14.0, 0.5)
-	var phase_text: String = ""
-	var phase_color: Color = Color(1.0, 0.55, 0.55)
+	# 페이즈 인지는 VEIL 자막 + 화면 플래시 + 카메라 흔들림으로.
+	# 큰 영문 배너는 톤 안 맞아 제거. VEIL이 짧게 코멘트.
+	_screen_flash(Color(1.0, 0.20, 0.22, 0.55), 0.06, 0.45)
+	_camera_shake(8.0 if new_phase == 2 else 14.0, 0.45)
 	match new_phase:
 		2:
-			phase_text = "PHASE 2 — TRACKING"
-			phase_color = Color(1.0, 0.65, 0.40)
+			_show_veil_subtitle("패턴이 바뀌었어요. 양쪽 조심해요.", 2.8)
 		3:
-			phase_text = "PHASE 3 — UNSTABLE"
-			phase_color = Color(1.0, 0.35, 0.35)
-	if phase_text != "":
-		_show_boss_phase_banner(phase_text, phase_color)
-	if new_phase == 3:
-		_show_veil_subtitle("자폭하려고 해요. 빠르게 처치해요, 요원.", 3.0)
-
-func _show_boss_phase_banner(text: String, col: Color) -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = 23
-	add_child(layer)
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", 44)
-	l.add_theme_color_override("font_color", col)
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	l.add_theme_constant_override("outline_size", 6)
-	l.position = Vector2(140.0, 280.0)
-	l.size = Vector2(1000.0, 60.0)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.modulate.a = 0.0
-	l.scale = Vector2(0.85, 0.85)
-	l.pivot_offset = Vector2(500.0, 30.0)
-	layer.add_child(l)
-	var tw := l.create_tween()
-	tw.set_parallel(true)
-	tw.tween_property(l, "modulate:a", 1.0, 0.3)
-	tw.tween_property(l, "scale", Vector2(1.0, 1.0), 0.35)
-	tw.chain().tween_interval(0.85)
-	tw.chain().tween_property(l, "modulate:a", 0.0, 0.5)
-	tw.chain().tween_callback(layer.queue_free)
+			_show_veil_subtitle("불안정해졌어요. 거리 두고 빠르게.", 2.8)
 
 func _on_boss_self_destruct_started() -> void:
 	# 화면 전체 경고 — 큰 카운트다운 라벨

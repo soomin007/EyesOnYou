@@ -50,47 +50,47 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	margin.add_child(v)
 
 	var header := Label.new()
-	header.text = "[NEW] 적 도감"
-	header.add_theme_font_size_override("font_size", 13)
+	header.text = "[조우]"
+	header.add_theme_font_size_override("font_size", 12)
 	header.add_theme_color_override("font_color", Color(0.55, 0.85, 0.95))
 	v.add_child(header)
 
 	var name_label := Label.new()
 	name_label.text = str(data.get("name", "???"))
-	name_label.add_theme_font_size_override("font_size", 26)
+	name_label.add_theme_font_size_override("font_size", 24)
 	name_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
 	v.add_child(name_label)
 
-	var blurb := Label.new()
-	blurb.text = str(data.get("blurb", ""))
-	blurb.add_theme_font_size_override("font_size", 15)
-	blurb.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
-	blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# 관찰 메모 — 짧은 행동 단서. 공략은 플레이로 알아가게 (글로 풀지 않음).
+	# 행동 키워드("LED", "조준선", "그림자" 등)만 강조 색으로 구분.
+	var blurb := RichTextLabel.new()
+	blurb.bbcode_enabled = true
+	blurb.fit_content = true
+	blurb.scroll_active = false
+	blurb.text = _highlight_keywords(str(data.get("blurb", "")))
+	blurb.add_theme_font_size_override("normal_font_size", 15)
+	blurb.add_theme_color_override("default_color", Color(0.85, 0.85, 0.85))
 	blurb.custom_minimum_size = Vector2(480, 0)
 	v.add_child(blurb)
 
-	v.add_child(HSeparator.new())
-
-	var tactic_h := Label.new()
-	tactic_h.text = "공략"
-	tactic_h.add_theme_font_size_override("font_size", 13)
-	tactic_h.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
-	v.add_child(tactic_h)
-
-	var tactic := Label.new()
-	tactic.text = str(data.get("tactic", ""))
-	tactic.add_theme_font_size_override("font_size", 15)
-	tactic.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
-	tactic.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tactic.custom_minimum_size = Vector2(480, 0)
-	v.add_child(tactic)
-
 	var btn := Button.new()
-	btn.text = "확인 (SPACE)"
+	btn.text = "확인"
 	btn.process_mode = Node.PROCESS_MODE_ALWAYS
 	btn.pressed.connect(func() -> void: _close(layer))
 	v.add_child(btn)
 	btn.grab_focus.call_deferred()
+
+# 행동 단서 단어를 노란색으로 강조 — 정보를 글로 풀지 않고 시선만 유도.
+static func _highlight_keywords(text: String) -> String:
+	var keywords: Array = [
+		"붉게 깜빡", "조준선", "그림자", "빨갛게 깜빡", "방패", "튕겨낸다",
+		"순찰", "호버", "자폭",
+	]
+	var result: String = text
+	for k in keywords:
+		var word: String = str(k)
+		result = result.replace(word, "[color=#f5d873]%s[/color]" % word)
+	return result
 
 	host.add_child(layer)
 	return layer
