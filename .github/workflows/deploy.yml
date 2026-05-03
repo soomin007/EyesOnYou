@@ -19,7 +19,7 @@ concurrency:
 
 env:
   GODOT_VERSION: 4.6-stable
-  EXPORT_PRESET: "Eyes On You"
+  EXPORT_PRESET: "Web"
   BUILD_DIR: build
 
 jobs:
