@@ -21,6 +21,9 @@ func _ready() -> void:
 	# 선택 화면에서 분명히 눈에 들어오게 (이전 15는 카드에 묻혀 안 보였음).
 	veil_text.add_theme_font_size_override("font_size", 22)
 	veil_text.add_theme_color_override("font_color", GameState.veil_tone_color())
+	# 긴 description이 박스 밖으로 빠져나가던 문제 — 자동 줄바꿈.
+	veil_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	veil_text.custom_minimum_size = Vector2(560, 0)
 	_setup_trust_gauge()
 	_build_node_buttons()
 	_update_veil_comment()

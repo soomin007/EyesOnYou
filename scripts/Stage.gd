@@ -28,10 +28,11 @@ var pending_levelup: bool = false
 var pause_overlay: CanvasLayer
 var settings_overlay: Control
 
-# 쿨다운 UI — 사격/대시/스킬 게이지
+# 쿨다운 UI — 사격/대시/스킬/방어막 게이지
 var cd_attack_slot: Control
 var cd_dash_slot: Control
 var cd_skill_slot: Control
+var cd_barrier_slot: Control  # 방어막 — 충전 progress, 완료 시 청록 가득
 const CD_BAR_WIDTH: float = 90.0
 
 func _ready() -> void:
@@ -1419,6 +1420,7 @@ func _build_hud() -> void:
 	cd_attack_slot = _make_cd_slot("사격")
 	cd_dash_slot = _make_cd_slot("대시")
 	cd_skill_slot = _make_cd_slot("스킬")
+	cd_barrier_slot = _make_cd_slot("방어막")
 	# 스킬 슬롯에만 충전 점 추가 — explosive T3에서 2개 보유 가능.
 	# 항상 점 2개 생성하고 색으로 활성/비활성/(미사용) 구분.
 	var charges_row := HBoxContainer.new()
@@ -1434,6 +1436,7 @@ func _build_hud() -> void:
 	cd_row.add_child(cd_attack_slot)
 	cd_row.add_child(cd_dash_slot)
 	cd_row.add_child(cd_skill_slot)
+	cd_row.add_child(cd_barrier_slot)
 
 	var keys := Label.new()
 	keys.text = "A/D 이동   W 점프   S 플랫폼 내려가기   마우스 좌클릭 사격   SHIFT 대시   마우스 우클릭 스킬   ESC 일시정지"
@@ -1535,6 +1538,33 @@ func _refresh_hud() -> void:
 		if cd_skill_slot != null:
 			cd_skill_slot.visible = GameState.has_skill("explosive")
 			_update_skill_charges()
+		if cd_barrier_slot != null:
+			cd_barrier_slot.visible = GameState.has_skill("barrier")
+			if cd_barrier_slot.visible:
+				_update_barrier_slot()
+
+# 방어막 슬롯 — 일반 cd_slot과 다르게 charge_t/charge_max로 채움.
+# 완료 상태(barrier_ready)에서는 가득 + 청록 강조.
+func _update_barrier_slot() -> void:
+	if cd_barrier_slot == null or player == null or not is_instance_valid(player):
+		return
+	var bar_bg := cd_barrier_slot.get_child(1) as ColorRect
+	if bar_bg == null:
+		return
+	var bar_fill := bar_bg.get_node_or_null("Fill") as ColorRect
+	if bar_fill == null:
+		return
+	var ready: bool = bool(player.get("barrier_ready"))
+	if ready:
+		bar_fill.size.x = CD_BAR_WIDTH
+		bar_fill.color = Color(0.45, 0.95, 1.0)
+	else:
+		var charge_t: float = float(player.get("barrier_charge_t"))
+		var tier: int = GameState.get_skill_tier("barrier")
+		var charge_max: float = 6.0 if tier >= 2 else 10.0  # Player.BARRIER_CHARGE_T1/T2
+		var ratio: float = clamp(charge_t / charge_max, 0.0, 1.0)
+		bar_fill.size.x = CD_BAR_WIDTH * ratio
+		bar_fill.color = Color(0.40, 0.55, 0.75, 0.90)
 
 # 스킬 충전 점 갱신 — explosive T3에서 2개 보유. 색으로 활성/비활성/(미사용) 구분.
 func _update_skill_charges() -> void:

@@ -139,20 +139,22 @@ func veil_tone_color() -> Color:
 			return Color(0.95, 0.55, 0.55)
 	return Color(0.55, 0.85, 0.95)
 
-# 신뢰도에 따라 멘트 앞에 붙는 톤 변화. 빈 문자열이면 평상시(보통).
+# 신뢰도 단계별 prefix 풀. 매 호출 random 선택 — 단조롭지 않게.
+const TONE_PREFIXES: Dictionary = {
+	"high":    ["당신이라면, ", "역시 당신이에요. ", "맞춰가볼게요. ", "믿어요. "],
+	"warm":    ["", "들어봐요, ", "", "제 의견은요, "],
+	"neutral": ["", "", "", "그럼, "],
+	"cool":    ["음… ", "글쎄요. ", "흠… ", "잘 모르겠지만, "],
+	"broken":  ["마음대로 하세요. ", "원하는 대로요. ", "당신 결정이에요. ", "더는 안 말려요. "],
+}
+
+# 신뢰도에 따라 멘트 앞에 붙는 톤 변화. 같은 단계에서도 풀에서 랜덤 — 호출마다 다양.
 func veil_tone_prefix() -> String:
-	match veil_trust_tier():
-		"high":
-			return "당신이라면, "
-		"warm":
-			return ""
-		"neutral":
-			return ""
-		"cool":
-			return "음… "
-		"broken":
-			return "마음대로 하세요. "
-	return ""
+	var tier: String = veil_trust_tier()
+	var arr: Array = TONE_PREFIXES.get(tier, [""])
+	if arr.is_empty():
+		return ""
+	return str(arr[randi() % arr.size()])
 
 # 신뢰도 게이지 — UI 표시용 (-1.0 ~ +1.0 정규화).
 func veil_trust_normalized() -> float:

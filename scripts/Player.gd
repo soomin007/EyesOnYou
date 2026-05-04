@@ -71,14 +71,27 @@ func _ready() -> void:
 	muzzle_flash.position = Vector2(ATTACK_MUZZLE_X, ATTACK_MUZZLE_Y - 4.0)
 	muzzle_flash.visible = false
 	add_child(muzzle_flash)
-	# barrier indicator — 머리 위 작은 점, 충전 완료 시 푸른빛.
+	# barrier indicator — 머리 위 점, 충전 완료 시 푸른빛 펄스. 사용자
+	# 피드백: 작아서 안 띄임 → 12x12로 키우고 외곽선 라인 추가.
 	barrier_indicator = ColorRect.new()
 	barrier_indicator.name = "BarrierIndicator"
-	barrier_indicator.color = Color(0.45, 0.75, 1.0, 0.0)
-	barrier_indicator.size = Vector2(6.0, 6.0)
-	barrier_indicator.position = Vector2(-3.0, -64.0)
-	barrier_indicator.pivot_offset = Vector2(3.0, 3.0)
+	# color.a는 1.0로 두고 modulate로 fade. modulate는 자식 ring에도 전파됨.
+	barrier_indicator.color = Color(0.45, 0.75, 1.0, 0.85)
+	barrier_indicator.modulate.a = 0.0
+	barrier_indicator.size = Vector2(12.0, 12.0)
+	barrier_indicator.position = Vector2(-6.0, -70.0)
+	barrier_indicator.pivot_offset = Vector2(6.0, 6.0)
 	add_child(barrier_indicator)
+	var ring := ColorRect.new()
+	ring.color = Color(0.85, 0.92, 1.0, 0.65)
+	ring.size = Vector2(14.0, 1.0)
+	ring.position = Vector2(-1.0, -1.0)
+	barrier_indicator.add_child(ring)
+	var ring2 := ColorRect.new()
+	ring2.color = Color(0.85, 0.92, 1.0, 0.65)
+	ring2.size = Vector2(14.0, 1.0)
+	ring2.position = Vector2(-1.0, 12.0)
+	barrier_indicator.add_child(ring2)
 
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
@@ -117,20 +130,26 @@ func _tick_barrier(delta: float) -> void:
 	# barrier 라인 미보유 시 indicator 숨김.
 	if not GameState.has_skill("barrier"):
 		if barrier_indicator != null:
-			barrier_indicator.color.a = 0.0
+			barrier_indicator.visible = false
 		return
+	if barrier_indicator != null:
+		barrier_indicator.visible = true
 	if barrier_ready:
-		# 충전 완료 — 푸른빛 펄스
+		# 충전 완료 — 푸른빛 펄스(alpha + scale)로 강한 신호.
 		if barrier_indicator != null:
-			barrier_indicator.color.a = 0.85 + 0.15 * sin(Time.get_ticks_msec() * 0.005)
+			var pulse: float = 0.85 + 0.15 * sin(Time.get_ticks_msec() * 0.005)
+			barrier_indicator.modulate.a = pulse
+			var s: float = 1.0 + 0.15 * sin(Time.get_ticks_msec() * 0.006)
+			barrier_indicator.scale = Vector2(s, s)
 		return
 	# 충전 진행
 	var charge_max: float = BARRIER_CHARGE_T2 if GameState.get_skill_tier("barrier") >= 2 else BARRIER_CHARGE_T1
 	barrier_charge_t += delta
-	# 충전 비율에 따라 indicator alpha 가늘게 (0.05 → 0.4)
+	# 충전 비율에 따라 alpha 변화 (0.25 → 0.75) + scale 1.0 유지.
 	if barrier_indicator != null:
 		var ratio: float = clamp(barrier_charge_t / charge_max, 0.0, 1.0)
-		barrier_indicator.color.a = lerp(0.05, 0.4, ratio)
+		barrier_indicator.modulate.a = lerp(0.25, 0.75, ratio)
+		barrier_indicator.scale = Vector2(1.0, 1.0)
 	if barrier_charge_t >= charge_max:
 		barrier_ready = true
 		barrier_charge_t = 0.0
