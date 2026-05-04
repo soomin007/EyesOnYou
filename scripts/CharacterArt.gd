@@ -30,30 +30,32 @@ static func build_player(parent: Node2D) -> Node2D:
 	torso.name = "Torso"
 	root.add_child(torso)
 
-	# 상체(어깨~가랑이) — 두 다리는 별도 polygon으로 분리해 다리답게.
+	# 5두신 비례 — 머리 14 / 상체 22 / 다리 16 / 신발 4. 가랑이 -20.
+	# 이전엔 다리(28) > 상체(18)라 "상체 없는" 인상이었음.
+	# 상체(어깨 -42 ~ 가랑이 -20) — V형 어깨~허리.
 	_filled(torso, Color(0.82, 0.84, 0.88), PackedVector2Array([
-		Vector2(-11, -46), Vector2(11, -46),
-		Vector2(10, -36), Vector2(9, -28),
-		Vector2(-9, -28), Vector2(-10, -36),
+		Vector2(-11, -42), Vector2(11, -42),
+		Vector2(10, -32), Vector2(9, -20),
+		Vector2(-9, -20), Vector2(-10, -32),
 	]))
 
-	# 왼 다리 — 허벅지 6 → 무릎 6 → 종아리 살짝 굵게(7) → 발목 6.
+	# 왼 다리 — 허벅지 6 → 종아리 7. 가랑이 -20 ~ 발목 -4 (16px).
 	_filled(torso, Color(0.78, 0.80, 0.84), PackedVector2Array([
-		Vector2(-9, -28), Vector2(-3, -28),
-		Vector2(-4, -16),
+		Vector2(-9, -20), Vector2(-3, -20),
+		Vector2(-4, -12),
 		Vector2(-3, -4),
 		Vector2(-9, -4),
-		Vector2(-10, -16),
+		Vector2(-10, -12),
 	]))
 	# 오른 다리 — 좌우 대칭, 살짝 밝게(앞다리 인상).
 	_filled(torso, Color(0.84, 0.86, 0.90), PackedVector2Array([
-		Vector2(3, -28), Vector2(9, -28),
-		Vector2(10, -16),
+		Vector2(3, -20), Vector2(9, -20),
+		Vector2(10, -12),
 		Vector2(9, -4),
 		Vector2(3, -4),
-		Vector2(4, -16),
+		Vector2(4, -12),
 	]))
-	# 왼 신발 — 다리보다 살짝 넓게(8)
+	# 왼 신발
 	_filled(torso, Color(0.16, 0.18, 0.22), PackedVector2Array([
 		Vector2(-10, -4), Vector2(-2, -4),
 		Vector2(-2, 0), Vector2(-10, 0),
@@ -64,36 +66,35 @@ static func build_player(parent: Node2D) -> Node2D:
 		Vector2(10, 0), Vector2(2, 0),
 	]))
 
-	# 어깨 패드 (양쪽) — 어깨 11 비례에 맞춰 살짝 바깥으로 돌출
+	# 어깨 패드 — 어깨 라인(-42)에서 살짝 바깥으로
 	_filled(torso, Color(0.50, 0.54, 0.62), PackedVector2Array([
-		Vector2(-13, -46), Vector2(-7, -46), Vector2(-8, -40), Vector2(-13, -40),
+		Vector2(-13, -42), Vector2(-7, -42), Vector2(-8, -36), Vector2(-13, -36),
 	]))
 	_filled(torso, Color(0.50, 0.54, 0.62), PackedVector2Array([
-		Vector2(7, -46), Vector2(13, -46), Vector2(13, -40), Vector2(8, -40),
+		Vector2(7, -42), Vector2(13, -42), Vector2(13, -36), Vector2(8, -36),
 	]))
 
-	# 벨트 — 허리 라인. 두께 8(상하 4씩 띠), 진한 색으로 가슴/다리 분리감 강조.
+	# 벨트 — 허리(-25 ~ -20) 5px. 짙은 색 + 상단 highlight로 허리 라인 명확.
 	_filled(torso, Color(0.10, 0.12, 0.16), PackedVector2Array([
-		Vector2(-10, -36), Vector2(10, -36), Vector2(10, -28), Vector2(-10, -28),
+		Vector2(-10, -25), Vector2(10, -25), Vector2(10, -20), Vector2(-10, -20),
 	]))
-	# 벨트 상단 highlight (얇은 청회색 띠) — 허리 라인을 명확히
 	var belt_hl := Polygon2D.new()
 	belt_hl.color = Color(0.55, 0.65, 0.78, 0.45)
 	belt_hl.polygon = PackedVector2Array([
-		Vector2(-10, -36), Vector2(10, -36), Vector2(10, -35), Vector2(-10, -35),
+		Vector2(-10, -25), Vector2(10, -25), Vector2(10, -24), Vector2(-10, -24),
 	])
 	torso.add_child(belt_hl)
 	# 벨트 버클
 	_filled(torso, Color(0.85, 0.78, 0.50), PackedVector2Array([
-		Vector2(-2.5, -34), Vector2(2.5, -34), Vector2(2.5, -30), Vector2(-2.5, -30),
+		Vector2(-2.5, -24), Vector2(2.5, -24), Vector2(2.5, -21), Vector2(-2.5, -21),
 	]))
 
-	# 가슴 패널
+	# 가슴 패널 — 어깨 -42 ~ 벨트 위 -28 (14px 길게)
 	_filled(torso, Color(0.40, 0.55, 0.70, 0.85), PackedVector2Array([
-		Vector2(-5, -42), Vector2(5, -42), Vector2(5, -34), Vector2(-5, -34),
+		Vector2(-5, -38), Vector2(5, -38), Vector2(5, -28), Vector2(-5, -28),
 	]))
 	# 가슴 LED
-	_filled_circle(torso, Vector2(0, -38), 1.4, Color(0.75, 1.0, 1.0))
+	_filled_circle(torso, Vector2(0, -33), 1.4, Color(0.75, 1.0, 1.0))
 
 	# 머리 (얼굴) — radius 6 → 7
 	_filled_circle(torso, Vector2(0, -50), 7.0, Color(0.95, 0.88, 0.78))
@@ -119,16 +120,16 @@ static func build_player(parent: Node2D) -> Node2D:
 	])
 	torso.add_child(hl)
 
-	# 뒷팔
+	# 뒷팔 — 어깨 -38 ~ 허리 -28
 	_filled(torso, Color(0.62, 0.64, 0.70), PackedVector2Array([
-		Vector2(-11, -42), Vector2(-7, -42), Vector2(-7, -32), Vector2(-11, -32),
+		Vector2(-11, -38), Vector2(-7, -38), Vector2(-7, -28), Vector2(-11, -28),
 	]))
 
-	# 앞팔 + 총 — ArmFront origin이 손목 부근(10, -36)
-	# 회전 시 총구가 어깨를 중심으로 살짝 위/아래로 흔들리도록.
+	# 앞팔 + 총 — ArmFront origin이 손목 부근(10, -32) — 어깨에서 허리 사이.
+	# 회전 시 총구가 살짝 위/아래로 흔들리도록.
 	var arm_front := Node2D.new()
 	arm_front.name = "ArmFront"
-	arm_front.position = Vector2(10, -36)
+	arm_front.position = Vector2(10, -32)
 	torso.add_child(arm_front)
 	# 그립
 	_filled(arm_front, Color(0.16, 0.18, 0.22), PackedVector2Array([

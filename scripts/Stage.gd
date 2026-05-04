@@ -873,7 +873,8 @@ func _build_hazards() -> void:
 			var d: Dictionary = entry
 			var sx: float = float(d.get("x", 0.0))
 			var sy: float = float(d.get("y", GROUND_Y - 6.0))
-			_build_spike(sx, 90.0, sy)
+			var sw: float = float(d.get("w", 90.0))
+			_build_spike(sx, sw, sy)
 		return
 	# 폴백 (디버그/플레이그라운드)
 	if not "함정" in GameState.current_route_tags:

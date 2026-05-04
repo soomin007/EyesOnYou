@@ -24,8 +24,8 @@ const BARRIER_CHARGE_T1: float = 10.0
 const BARRIER_CHARGE_T2: float = 6.0
 const BARRIER_INVULN_T3: float = 0.6
 
-const ATTACK_MUZZLE_X: float = 14.0
-const ATTACK_MUZZLE_Y: float = -38.0  # 총구 높이 (가슴)
+const ATTACK_MUZZLE_X: float = 13.0
+const ATTACK_MUZZLE_Y: float = -31.0  # 총구 높이 — 5두신 비례 재조정 후 새 손목 위치
 const EXPLOSION_RADIUS: float = 180.0
 const EXPLOSION_DAMAGE: int = 3
 
