@@ -674,37 +674,95 @@ func _show_boss_alert(message: String, color: Color, duration: float) -> void:
 func _build_background() -> void:
 	# 세계 크기에 맞춰 배경 확장
 	var bg_height: float = _world_size.y + 600.0
+	var bg_w: float = STAGE_LENGTH + 400.0
 	var bg := ColorRect.new()
 	bg.color = _stage_color()
 	bg.position = Vector2(-200, -300)
-	bg.size = Vector2(STAGE_LENGTH + 400.0, bg_height)
+	bg.size = Vector2(bg_w, bg_height)
 	bg.z_index = -20
 	add_child(bg)
 
-	# 위쪽 그라디언트 (어두운 천장)
-	var top_grad := ColorRect.new()
-	top_grad.color = Color(0, 0, 0, 0.55)
-	top_grad.position = Vector2(-200, -300)
-	top_grad.size = Vector2(STAGE_LENGTH + 400.0, 320.0)
-	top_grad.z_index = -19
-	add_child(top_grad)
+	# 상단 비네팅 — 진한 부분에서 점진 페이드. 두 겹으로 깊이감.
+	var top_dark := ColorRect.new()
+	top_dark.color = Color(0, 0, 0, 0.65)
+	top_dark.position = Vector2(-200, -300)
+	top_dark.size = Vector2(bg_w, 220.0)
+	top_dark.z_index = -19
+	add_child(top_dark)
+	var top_fade := ColorRect.new()
+	top_fade.color = Color(0, 0, 0, 0.30)
+	top_fade.position = Vector2(-200, -80)
+	top_fade.size = Vector2(bg_w, 200.0)
+	top_fade.z_index = -19
+	add_child(top_fade)
 
-	# 멀리 있는 실루엣 기둥 — HORIZONTAL 맵에서만 (VERTICAL/ARENA에선 시각적으로 안 어울림)
+	# 별/티끌 — 어두운 톤 위에 랜덤 작은 점 (아주 옅음)
+	var srng := RandomNumberGenerator.new()
+	srng.seed = GameState.current_stage * 911 + 17
+	var star_count: int = 80
+	for i in star_count:
+		var s := ColorRect.new()
+		var sa: float = srng.randf_range(0.10, 0.32)
+		s.color = Color(0.85, 0.92, 1.0, sa)
+		s.position = Vector2(srng.randf_range(-150, STAGE_LENGTH + 150), srng.randf_range(-280, GROUND_Y - 200))
+		var sz: float = srng.randf_range(1.0, 2.4)
+		s.size = Vector2(sz, sz)
+		s.z_index = -18
+		add_child(s)
+
+	# 멀리 있는 실루엣 기둥 — HORIZONTAL 맵에서만
 	if _world_type != "HORIZONTAL":
 		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 7919 + 13
+	# 후경 — 멀리, 어두움
 	var x: float = -100.0
 	while x < STAGE_LENGTH + 200.0:
 		var w: float = rng.randf_range(40.0, 90.0)
 		var h: float = rng.randf_range(180.0, 380.0)
-		var pillar := ColorRect.new()
-		pillar.color = Color(0.02, 0.025, 0.035, 0.85)
-		pillar.position = Vector2(x, GROUND_Y - h)
-		pillar.size = Vector2(w, h + 20.0)
-		pillar.z_index = -15
-		add_child(pillar)
+		_add_silhouette_pillar(Vector2(x, GROUND_Y - h), Vector2(w, h + 20.0), Color(0.02, 0.025, 0.035, 0.88), -15)
 		x += w + rng.randf_range(80.0, 220.0)
+	# 중경 — 살짝 가깝고 더 어두움 + 옥상 안테나/창문 점
+	var rng2 := RandomNumberGenerator.new()
+	rng2.seed = GameState.current_stage * 7919 + 41
+	var x2: float = -60.0
+	while x2 < STAGE_LENGTH + 200.0:
+		var w2: float = rng2.randf_range(60.0, 130.0)
+		var h2: float = rng2.randf_range(120.0, 260.0)
+		var pos2: Vector2 = Vector2(x2, GROUND_Y - h2)
+		var sz2: Vector2 = Vector2(w2, h2 + 20.0)
+		_add_silhouette_pillar(pos2, sz2, Color(0.04, 0.05, 0.07, 0.95), -13)
+		# 작은 창문 점들 (옅은 따뜻색)
+		var win_rows: int = int(h2 / 30.0)
+		for r in win_rows:
+			if rng2.randf() < 0.35:
+				var win := ColorRect.new()
+				win.color = Color(0.95, 0.85, 0.55, rng2.randf_range(0.35, 0.65))
+				win.position = Vector2(pos2.x + rng2.randf_range(8, w2 - 12), pos2.y + 18 + r * 30 + rng2.randf_range(0, 6))
+				win.size = Vector2(rng2.randf_range(2, 4), rng2.randf_range(2, 3))
+				win.z_index = -12
+				add_child(win)
+		x2 += w2 + rng2.randf_range(60.0, 180.0)
+
+# 후경 실루엣 — Polygon2D + 미세한 외곽 highlight 라인.
+func _add_silhouette_pillar(pos: Vector2, size: Vector2, color: Color, z: int) -> void:
+	var p := Polygon2D.new()
+	p.color = color
+	p.polygon = PackedVector2Array([
+		pos,
+		Vector2(pos.x + size.x, pos.y),
+		Vector2(pos.x + size.x, pos.y + size.y),
+		Vector2(pos.x, pos.y + size.y),
+	])
+	p.z_index = z
+	add_child(p)
+	# 윗면 가는 highlight (도시 윤곽 강조)
+	var line := ColorRect.new()
+	line.color = Color(0.18, 0.22, 0.30, 0.55)
+	line.position = pos
+	line.size = Vector2(size.x, 1.0)
+	line.z_index = z + 1
+	add_child(line)
 
 func _build_ground() -> void:
 	var ground := StaticBody2D.new()
@@ -718,18 +776,46 @@ func _build_ground() -> void:
 	col.position = Vector2(STAGE_LENGTH * 0.5, GROUND_Y + 100.0)
 	ground.add_child(col)
 
+	var fw: float = STAGE_LENGTH + 400.0
+	# 바닥 본체 (어두운)
 	var floor_visual := ColorRect.new()
 	floor_visual.color = Color(0.04, 0.045, 0.06)
 	floor_visual.position = Vector2(-200, GROUND_Y)
-	floor_visual.size = Vector2(STAGE_LENGTH + 400.0, 300.0)
+	floor_visual.size = Vector2(fw, 300.0)
 	add_child(floor_visual)
-
-	# 바닥 위 가는 라이트 라인 (지평선 강조)
+	# 바닥 상단 패널 (살짝 밝음, 4px) — 깊이감
+	var floor_top := ColorRect.new()
+	floor_top.color = Color(0.10, 0.12, 0.16)
+	floor_top.position = Vector2(-200, GROUND_Y)
+	floor_top.size = Vector2(fw, 4.0)
+	add_child(floor_top)
+	# 지평선 발광 라인 (위)
 	var line := ColorRect.new()
-	line.color = Color(0.55, 0.62, 0.78, 0.35)
+	line.color = Color(0.55, 0.62, 0.78, 0.55)
 	line.position = Vector2(-200, GROUND_Y - 1.0)
-	line.size = Vector2(STAGE_LENGTH + 400.0, 1.0)
+	line.size = Vector2(fw, 1.4)
 	add_child(line)
+	# 바닥 패널 라인들 — 일정 간격 수평 stripe (질감)
+	var stripe_y: float = GROUND_Y + 18.0
+	while stripe_y < GROUND_Y + 240.0:
+		var stripe := ColorRect.new()
+		stripe.color = Color(0.10, 0.12, 0.16, 0.35)
+		stripe.position = Vector2(-200, stripe_y)
+		stripe.size = Vector2(fw, 1.0)
+		add_child(stripe)
+		stripe_y += 28.0
+	# 바닥 노이즈 — 작은 점 패널 마커 (랜덤)
+	var grng := RandomNumberGenerator.new()
+	grng.seed = GameState.current_stage * 421 + 9
+	var gx: float = -100.0
+	while gx < STAGE_LENGTH + 200.0:
+		var gap: float = grng.randf_range(140.0, 280.0)
+		var dot := ColorRect.new()
+		dot.color = Color(0.14, 0.18, 0.24, 0.85)
+		dot.position = Vector2(gx, GROUND_Y + grng.randf_range(8.0, 60.0))
+		dot.size = Vector2(grng.randf_range(8.0, 18.0), 2.0)
+		add_child(dot)
+		gx += gap
 
 var _map_data: Dictionary = {}
 
@@ -1098,17 +1184,67 @@ func _build_platform(x: float, y: float, w: float) -> void:
 	col.position = Vector2(x, y)
 	body.add_child(col)
 
-	var visual := ColorRect.new()
-	visual.color = Color(0.16, 0.18, 0.22)
-	visual.position = Vector2(x - w * 0.5, y - 12.0)
-	visual.size = Vector2(w, 24.0)
-	add_child(visual)
-	# 플랫폼 위 가는 라이트
-	var top := ColorRect.new()
-	top.color = Color(0.55, 0.62, 0.78, 0.55)
-	top.position = Vector2(x - w * 0.5, y - 12.0)
-	top.size = Vector2(w, 1.0)
-	add_child(top)
+	# 플랫폼 비주얼 — 3단 패널(밝은 상부 / 어두운 본체 / 더 어두운 그림자) + 외곽선
+	# + 상단 발광 라인 + 좌우 모서리 발광 캡으로 입체감.
+	var px: float = x - w * 0.5
+	var py: float = y - 12.0
+	# 본체 (16px, 어두운)
+	_add_filled_rect(Vector2(px, py + 4.0), Vector2(w, 16.0), Color(0.14, 0.16, 0.20))
+	# 상단 패널 (4px, 밝은)
+	_add_filled_rect(Vector2(px, py), Vector2(w, 4.0), Color(0.42, 0.46, 0.54))
+	# 하단 패널 (4px, 가장 어두운 — 그림자)
+	_add_filled_rect(Vector2(px, py + 20.0), Vector2(w, 4.0), Color(0.06, 0.07, 0.09))
+	# 본체 표면 마이크로 패널 라인 (입체감) — 너비가 충분할 때만
+	if w >= 120.0:
+		var seam_x: float = px + w * 0.5
+		var seam := ColorRect.new()
+		seam.color = Color(0.06, 0.07, 0.09, 0.65)
+		seam.position = Vector2(seam_x - 0.5, py + 6.0)
+		seam.size = Vector2(1.0, 12.0)
+		add_child(seam)
+	# 외곽선 박스
+	var outline := Line2D.new()
+	outline.points = PackedVector2Array([
+		Vector2(px, py),
+		Vector2(px + w, py),
+		Vector2(px + w, py + 24.0),
+		Vector2(px, py + 24.0),
+	])
+	outline.closed = true
+	outline.width = 1.4
+	outline.default_color = Color(0.04, 0.05, 0.07, 0.95)
+	outline.antialiased = true
+	add_child(outline)
+	# 상단 발광 라인 (착지면 인지)
+	var glow := ColorRect.new()
+	glow.color = Color(0.65, 0.78, 0.95, 0.7)
+	glow.position = Vector2(px + 2.0, py - 1.0)
+	glow.size = Vector2(w - 4.0, 1.6)
+	add_child(glow)
+	# 좌우 모서리 발광 캡
+	var cap_l := ColorRect.new()
+	cap_l.color = Color(0.55, 0.85, 1.0, 0.9)
+	cap_l.position = Vector2(px - 2.0, py + 2.0)
+	cap_l.size = Vector2(3.0, 4.0)
+	add_child(cap_l)
+	var cap_r := ColorRect.new()
+	cap_r.color = Color(0.55, 0.85, 1.0, 0.9)
+	cap_r.position = Vector2(px + w - 1.0, py + 2.0)
+	cap_r.size = Vector2(3.0, 4.0)
+	add_child(cap_r)
+
+# 단순 사각형 폴리곤 — 외곽선 없는 채움. _build_platform/_build_background에서 사용.
+func _add_filled_rect(pos: Vector2, size: Vector2, color: Color) -> Polygon2D:
+	var p := Polygon2D.new()
+	p.color = color
+	p.polygon = PackedVector2Array([
+		pos,
+		Vector2(pos.x + size.x, pos.y),
+		Vector2(pos.x + size.x, pos.y + size.y),
+		Vector2(pos.x, pos.y + size.y),
+	])
+	add_child(p)
+	return p
 
 func _build_wall(x: float) -> void:
 	# 세로 맵에서도 벽이 월드 전체 높이를 덮도록 height를 동적으로.
@@ -1122,6 +1258,29 @@ func _build_wall(x: float) -> void:
 	col.shape = shape
 	col.position = Vector2(x, _world_size.y * 0.5)
 	body.add_child(col)
+
+	# 벽 시각 — 본체 + 안쪽 모서리 발광 라인 + 패널 분할 (수직 stripe).
+	var wx: float = x - 30.0
+	var wtop: float = -200.0
+	var wh: float = wall_height
+	_add_filled_rect(Vector2(wx, wtop), Vector2(60.0, wh), Color(0.06, 0.07, 0.09))
+	# 안쪽 면(보이는 쪽) — STAGE_LENGTH 끝(x>STAGE_LENGTH)이면 왼쪽이 안쪽, 시작(x<0)이면 오른쪽이 안쪽
+	var inner_x: float = (wx + 56.0) if x < 0.0 else wx
+	var glow := ColorRect.new()
+	glow.color = Color(0.55, 0.78, 0.95, 0.55)
+	glow.position = Vector2(inner_x, wtop)
+	glow.size = Vector2(2.0, wh)
+	glow.z_index = -2
+	add_child(glow)
+	# 수평 패널 분할 라인 (60px 간격)
+	var ly: float = wtop + 40.0
+	while ly < wtop + wh:
+		var seam := ColorRect.new()
+		seam.color = Color(0.02, 0.03, 0.04, 0.85)
+		seam.position = Vector2(wx, ly)
+		seam.size = Vector2(60.0, 1.0)
+		add_child(seam)
+		ly += 60.0
 
 func _build_player() -> void:
 	player = CharacterBody2D.new()

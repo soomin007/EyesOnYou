@@ -29,14 +29,38 @@ static func build_player(parent: Node2D) -> Node2D:
 	torso.name = "Torso"
 	root.add_child(torso)
 
-	# 상체 어깨 11 → 하체 무릎 7 → 발 5로 좁아지는 V형 비례.
+	# 상체(어깨~가랑이) — 두 다리는 별도 polygon으로 분리해 다리답게.
 	_filled(torso, Color(0.82, 0.84, 0.88), PackedVector2Array([
 		Vector2(-11, -46), Vector2(11, -46),
-		Vector2(11, -30), Vector2(9, -22),
-		Vector2(7, -12), Vector2(5, -2),
-		Vector2(2, -2), Vector2(0, -8), Vector2(-2, -2),
-		Vector2(-5, -2), Vector2(-7, -12), Vector2(-9, -22),
-		Vector2(-11, -30),
+		Vector2(10, -36), Vector2(9, -28),
+		Vector2(-9, -28), Vector2(-10, -36),
+	]))
+
+	# 왼 다리 — 허벅지 너비 6 → 정강이 4 (무릎에서 살짝 좁아짐).
+	_filled(torso, Color(0.78, 0.80, 0.84), PackedVector2Array([
+		Vector2(-9, -28), Vector2(-3, -28),
+		Vector2(-3, -16),
+		Vector2(-3, -4),
+		Vector2(-7, -4),
+		Vector2(-7, -16),
+	]))
+	# 오른 다리 — 좌우 대칭. 색상 살짝 밝게(앞다리 인상).
+	_filled(torso, Color(0.84, 0.86, 0.90), PackedVector2Array([
+		Vector2(3, -28), Vector2(9, -28),
+		Vector2(7, -16),
+		Vector2(7, -4),
+		Vector2(3, -4),
+		Vector2(3, -16),
+	]))
+	# 왼 신발
+	_filled(torso, Color(0.16, 0.18, 0.22), PackedVector2Array([
+		Vector2(-9, -4), Vector2(-2, -4),
+		Vector2(-2, 0), Vector2(-9, 0),
+	]))
+	# 오른 신발
+	_filled(torso, Color(0.16, 0.18, 0.22), PackedVector2Array([
+		Vector2(2, -4), Vector2(9, -4),
+		Vector2(9, 0), Vector2(2, 0),
 	]))
 
 	# 어깨 패드 (양쪽) — 어깨 11 비례에 맞춰 살짝 바깥으로 돌출
@@ -47,13 +71,13 @@ static func build_player(parent: Node2D) -> Node2D:
 		Vector2(7, -46), Vector2(13, -46), Vector2(13, -40), Vector2(8, -40),
 	]))
 
-	# 벨트 — 허리(11) 라인에 맞춤
+	# 벨트 — 허리 라인(가랑이 위)
 	_filled(torso, Color(0.18, 0.20, 0.26), PackedVector2Array([
-		Vector2(-11, -30), Vector2(11, -30), Vector2(9, -26), Vector2(-9, -26),
+		Vector2(-10, -34), Vector2(10, -34), Vector2(9, -28), Vector2(-9, -28),
 	]))
 	# 벨트 버클
 	_filled(torso, Color(0.85, 0.78, 0.50), PackedVector2Array([
-		Vector2(-2, -29), Vector2(2, -29), Vector2(2, -27), Vector2(-2, -27),
+		Vector2(-2, -33), Vector2(2, -33), Vector2(2, -30), Vector2(-2, -30),
 	]))
 
 	# 가슴 패널
