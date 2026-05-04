@@ -38,6 +38,9 @@ var skill_cd: float = 0.0
 var invuln: float = 0.0
 
 var visual: Node2D
+var torso: Node2D = null      # CharacterArt가 만든 Torso 컨테이너 — idle bob에 사용
+var arm_front: Node2D = null  # 앞팔/총 — 사격 시 반동 회전, 이동 시 흔들림
+var anim_t: float = 0.0       # 시각 애니메이션 누적 시간(sin bob 위상)
 var muzzle_flash: ColorRect
 
 # barrier 상태
@@ -49,6 +52,9 @@ func _ready() -> void:
 	add_to_group("player")
 	z_index = 2
 	visual = CharacterArt.build_player(self)
+	torso = visual.get_node_or_null("Torso")
+	if torso != null:
+		arm_front = torso.get_node_or_null("ArmFront")
 	muzzle_flash = ColorRect.new()
 	muzzle_flash.name = "MuzzleFlash"
 	muzzle_flash.color = Color(1.0, 0.92, 0.45, 1.0)
@@ -72,6 +78,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if is_on_floor():
 		jumps_used = 0
+	anim_t += delta
 	_update_visual()
 
 func _tick_timers(delta: float) -> void:
@@ -376,3 +383,35 @@ func _update_visual() -> void:
 	else:
 		visual.modulate.a = 1.0
 	visual.scale.x = -1.0 if facing < 0 else 1.0
+	# 자세 — Torso의 작은 y bob + ArmFront 회전으로 정적 인상 완화.
+	# scale.x로 좌우 반전돼도 child rotation은 시각적으로 자동 미러됨.
+	if torso == null:
+		return
+	var moving: bool = absf(velocity.x) > 10.0
+	var grounded: bool = is_on_floor()
+	var bob: float = 0.0
+	var lean: float = 0.0
+	var arm_rot: float = 0.0
+	if not grounded:
+		bob = -1.0
+		if velocity.y < 0.0:
+			lean = 0.05
+			arm_rot = -0.18
+		else:
+			lean = -0.03
+			arm_rot = 0.10
+	elif moving:
+		bob = sin(anim_t * 14.0) * 1.4
+		arm_rot = sin(anim_t * 14.0) * 0.10
+	else:
+		bob = sin(anim_t * 3.0) * 0.6
+		arm_rot = sin(anim_t * 3.0) * 0.03
+	# 사격 직후 반동 — attack_cd가 max에서 0으로 줄어드는 동안 팔이 위로 튀었다 내려옴.
+	var max_cd: float = get_attack_cd_max()
+	if attack_cd > 0.0 and max_cd > 0.0:
+		var t: float = clamp(attack_cd / max_cd, 0.0, 1.0)
+		arm_rot += -0.30 * t
+	torso.position.y = bob
+	torso.rotation = lean
+	if arm_front != null:
+		arm_front.rotation = arm_rot
