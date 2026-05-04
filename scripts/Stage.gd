@@ -696,19 +696,21 @@ func _build_background() -> void:
 	top_fade.z_index = -19
 	add_child(top_fade)
 
-	# 별/티끌 — 어두운 톤 위에 랜덤 작은 점 (아주 옅음)
-	var srng := RandomNumberGenerator.new()
-	srng.seed = GameState.current_stage * 911 + 17
-	var star_count: int = 80
-	for i in star_count:
-		var s := ColorRect.new()
-		var sa: float = srng.randf_range(0.10, 0.32)
-		s.color = Color(0.85, 0.92, 1.0, sa)
-		s.position = Vector2(srng.randf_range(-150, STAGE_LENGTH + 150), srng.randf_range(-280, GROUND_Y - 200))
-		var sz: float = srng.randf_range(1.0, 2.4)
-		s.size = Vector2(sz, sz)
-		s.z_index = -18
-		add_child(s)
+	# 별/티끌 — 외곽 루트(외곽 진입로 / 외벽 옥상)에서만. 실내 맵엔 어색.
+	var outdoor_routes: Array = ["route_back_alley", "route_rooftops"]
+	if GameState.current_route_id in outdoor_routes:
+		var srng := RandomNumberGenerator.new()
+		srng.seed = GameState.current_stage * 911 + 17
+		var star_count: int = 80
+		for i in star_count:
+			var s := ColorRect.new()
+			var sa: float = srng.randf_range(0.10, 0.32)
+			s.color = Color(0.85, 0.92, 1.0, sa)
+			s.position = Vector2(srng.randf_range(-150, STAGE_LENGTH + 150), srng.randf_range(-280, GROUND_Y - 200))
+			var sz: float = srng.randf_range(1.0, 2.4)
+			s.size = Vector2(sz, sz)
+			s.z_index = -18
+			add_child(s)
 
 	# 멀리 있는 실루엣 기둥 — HORIZONTAL 맵에서만
 	if _world_type != "HORIZONTAL":
@@ -1202,7 +1204,7 @@ func _build_platform(x: float, y: float, w: float) -> void:
 		seam.position = Vector2(seam_x - 0.5, py + 6.0)
 		seam.size = Vector2(1.0, 12.0)
 		add_child(seam)
-	# 외곽선 박스
+	# 외곽선 박스 — 형태만 잡는 정도로 옅게(쟁한 느낌 방지).
 	var outline := Line2D.new()
 	outline.points = PackedVector2Array([
 		Vector2(px, py),
@@ -1211,8 +1213,8 @@ func _build_platform(x: float, y: float, w: float) -> void:
 		Vector2(px, py + 24.0),
 	])
 	outline.closed = true
-	outline.width = 1.4
-	outline.default_color = Color(0.04, 0.05, 0.07, 0.95)
+	outline.width = 0.8
+	outline.default_color = Color(0.04, 0.05, 0.07, 0.50)
 	outline.antialiased = true
 	add_child(outline)
 	# 상단 발광 라인 (착지면 인지)

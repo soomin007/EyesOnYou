@@ -52,7 +52,9 @@ const SNIPER_RANGE: float = 820.0
 
 # Drone — 머리 위 호버 후 폭탄 투하
 const DRONE_SPEED: float = 110.0
-const DRONE_HOVER_OFFSET_Y: float = -180.0
+# hover 거리 — 플레이어 머리 위 220px. 기존 -180은 플레이어가 플랫폼 바로
+# 아래에 있을 때 드론이 그 플랫폼에 시각적으로 붙어 보였음.
+const DRONE_HOVER_OFFSET_Y: float = -220.0
 const DRONE_BOMB_INTERVAL: float = 2.5
 const DRONE_BOMB_X_BAND: float = 90.0
 const DRONE_BOMB_Y_MIN: float = 80.0

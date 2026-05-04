@@ -114,7 +114,9 @@ static func _rooftops() -> Dictionary:
 		"enemies": {
 			"patrol": [Vector2(640, 2450.0), Vector2(640, 1810.0), Vector2(640, 1150.0)],
 			"sniper": [Vector2(960, 1370.0), Vector2(180, 1370.0)],
-			"drone":  [Vector2(640, 480.0)],
+			# 드론은 정상 영역 위쪽 빈 공간에서 호버. 플랫폼(640, 520)에 너무
+			# 붙지 않게 위로 이동 — hover offset과 함께 발판 위 100px 이상 확보.
+			"drone":  [Vector2(640, 360.0)],
 			"bomber": [], "shield": [],
 		},
 		"rewards": {
@@ -275,7 +277,9 @@ static func _cooling() -> Dictionary:
 		"enemies": {
 			"patrol": [Vector2(540, 2670.0), Vector2(640, 2310.0), Vector2(540, 1790.0)],
 			"sniper": [Vector2(180, 1130.0)],
-			"drone":  [Vector2(960, 1340.0), Vector2(900, 1210.0)],
+			# 드론 — 분기 위쪽 빈 공간. 기존 (960, 1340)/(900, 1210)는 플랫폼
+			# (960, 1380)/(900, 1240) 바로 위 30~40px라 시각적으로 붙어 있었음.
+			"drone":  [Vector2(960, 1080.0), Vector2(540, 940.0)],
 			"bomber": [], "shield": [],
 		},
 		"rewards": {
@@ -379,7 +383,9 @@ static func _ward() -> Dictionary:
 			"sniper": [],
 			"drone":  [],
 			"bomber": [Vector2(3100, 600.0)],
-			"shield": [Vector2(1300, 600.0), Vector2(2100, 600.0)],
+			# 방패병 — 통로 장애물(1200/2000/2800)과 이스터에그 문(2000) 사이의
+			# 빈 공간에 배치. 플랫폼/문 뒤에 가려지면 사격이 막혀 매우 불쾌.
+			"shield": [Vector2(1500, 600.0), Vector2(2400, 600.0)],
 		},
 		"rewards": {
 			"xp_orbs":    [],

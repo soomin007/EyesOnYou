@@ -14,8 +14,9 @@ extends RefCounted
 # 도형 위에 어두운 외곽선(Line2D)을 얹어 픽토그램 톤을 만든다 — _filled 헬퍼.
 # Player는 Torso/ArmFront 컨테이너 분리 → Player.gd가 idle bob/총 회전 적용.
 
-const STROKE_COLOR: Color = Color(0.05, 0.06, 0.08, 0.95)
-const STROKE_W: float = 1.6
+# 외곽선은 형태를 잡아주는 정도로만. 너무 진하면 픽토그램이 아니라 만화책처럼 느껴짐.
+const STROKE_COLOR: Color = Color(0.08, 0.10, 0.13, 0.55)
+const STROKE_W: float = 0.9
 
 static func build_player(parent: Node2D) -> Node2D:
 	var root := Node2D.new()
@@ -36,31 +37,31 @@ static func build_player(parent: Node2D) -> Node2D:
 		Vector2(-9, -28), Vector2(-10, -36),
 	]))
 
-	# 왼 다리 — 허벅지 너비 6 → 정강이 4 (무릎에서 살짝 좁아짐).
+	# 왼 다리 — 허벅지 6 → 무릎 6 → 종아리 살짝 굵게(7) → 발목 6.
 	_filled(torso, Color(0.78, 0.80, 0.84), PackedVector2Array([
 		Vector2(-9, -28), Vector2(-3, -28),
-		Vector2(-3, -16),
+		Vector2(-4, -16),
 		Vector2(-3, -4),
-		Vector2(-7, -4),
-		Vector2(-7, -16),
+		Vector2(-9, -4),
+		Vector2(-10, -16),
 	]))
-	# 오른 다리 — 좌우 대칭. 색상 살짝 밝게(앞다리 인상).
+	# 오른 다리 — 좌우 대칭, 살짝 밝게(앞다리 인상).
 	_filled(torso, Color(0.84, 0.86, 0.90), PackedVector2Array([
 		Vector2(3, -28), Vector2(9, -28),
-		Vector2(7, -16),
-		Vector2(7, -4),
+		Vector2(10, -16),
+		Vector2(9, -4),
 		Vector2(3, -4),
-		Vector2(3, -16),
+		Vector2(4, -16),
 	]))
-	# 왼 신발
+	# 왼 신발 — 다리보다 살짝 넓게(8)
 	_filled(torso, Color(0.16, 0.18, 0.22), PackedVector2Array([
-		Vector2(-9, -4), Vector2(-2, -4),
-		Vector2(-2, 0), Vector2(-9, 0),
+		Vector2(-10, -4), Vector2(-2, -4),
+		Vector2(-2, 0), Vector2(-10, 0),
 	]))
 	# 오른 신발
 	_filled(torso, Color(0.16, 0.18, 0.22), PackedVector2Array([
-		Vector2(2, -4), Vector2(9, -4),
-		Vector2(9, 0), Vector2(2, 0),
+		Vector2(2, -4), Vector2(10, -4),
+		Vector2(10, 0), Vector2(2, 0),
 	]))
 
 	# 어깨 패드 (양쪽) — 어깨 11 비례에 맞춰 살짝 바깥으로 돌출
@@ -71,13 +72,20 @@ static func build_player(parent: Node2D) -> Node2D:
 		Vector2(7, -46), Vector2(13, -46), Vector2(13, -40), Vector2(8, -40),
 	]))
 
-	# 벨트 — 허리 라인(가랑이 위)
-	_filled(torso, Color(0.18, 0.20, 0.26), PackedVector2Array([
-		Vector2(-10, -34), Vector2(10, -34), Vector2(9, -28), Vector2(-9, -28),
+	# 벨트 — 허리 라인. 두께 8(상하 4씩 띠), 진한 색으로 가슴/다리 분리감 강조.
+	_filled(torso, Color(0.10, 0.12, 0.16), PackedVector2Array([
+		Vector2(-10, -36), Vector2(10, -36), Vector2(10, -28), Vector2(-10, -28),
 	]))
+	# 벨트 상단 highlight (얇은 청회색 띠) — 허리 라인을 명확히
+	var belt_hl := Polygon2D.new()
+	belt_hl.color = Color(0.55, 0.65, 0.78, 0.45)
+	belt_hl.polygon = PackedVector2Array([
+		Vector2(-10, -36), Vector2(10, -36), Vector2(10, -35), Vector2(-10, -35),
+	])
+	torso.add_child(belt_hl)
 	# 벨트 버클
 	_filled(torso, Color(0.85, 0.78, 0.50), PackedVector2Array([
-		Vector2(-2, -33), Vector2(2, -33), Vector2(2, -30), Vector2(-2, -30),
+		Vector2(-2.5, -34), Vector2(2.5, -34), Vector2(2.5, -30), Vector2(-2.5, -30),
 	]))
 
 	# 가슴 패널
