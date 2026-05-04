@@ -443,16 +443,20 @@ func _update_visual() -> void:
 	torso.rotation = lean
 	if arm_front != null:
 		arm_front.rotation = arm_rot
-	# 다리 — 걷기 swing. 가랑이 origin이라 회전이 자연스러운 진자 동작.
-	var leg_swing: float = 0.0
-	if grounded and moving:
-		leg_swing = sin(anim_t * 14.0) * 0.45
-	elif not grounded:
-		leg_swing = -0.20  # 점프 중 살짝 굽힘 (양다리 같은 방향)
-	if leg_l != null and leg_r != null:
-		if grounded:
-			leg_l.rotation = -leg_swing
-			leg_r.rotation = leg_swing
-		else:
-			leg_l.rotation = leg_swing
-			leg_r.rotation = leg_swing
+	# 다리 — 가랑이 origin인 LegL/LegR을 회전시켜 보행/점프 자세.
+	var leg_l_rot: float = 0.0
+	var leg_r_rot: float = 0.0
+	if grounded:
+		if moving:
+			var swing: float = sin(anim_t * 14.0) * 0.45
+			leg_l_rot = -swing
+			leg_r_rot = swing
+	else:
+		# 점프/낙하 — 한쪽 다리 앞 한쪽 뒤로 살짝(running jump 자세).
+		# 양다리가 같은 방향이면 어색하니 비대칭으로.
+		leg_l_rot = -0.22
+		leg_r_rot = 0.10
+	if leg_l != null:
+		leg_l.rotation = leg_l_rot
+	if leg_r != null:
+		leg_r.rotation = leg_r_rot

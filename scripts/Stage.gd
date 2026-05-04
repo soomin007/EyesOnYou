@@ -92,6 +92,15 @@ func _setup_veil_mistakes() -> void:
 	# x=900 — 진입 직후 분기 결정 전에 분위기 깔리도록 일찍 트리거.
 	if GameState.current_route_id == "route_ward":
 		_arm_ward_foreshadow_at(900.0)
+	# Vertical 맵 — 진입 직후 방향 안내. 사용자: "왜 올라가야 하는지 모르겠다".
+	# 정상/바닥에 출구가 있다는 사실을 첫 멘트로 명시.
+	match GameState.current_route_id:
+		"route_rooftops":
+			_show_veil_subtitle("위로 올라가요. 옥상이 출구예요.", 3.0)
+		"route_cooling":
+			_show_veil_subtitle("냉각 파이프 위쪽이 출구예요. 발판 따라 올라가요.", 3.2)
+		"route_sewers":
+			_show_veil_subtitle("아래로 내려가요. 통로 끝에 출구가 있어요.", 3.0)
 
 func _arm_ward_foreshadow_at(trigger_x: float) -> void:
 	var area := Area2D.new()
@@ -876,7 +885,8 @@ func _build_hazards() -> void:
 			var sx: float = float(d.get("x", 0.0))
 			var sy: float = float(d.get("y", GROUND_Y - 6.0))
 			var sw: float = float(d.get("w", 90.0))
-			_build_spike(sx, sw, sy)
+			var sd: int = int(d.get("dmg", 1))
+			_build_spike(sx, sw, sy, sd)
 		return
 	# 폴백 (디버그/플레이그라운드)
 	if not "함정" in GameState.current_route_tags:
@@ -889,9 +899,10 @@ func _build_hazards() -> void:
 		var x: float = base_x + rng.randf_range(-80.0, 80.0)
 		_build_spike(x, 90.0, GROUND_Y - 6.0)
 
-func _build_spike(center_x: float, w: float, base_y: float = -1.0) -> void:
+func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1) -> void:
 	# base_y는 가시 끝(뾰족한 부분)의 y. -1이면 GROUND_Y - 6 폴백 (지면 위 가시).
 	# 가시는 base_y 위로 18px, 즉 base_y - 18에서 시작해 base_y에서 끝남.
+	# dmg: 가시 데미지(default 1, sewers 같은 강조 함정은 2).
 	if base_y < 0.0:
 		base_y = GROUND_Y - 6.0
 	var x_start: float = center_x - w * 0.5
@@ -903,7 +914,7 @@ func _build_spike(center_x: float, w: float, base_y: float = -1.0) -> void:
 	add_child(visual)
 	for sx in range(int(x_start) + 12, int(x_end), 24):
 		var spike := Polygon2D.new()
-		spike.color = Color(0.95, 0.30, 0.30)
+		spike.color = Color(0.95, 0.30, 0.30) if dmg < 2 else Color(1.0, 0.40, 0.20)
 		spike.polygon = PackedVector2Array([
 			Vector2(float(sx), base_y),
 			Vector2(float(sx) + 12.0, base_y),
@@ -914,17 +925,21 @@ func _build_spike(center_x: float, w: float, base_y: float = -1.0) -> void:
 	zone.collision_layer = 0
 	zone.collision_mask = 2  # 플레이어
 	zone.position = Vector2(center_x, base_y - 12.0)
+	zone.set_meta("damage", dmg)
 	add_child(zone)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(w, 36.0)
 	col.shape = shape
 	zone.add_child(col)
-	zone.body_entered.connect(_on_spike_touched)
+	zone.body_entered.connect(_on_spike_touched.bind(zone))
 
-func _on_spike_touched(body: Node) -> void:
+func _on_spike_touched(body: Node, zone: Area2D) -> void:
 	if body == player and body.has_method("take_hit"):
-		body.take_hit(1)
+		var d: int = 1
+		if is_instance_valid(zone):
+			d = int(zone.get_meta("damage", 1))
+		body.take_hit(d)
 
 func _build_route_ambience() -> void:
 	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용.
@@ -1359,20 +1374,29 @@ func _build_hud() -> void:
 	top.add_theme_constant_override("margin_bottom", 16)
 	top.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	hud.add_child(top)
+	# 두 줄 — 1행: STAGE/맵/HP/XP/VEIL. 2행: SKILL(아래로 분리).
+	var top_v := VBoxContainer.new()
+	top_v.add_theme_constant_override("separation", 4)
+	top.add_child(top_v)
 	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 32)
-	top.add_child(hb)
+	hb.add_theme_constant_override("separation", 28)
+	top_v.add_child(hb)
+	var hb2 := HBoxContainer.new()
+	hb2.add_theme_constant_override("separation", 12)
+	top_v.add_child(hb2)
 	hp_label = Label.new()
 	xp_label = Label.new()
 	stage_label = Label.new()
 	map_label = Label.new()
 	trust_label = Label.new()
 	skill_label = Label.new()
-	# 표시 순서 — STAGE / 맵 이름 / HP / XP / VEIL 신뢰도 / SKILL
-	for l in [stage_label, map_label, hp_label, xp_label, trust_label, skill_label]:
+	for l in [stage_label, map_label, hp_label, xp_label, trust_label]:
 		l.add_theme_font_size_override("font_size", 18)
 		l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 		hb.add_child(l)
+	skill_label.add_theme_font_size_override("font_size", 14)
+	skill_label.add_theme_color_override("font_color", Color(0.65, 0.72, 0.82))
+	hb2.add_child(skill_label)
 	_refresh_hud()
 
 	var bottom := MarginContainer.new()
@@ -1395,6 +1419,18 @@ func _build_hud() -> void:
 	cd_attack_slot = _make_cd_slot("사격")
 	cd_dash_slot = _make_cd_slot("대시")
 	cd_skill_slot = _make_cd_slot("스킬")
+	# 스킬 슬롯에만 충전 점 추가 — explosive T3에서 2개 보유 가능.
+	# 항상 점 2개 생성하고 색으로 활성/비활성/(미사용) 구분.
+	var charges_row := HBoxContainer.new()
+	charges_row.name = "ChargesRow"
+	charges_row.add_theme_constant_override("separation", 4)
+	for i in 2:
+		var dot := ColorRect.new()
+		dot.custom_minimum_size = Vector2(8, 8)
+		dot.size = Vector2(8, 8)
+		dot.color = Color(0.20, 0.22, 0.26, 0.4)
+		charges_row.add_child(dot)
+	cd_skill_slot.add_child(charges_row)
 	cd_row.add_child(cd_attack_slot)
 	cd_row.add_child(cd_dash_slot)
 	cd_row.add_child(cd_skill_slot)
@@ -1498,6 +1534,30 @@ func _refresh_hud() -> void:
 			cd_dash_slot.visible = GameState.has_skill("dash")
 		if cd_skill_slot != null:
 			cd_skill_slot.visible = GameState.has_skill("explosive")
+			_update_skill_charges()
+
+# 스킬 충전 점 갱신 — explosive T3에서 2개 보유. 색으로 활성/비활성/(미사용) 구분.
+func _update_skill_charges() -> void:
+	if cd_skill_slot == null or player == null or not is_instance_valid(player):
+		return
+	var charges_row := cd_skill_slot.get_node_or_null("ChargesRow") as HBoxContainer
+	if charges_row == null:
+		return
+	var cur: int = int(player.get("skill_charges"))
+	var max_c: int = int(player.get("skill_max_charges"))
+	for i in charges_row.get_child_count():
+		var dot := charges_row.get_child(i) as ColorRect
+		if dot == null:
+			continue
+		if i >= max_c:
+			# T1/T2 — 두번째 점은 미사용(회색 옅게)
+			dot.color = Color(0.15, 0.16, 0.20, 0.35)
+		elif i < cur:
+			# 활성 충전
+			dot.color = Color(0.95, 0.65, 0.30)
+		else:
+			# 충전 중(비활성)
+			dot.color = Color(0.30, 0.32, 0.36)
 
 func _hearts(hp: int, max_hp: int) -> String:
 	var s: String = ""
