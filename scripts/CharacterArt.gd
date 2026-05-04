@@ -29,26 +29,27 @@ static func build_player(parent: Node2D) -> Node2D:
 	torso.name = "Torso"
 	root.add_child(torso)
 
+	# 상체 어깨 11 → 하체 무릎 7 → 발 5로 좁아지는 V형 비례.
 	_filled(torso, Color(0.82, 0.84, 0.88), PackedVector2Array([
-		Vector2(-9, -46), Vector2(9, -46),
-		Vector2(12, -28), Vector2(10, -10),
-		Vector2(8, 0), Vector2(2, 0),
-		Vector2(0, -8), Vector2(-2, 0),
-		Vector2(-8, 0), Vector2(-10, -10),
-		Vector2(-12, -28),
+		Vector2(-11, -46), Vector2(11, -46),
+		Vector2(11, -30), Vector2(9, -22),
+		Vector2(7, -12), Vector2(5, -2),
+		Vector2(2, -2), Vector2(0, -8), Vector2(-2, -2),
+		Vector2(-5, -2), Vector2(-7, -12), Vector2(-9, -22),
+		Vector2(-11, -30),
 	]))
 
-	# 어깨 패드 (양쪽)
+	# 어깨 패드 (양쪽) — 어깨 11 비례에 맞춰 살짝 바깥으로 돌출
 	_filled(torso, Color(0.50, 0.54, 0.62), PackedVector2Array([
-		Vector2(-12, -46), Vector2(-7, -46), Vector2(-8, -40), Vector2(-12, -40),
+		Vector2(-13, -46), Vector2(-7, -46), Vector2(-8, -40), Vector2(-13, -40),
 	]))
 	_filled(torso, Color(0.50, 0.54, 0.62), PackedVector2Array([
-		Vector2(7, -46), Vector2(12, -46), Vector2(12, -40), Vector2(8, -40),
+		Vector2(7, -46), Vector2(13, -46), Vector2(13, -40), Vector2(8, -40),
 	]))
 
-	# 벨트
+	# 벨트 — 허리(11) 라인에 맞춤
 	_filled(torso, Color(0.18, 0.20, 0.26), PackedVector2Array([
-		Vector2(-12, -30), Vector2(12, -30), Vector2(11, -26), Vector2(-11, -26),
+		Vector2(-11, -30), Vector2(11, -30), Vector2(9, -26), Vector2(-9, -26),
 	]))
 	# 벨트 버클
 	_filled(torso, Color(0.85, 0.78, 0.50), PackedVector2Array([

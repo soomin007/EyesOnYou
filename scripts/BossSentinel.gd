@@ -329,13 +329,18 @@ func _arm_self_destruct() -> void:
 	danger_ring_outer = _make_danger_ring(SELF_DESTRUCT_OUTER, Color(0.95, 0.78, 0.30, 0.65), 3.0)
 	add_child(danger_ring_inner)
 	add_child(danger_ring_outer)
-	# 두 ring 모두 펄스 — 카운트다운 인지
-	for ring in [danger_ring_inner, danger_ring_outer]:
-		var tw := ring.create_tween()
-		tw.set_loops()
-		tw.tween_property(ring, "modulate:a", 0.45, 0.4)
-		tw.tween_property(ring, "modulate:a", 1.0, 0.4)
+	# 두 ring 모두 펄스 — 카운트다운 인지.
+	# 주의: array literal로 묶어 for 돌리면 ring이 Variant로 추론돼
+	# `var tw := ring.create_tween()`의 := 타입 추론이 파서를 막는다.
+	_pulse_ring(danger_ring_inner)
+	_pulse_ring(danger_ring_outer)
 	emit_signal("self_destruct_started")
+
+func _pulse_ring(ring: Line2D) -> void:
+	var tw: Tween = ring.create_tween()
+	tw.set_loops()
+	tw.tween_property(ring, "modulate:a", 0.45, 0.4)
+	tw.tween_property(ring, "modulate:a", 1.0, 0.4)
 
 func _make_danger_ring(radius: float, color: Color, width: float) -> Line2D:
 	var line := Line2D.new()
