@@ -82,10 +82,10 @@ func _setup_veil_mistakes() -> void:
 	if GameState.playground_active:
 		return
 	if GameState.current_stage == 0:
-		# 첫 적 구역 진입 시 한 번 — 트리거 좌표는 첫 patrol 근처
-		_arm_veil_mistake_at(680.0, "앞쪽에 둘이에요. 조심해요.", "셋이었네요. 제가 틀렸어요.")
+		# 첫 적 구역 진입 — 미션 컨텍스트 한 줄. 적 수 카운팅 같은 친절한 안내는 의도적으로 안 함.
+		_arm_veil_mistake_at(680.0, "정문은 봉쇄됐어요. 외벽으로 우회해요.", "")
 	elif GameState.current_stage == 2:
-		_arm_veil_mistake_at(1400.0, "이 구역은 경비 없을 거예요.", "있었네요. 미안해요.")
+		_arm_veil_mistake_at(1400.0, "여기 시야 자주 가려요. 발밑 조심해요.", "")
 	# 격리 병동 통과 시 ??? 맵 복선 (stage 3 또는 4).
 	# x=900 — 진입 직후 분기 결정 전에 분위기 깔리도록 일찍 트리거.
 	if GameState.current_route_id == "route_ward":
@@ -141,9 +141,13 @@ func _on_veil_mistake_zone(body: Node, area: Area2D) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
 	veil_mistake_triggered = true
-	# 큐에 차례로 — before 자막 끝나고 after가 자동 재생.
-	_show_veil_subtitle(str(area.get_meta("before", "")), 2.5)
-	_show_veil_subtitle(str(area.get_meta("after", "")), 3.0)
+	# before 한 줄 + (있으면) after 한 줄. after는 빈 문자열이면 표시 생략.
+	var before_line: String = str(area.get_meta("before", ""))
+	var after_line: String = str(area.get_meta("after", ""))
+	if before_line != "":
+		_show_veil_subtitle(before_line, 2.8)
+	if after_line != "":
+		_show_veil_subtitle(after_line, 3.0)
 
 func _build_hidden_archive() -> void:
 	# 격리 서버실 — 적/가시/골 없음, 단말기 2개 시퀀스 후 자동 ENDING 전환
@@ -623,6 +627,49 @@ func _display_veil_subtitle(message: String, duration: float) -> void:
 	tw.tween_interval(duration)
 	tw.tween_property(l, "modulate:a", 0.0, 0.5)
 	tw.tween_callback(msg_layer.queue_free)
+
+# 보스전 전용 강조 자막 — 일반 _show_veil_subtitle보다 큰 폰트 + 어두운 박스 배경 +
+# 색상으로 위험도 차등화. 화면 중앙 위쪽에 배치해 폭발 효과/총알 위에서도 인지 가능.
+func _show_boss_alert(message: String, color: Color, duration: float) -> void:
+	var msg_layer := CanvasLayer.new()
+	msg_layer.layer = 22
+	add_child(msg_layer)
+	var holder := CenterContainer.new()
+	holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	holder.position = Vector2(0, 110.0)
+	holder.size = Vector2(1280.0, 80.0)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	msg_layer.add_child(holder)
+	var panel := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.05, 0.06, 0.08, 0.88)
+	sb.border_color = color
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(6)
+	sb.content_margin_left = 24
+	sb.content_margin_right = 24
+	sb.content_margin_top = 12
+	sb.content_margin_bottom = 12
+	panel.add_theme_stylebox_override("panel", sb)
+	holder.add_child(panel)
+	var l := Label.new()
+	l.text = "VEIL  —  " + message
+	l.add_theme_font_size_override("font_size", 28)
+	l.add_theme_color_override("font_color", color)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	l.add_theme_constant_override("outline_size", 5)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(l)
+	# 살짝 스케일 인 + 페이드 인/아웃
+	panel.modulate.a = 0.0
+	panel.scale = Vector2(0.92, 0.92)
+	var tw := panel.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(panel, "modulate:a", 1.0, 0.25)
+	tw.tween_property(panel, "scale", Vector2(1.0, 1.0), 0.3).set_trans(Tween.TRANS_BACK)
+	tw.chain().tween_interval(duration)
+	tw.chain().tween_property(panel, "modulate:a", 0.0, 0.5)
+	tw.chain().tween_callback(msg_layer.queue_free)
 
 func _build_background() -> void:
 	# 세계 크기에 맞춰 배경 확장
@@ -1481,15 +1528,14 @@ func _refresh_boss_hp_bar() -> void:
 		3: boss_hp_bar_fill.color = Color(1.0, 0.18, 0.18)
 
 func _on_boss_phase_changed(new_phase: int) -> void:
-	# 페이즈 인지는 VEIL 자막 + 화면 플래시 + 카메라 흔들림으로.
-	# 큰 영문 배너는 톤 안 맞아 제거. VEIL이 짧게 코멘트.
+	# 페이즈 인지 — 화면 플래시 + 카메라 흔들림 + 강조 자막(큰 폰트 + 박스 배경).
 	_screen_flash(Color(1.0, 0.20, 0.22, 0.55), 0.06, 0.45)
 	_camera_shake(8.0 if new_phase == 2 else 14.0, 0.45)
 	match new_phase:
 		2:
-			_show_veil_subtitle("패턴이 바뀌었어요. 양쪽 조심해요.", 2.8)
+			_show_boss_alert("패턴이 바뀌었어요. 양쪽 조심해요.", Color(1.0, 0.78, 0.40), 3.0)
 		3:
-			_show_veil_subtitle("불안정해졌어요. 거리 두고 빠르게.", 2.8)
+			_show_boss_alert("불안정해졌어요. 거리 두고 빠르게.", Color(1.0, 0.45, 0.45), 3.0)
 
 func _on_boss_self_destruct_started() -> void:
 	# 화면 전체 경고 — 큰 카운트다운 라벨
@@ -1519,6 +1565,17 @@ func _on_boss_self_destruct_started() -> void:
 	boss_self_destruct_label.size = Vector2(1000.0, 50.0)
 	boss_self_destruct_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	boss_self_destruct_layer.add_child(boss_self_destruct_label)
+	# 회피 안내 — 노랑 ring 너머가 안전. 짧은 한 줄.
+	var avoid_label := Label.new()
+	avoid_label.text = "노란 원 밖으로 멀어져요"
+	avoid_label.add_theme_font_size_override("font_size", 18)
+	avoid_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
+	avoid_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	avoid_label.add_theme_constant_override("outline_size", 4)
+	avoid_label.position = Vector2(140.0, 296.0)
+	avoid_label.size = Vector2(1000.0, 36.0)
+	avoid_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_self_destruct_layer.add_child(avoid_label)
 
 func _on_boss_self_destruct_disarmed() -> void:
 	if boss_self_destruct_layer != null and is_instance_valid(boss_self_destruct_layer):

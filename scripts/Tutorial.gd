@@ -240,7 +240,7 @@ func _build_signs() -> void:
 	# 이중 점프는 PLATFORM_3가 1단 한계 위에 있어 자연 학습되므로 별도 안내 안 함.
 	sign_move = _make_keycap_sign(["A", "D"], "이동", Vector2(280.0, GROUND_Y - 200.0))
 	sign_jump = _make_keycap_sign(["W"], "점프", Vector2(950.0, GROUND_Y - 280.0))
-	sign_attack = _make_keycap_sign(["좌클릭"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
+	sign_attack = _make_attack_sign(Vector2(1750.0, GROUND_Y - 200.0))
 	sign_dash = _make_keycap_sign(["SHIFT"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
 	sign_levelup = Label.new()
@@ -280,6 +280,83 @@ func _make_keycap_sign(keys: Array, label_text: String, pos: Vector2) -> Control
 	l.size = Vector2(320, 24)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	holder.add_child(l)
+	return holder
+
+# 사격 표지 — 마우스 그림(좌버튼만 빨강) + 보조 키 J 키캡 + 한 단어.
+func _make_attack_sign(pos: Vector2) -> Control:
+	var holder := Control.new()
+	holder.position = pos - Vector2(160, 60)
+	holder.size = Vector2(320, 96)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(holder)
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 12)
+	hbox.position = Vector2(0, 0)
+	hbox.size = Vector2(320, 56)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	holder.add_child(hbox)
+	hbox.add_child(_make_mouse_icon(true))
+	# "또는" 의미의 슬래시 — 한 글자만으로 두 입력 동등함을 표현
+	var slash := Label.new()
+	slash.text = "/"
+	slash.add_theme_font_size_override("font_size", 22)
+	slash.add_theme_color_override("font_color", Color(0.62, 0.68, 0.78))
+	slash.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hbox.add_child(slash)
+	hbox.add_child(_make_keycap("J"))
+	var l := Label.new()
+	l.text = "사격"
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", Color(0.62, 0.68, 0.78))
+	l.position = Vector2(0, 64)
+	l.size = Vector2(320, 24)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	holder.add_child(l)
+	return holder
+
+# 마우스 픽토그램 — Panel 본체 + 좌/우 버튼 영역 + 휠 점.
+# highlight_left=true면 좌버튼만 빨강 강조 (사격 입력 안내용).
+func _make_mouse_icon(highlight_left: bool) -> Control:
+	var w: float = 40.0
+	var h: float = 56.0
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(w, h)
+	# 본체 — 위쪽 모서리 둥글게, 아래쪽도 살짝 둥글게.
+	var body := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.12, 0.14, 0.18, 0.95)
+	sb.border_color = Color(0.65, 0.72, 0.85, 0.85)
+	sb.set_border_width_all(2)
+	sb.corner_radius_top_left = 18
+	sb.corner_radius_top_right = 18
+	sb.corner_radius_bottom_left = 14
+	sb.corner_radius_bottom_right = 14
+	body.add_theme_stylebox_override("panel", sb)
+	body.position = Vector2(0, 0)
+	body.size = Vector2(w, h)
+	holder.add_child(body)
+	# 좌버튼 영역 (좌상단 1/4) — highlight 시 빨강
+	if highlight_left:
+		var lb := Panel.new()
+		var lb_sb := StyleBoxFlat.new()
+		lb_sb.bg_color = Color(0.95, 0.30, 0.30, 0.92)
+		lb_sb.corner_radius_top_left = 16
+		lb.add_theme_stylebox_override("panel", lb_sb)
+		lb.position = Vector2(2, 2)
+		lb.size = Vector2(17, 22)
+		holder.add_child(lb)
+	# 좌/우 분리선 (위쪽 1/3 영역만)
+	var sep := ColorRect.new()
+	sep.color = Color(0.65, 0.72, 0.85, 0.6)
+	sep.position = Vector2(w * 0.5 - 1.0, 2.0)
+	sep.size = Vector2(2, 22)
+	holder.add_child(sep)
+	# 휠 점
+	var wheel := ColorRect.new()
+	wheel.color = Color(0.85, 0.88, 0.92, 0.85)
+	wheel.position = Vector2(w * 0.5 - 2.0, 12.0)
+	wheel.size = Vector2(4, 8)
+	holder.add_child(wheel)
 	return holder
 
 func _make_keycap(text: String) -> Control:

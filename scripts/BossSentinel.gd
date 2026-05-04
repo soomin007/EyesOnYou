@@ -64,6 +64,8 @@ var self_destruct_active: bool = false
 var self_destruct_t: float = 0.0
 var phase_freeze_t: float = 0.0  # 페이즈 전환 시 잠깐 정지 (시각적 강조)
 var summoned_minions: Array = []  # 페이즈 소환 잔당 — 보스 처치 시 함께 정리.
+var danger_ring_inner: Line2D = null  # 자폭 inner(380) 빨간 외곽선
+var danger_ring_outer: Line2D = null  # 자폭 outer(1200) 노랑 외곽선
 
 # 텔레그래프 시각 노드
 var bomb_dot: ColorRect = null
@@ -321,7 +323,32 @@ func _spawn_minion(kind: int, pos: Vector2, hp_value: int) -> CharacterBody2D:
 func _arm_self_destruct() -> void:
 	self_destruct_active = true
 	self_destruct_t = 0.0
+	# 위험 영역 시각화 — inner(380, 풀뎀) 빨강, outer(1200, 1뎀) 노랑.
+	# outer 너머가 안전 영역. ARENA 1920이라 벽 끝까지 도망가면 outer 너머 도달.
+	danger_ring_inner = _make_danger_ring(SELF_DESTRUCT_INNER, Color(0.95, 0.25, 0.25, 0.85), 4.0)
+	danger_ring_outer = _make_danger_ring(SELF_DESTRUCT_OUTER, Color(0.95, 0.78, 0.30, 0.65), 3.0)
+	add_child(danger_ring_inner)
+	add_child(danger_ring_outer)
+	# 두 ring 모두 펄스 — 카운트다운 인지
+	for ring in [danger_ring_inner, danger_ring_outer]:
+		var tw := ring.create_tween()
+		tw.set_loops()
+		tw.tween_property(ring, "modulate:a", 0.45, 0.4)
+		tw.tween_property(ring, "modulate:a", 1.0, 0.4)
 	emit_signal("self_destruct_started")
+
+func _make_danger_ring(radius: float, color: Color, width: float) -> Line2D:
+	var line := Line2D.new()
+	var pts: PackedVector2Array = []
+	var n: int = 64
+	for i in n + 1:
+		var a: float = float(i) * TAU / float(n)
+		pts.append(Vector2(cos(a) * radius, sin(a) * radius))
+	line.points = pts
+	line.default_color = color
+	line.width = width
+	line.z_index = 6
+	return line
 
 func _detonate() -> void:
 	# 거리 감쇠: inner 안=full 3뎀, outer 너머=1뎀, 그 사이는 lerp.
