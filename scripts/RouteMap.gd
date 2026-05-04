@@ -17,9 +17,35 @@ func _ready() -> void:
 	subtitle_label.text = "● 위험도 / 보상   —   ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
 	recommended_id = RouteData.choose_veil_recommendation(pool)
+	# VEIL 멘트 — 신뢰도 톤(색)을 _ready에서 한 번만 적용. 폰트는 22로 키워
+	# 선택 화면에서 분명히 눈에 들어오게 (이전 15는 카드에 묻혀 안 보였음).
+	veil_text.add_theme_font_size_override("font_size", 22)
+	veil_text.add_theme_color_override("font_color", GameState.veil_tone_color())
+	_setup_trust_gauge()
 	_build_node_buttons()
 	_update_veil_comment()
 	hint_label.text = "[ ←/→ : 선택 이동   SPACE/ENTER : 결정 ]"
+
+func _setup_trust_gauge() -> void:
+	# VEIL 박스 안에 5단계 점 게이지 추가. trust - aggression 기준.
+	var v_box: Node = veil_text.get_parent()
+	if v_box == null:
+		return
+	var gauge := Label.new()
+	gauge.name = "TrustGauge"
+	var net: int = GameState.trust_score - GameState.aggression_score
+	var dots: String = ""
+	for i in 5:
+		var th: int = -4 + i * 2
+		if net >= th:
+			dots += "●"
+		else:
+			dots += "○"
+	gauge.text = "VEIL 신뢰   " + dots
+	gauge.add_theme_font_size_override("font_size", 14)
+	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
+	gauge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v_box.add_child(gauge)
 
 func _build_node_buttons() -> void:
 	for child in nodes_container.get_children():
@@ -70,7 +96,7 @@ func _update_veil_comment() -> void:
 	var desc: String = str(route.get("description", ""))
 	if desc != "":
 		msg += desc + "\n\n"
-	msg += "VEIL  —  " + str(route.get("veil_comment", ""))
+	msg += "VEIL  —  " + GameState.veil_tone_prefix() + str(route.get("veil_comment", ""))
 	# 위험도가 보이는 루트(hidden 아님)에서만 명시 경고
 	if not route.get("hidden", false):
 		var risk: int = int(route.get("risk", 0))

@@ -97,11 +97,67 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	current_route_tags = route.get("tags", [])
 	current_route_risk = int(route.get("risk", 1))
 	current_route_reward = int(route.get("reward", 1))
-	followed_veil_last_choice = (rid == recommended_id)
+	followed_veil_last_choice = (rid == recommended_id and recommended_id != "")
+	# 신뢰도 — 추천 따랐으면 +1, 무시했으면 -1. 도전/숨김 루트는 추가 페널티(자율성↑).
 	if followed_veil_last_choice:
 		trust_score += 1
+	elif recommended_id != "":
+		trust_score -= 1
 	if "전투" in current_route_tags or "근접전" in current_route_tags:
 		aggression_score += 1
+	if route.get("challenge", false):
+		trust_score -= 1
+		aggression_score += 1
+	if route.get("hidden", false):
+		trust_score -= 1
+
+# 신뢰도 단계 — UI 톤/멘트 prefix 결정.
+# trust - aggression 기준. 양수면 VEIL을 따르는 플레이어, 음수면 거리감.
+func veil_trust_tier() -> String:
+	var net: int = trust_score - aggression_score
+	if net >= 4:
+		return "high"
+	if net >= 1:
+		return "warm"
+	if net >= -1:
+		return "neutral"
+	if net >= -3:
+		return "cool"
+	return "broken"
+
+func veil_tone_color() -> Color:
+	match veil_trust_tier():
+		"high":
+			return Color(0.55, 0.95, 0.85)
+		"warm":
+			return Color(0.55, 0.85, 0.95)
+		"neutral":
+			return Color(0.85, 0.85, 0.85)
+		"cool":
+			return Color(0.95, 0.78, 0.50)
+		"broken":
+			return Color(0.95, 0.55, 0.55)
+	return Color(0.55, 0.85, 0.95)
+
+# 신뢰도에 따라 멘트 앞에 붙는 톤 변화. 빈 문자열이면 평상시(보통).
+func veil_tone_prefix() -> String:
+	match veil_trust_tier():
+		"high":
+			return "당신이라면, "
+		"warm":
+			return ""
+		"neutral":
+			return ""
+		"cool":
+			return "음… "
+		"broken":
+			return "마음대로 하세요. "
+	return ""
+
+# 신뢰도 게이지 — UI 표시용 (-1.0 ~ +1.0 정규화).
+func veil_trust_normalized() -> float:
+	var net: float = float(trust_score - aggression_score)
+	return clamp(net / 6.0, -1.0, 1.0)
 
 func is_high_risk() -> bool:
 	return current_route_risk >= 3

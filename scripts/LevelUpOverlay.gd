@@ -31,11 +31,28 @@ static func show(host: Node, advice: String, on_picked: Callable) -> CanvasLayer
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)
 
+	# VEIL 신뢰도 게이지 — 카드 위에 5단계 점으로 표시.
+	# 신뢰도 따라 색이 바뀌어 플레이어와 VEIL의 관계가 매 선택에 보이게.
+	var gauge := Label.new()
+	var net: int = GameState.trust_score - GameState.aggression_score
+	var dots: String = ""
+	for i in 5:
+		var th: int = -4 + i * 2
+		if net >= th:
+			dots += "●"
+		else:
+			dots += "○"
+	gauge.text = "VEIL 신뢰   " + dots
+	gauge.add_theme_font_size_override("font_size", 13)
+	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
+	gauge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(gauge)
+
 	if advice != "":
 		var advice_label := Label.new()
-		advice_label.text = "VEIL  —  " + advice
-		advice_label.add_theme_font_size_override("font_size", 15)
-		advice_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.95))
+		advice_label.text = "VEIL  —  " + GameState.veil_tone_prefix() + advice
+		advice_label.add_theme_font_size_override("font_size", 22)
+		advice_label.add_theme_color_override("font_color", GameState.veil_tone_color())
 		advice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(advice_label)
 
