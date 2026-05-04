@@ -18,6 +18,8 @@ var hud: CanvasLayer
 var hp_label: Label
 var xp_label: Label
 var stage_label: Label
+var map_label: Label   # 현재 맵(루트) 이름 — HUD 상단
+var trust_label: Label # VEIL 신뢰도 게이지 — HUD 상단
 var skill_label: Label
 var levelup_overlay: CanvasLayer
 var goal_reached: bool = false
@@ -1117,25 +1119,29 @@ func _ambience_datacenter() -> void:
 		tw.tween_property(bar, "modulate:a", 0.35, 0.1)
 
 func _ambience_escape() -> void:
-	# 비상 탈출로 — 녹색 비상 표시등 + 옅은 안개. 톤 차분.
+	# 비상 탈출로 — 차분한 톤. 이전 초록 사각형 깜빡임은 XP orb과 헷갈려서 제거.
+	# 대신 천장 형광등 띠와 옅은 안개로 출구 가는 길의 분위기만.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 191 + 37
-	var x: float = 400.0
+	var x: float = 360.0
 	while x < STAGE_LENGTH:
-		var sign := ColorRect.new()
-		sign.color = Color(0.30, 0.85, 0.45, 0.55)
-		sign.size = Vector2(18.0, 18.0)
-		sign.position = Vector2(x - 9.0, GROUND_Y - 220.0)
-		sign.z_index = -4
-		add_child(sign)
-		var tw := sign.create_tween()
-		tw.set_loops()
-		tw.tween_interval(rng.randf_range(2.0, 4.0))
-		tw.tween_property(sign, "modulate:a", 0.3, 0.4)
-		tw.tween_property(sign, "modulate:a", 1.0, 0.4)
-		x += rng.randf_range(540.0, 800.0)
+		# 천장 형광등 — 가로 막대(차가운 백색). 화살표나 점등 효과 없이 잔잔하게.
+		var lamp := ColorRect.new()
+		lamp.color = Color(0.78, 0.88, 0.95, 0.55)
+		lamp.size = Vector2(120.0, 4.0)
+		lamp.position = Vector2(x - 60.0, -180.0)
+		lamp.z_index = -6
+		add_child(lamp)
+		# 그 아래 빛이 새는 옅은 빛 띠
+		var glow := ColorRect.new()
+		glow.color = Color(0.85, 0.92, 1.0, 0.08)
+		glow.size = Vector2(160.0, 60.0)
+		glow.position = Vector2(x - 80.0, -176.0)
+		glow.z_index = -7
+		add_child(glow)
+		x += rng.randf_range(420.0, 680.0)
 	var fog := ColorRect.new()
-	fog.color = Color(0.20, 0.45, 0.30, 0.06)
+	fog.color = Color(0.20, 0.30, 0.40, 0.06)
 	fog.position = Vector2(-200, GROUND_Y - 60.0)
 	fog.size = Vector2(STAGE_LENGTH + 400.0, 80.0)
 	fog.z_index = -3
@@ -1359,8 +1365,11 @@ func _build_hud() -> void:
 	hp_label = Label.new()
 	xp_label = Label.new()
 	stage_label = Label.new()
+	map_label = Label.new()
+	trust_label = Label.new()
 	skill_label = Label.new()
-	for l in [hp_label, xp_label, stage_label, skill_label]:
+	# 표시 순서 — STAGE / 맵 이름 / HP / XP / VEIL 신뢰도 / SKILL
+	for l in [stage_label, map_label, hp_label, xp_label, trust_label, skill_label]:
 		l.add_theme_font_size_override("font_size", 18)
 		l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 		hb.add_child(l)
@@ -1445,6 +1454,27 @@ func _refresh_hud() -> void:
 		marks.append("[고보상]")
 	var marker: String = ("  " + " ".join(marks)) if marks.size() > 0 else ""
 	stage_label.text = "STAGE %d/%d%s" % [GameState.current_stage + 1, GameState.TOTAL_STAGES, marker]
+	# 맵 이름 — RouteData에서 lookup. 튜토리얼/플레이그라운드 등 route_id 없으면 빈 문자열.
+	var route_name: String = ""
+	for r in RouteData.ALL_ROUTES:
+		var route: Dictionary = r
+		if route.get("id", "") == GameState.current_route_id:
+			route_name = str(route.get("name", ""))
+			break
+	if map_label != null:
+		map_label.text = (" ·  " + route_name) if route_name != "" else ""
+	# VEIL 신뢰도 — 5단계 점, 색은 신뢰도 단계에 따라.
+	if trust_label != null:
+		var net: int = GameState.trust_score - GameState.aggression_score
+		var dots: String = ""
+		for i in 5:
+			var th: int = -4 + i * 2
+			if net >= th:
+				dots += "●"
+			else:
+				dots += "○"
+		trust_label.text = "VEIL " + dots
+		trust_label.add_theme_color_override("font_color", GameState.veil_tone_color())
 	if GameState.skills.size() > 0:
 		var names: Array = []
 		for sid in GameState.skills:
@@ -1723,18 +1753,19 @@ func _on_boss_self_destruct_started() -> void:
 	boss_self_destruct_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.30))
 	boss_self_destruct_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	boss_self_destruct_label.add_theme_constant_override("outline_size", 5)
-	boss_self_destruct_label.position = Vector2(140.0, 240.0)
+	# 화면 상단 가운데 — 보스가 화면 중앙에 있어 가운데에 두면 보스 위에 박혀 보임.
+	boss_self_destruct_label.position = Vector2(140.0, 110.0)
 	boss_self_destruct_label.size = Vector2(1000.0, 50.0)
 	boss_self_destruct_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	boss_self_destruct_layer.add_child(boss_self_destruct_label)
-	# 회피 안내 — 노랑 ring 너머가 안전. 짧은 한 줄.
+	# 회피 안내 — 카운트다운 바로 아래.
 	var avoid_label := Label.new()
 	avoid_label.text = "노란 원 밖으로 멀어져요"
 	avoid_label.add_theme_font_size_override("font_size", 18)
 	avoid_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
 	avoid_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	avoid_label.add_theme_constant_override("outline_size", 4)
-	avoid_label.position = Vector2(140.0, 296.0)
+	avoid_label.position = Vector2(140.0, 158.0)
 	avoid_label.size = Vector2(1000.0, 36.0)
 	avoid_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	boss_self_destruct_layer.add_child(avoid_label)

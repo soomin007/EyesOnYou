@@ -17,7 +17,7 @@ const ALL_ROUTES: Array = [
 		"reward": 1,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 0, "max_stage": 0,
+		"min_stage": 0, "max_stage": 1,
 		"tags": ["우회", "어두운_환경"],
 		"veil_comment": "조용한 루트예요. 경비가 적어요.",
 		"stage_color": Color(0.12, 0.12, 0.14),
@@ -43,7 +43,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 1, "max_stage": 2,
+		# 지상(rooftops) 직후 깊은 지하로 가는 게 어색해 stage 2 이후로 한정.
+		"min_stage": 2, "max_stage": 3,
 		"tags": ["근접전", "어두운_환경", "함정", "전투"],
 		"veil_comment": "함정이 깔려 있어요. 발 밑 봐요.",
 		"stage_color": Color(0.18, 0.22, 0.20),
@@ -56,7 +57,8 @@ const ALL_ROUTES: Array = [
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 1, "max_stage": 2,
+		# 외부→시설 진입 brigde — stage 1~3에 등장해 외벽 단계와 내부 단계를 잇는다.
+		"min_stage": 1, "max_stage": 3,
 		"tags": ["근접전", "함정", "전투"],
 		"veil_comment": "좁아요. 대시 써서 함정 넘어가요.",
 		"stage_color": Color(0.08, 0.10, 0.14),
@@ -83,7 +85,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 2, "max_stage": 4,
+		# stage 1부터 등장 가능 — 외벽 옥상 직후 감시탑(둘 다 노출+높이)이 자연스럽게 이어짐.
+		"min_stage": 1, "max_stage": 4,
 		"tags": ["원거리", "전투", "노출"],
 		"veil_comment": "저격이 많아요. 엄폐 짧게 쓰고 빠르게.",
 		"stage_color": Color(0.18, 0.16, 0.22),

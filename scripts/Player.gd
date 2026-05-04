@@ -40,8 +40,14 @@ var invuln: float = 0.0
 var visual: Node2D
 var torso: Node2D = null      # CharacterArt가 만든 Torso 컨테이너 — idle bob에 사용
 var arm_front: Node2D = null  # 앞팔/총 — 사격 시 반동 회전, 이동 시 흔들림
+var leg_l: Node2D = null      # 왼다리 — 가랑이 origin. walk swing.
+var leg_r: Node2D = null      # 오른다리
 var anim_t: float = 0.0       # 시각 애니메이션 누적 시간(sin bob 위상)
 var muzzle_flash: ColorRect
+
+# explosive T3 — 2회 충전. 사용 시 charges -1, cd 끝나면 +1 누적.
+var skill_charges: int = 1
+var skill_max_charges: int = 1
 
 # barrier 상태
 var barrier_ready: bool = false
@@ -55,6 +61,9 @@ func _ready() -> void:
 	torso = visual.get_node_or_null("Torso")
 	if torso != null:
 		arm_front = torso.get_node_or_null("ArmFront")
+		leg_l = torso.get_node_or_null("LegL")
+		leg_r = torso.get_node_or_null("LegR")
+	_refresh_skill_charges()
 	muzzle_flash = ColorRect.new()
 	muzzle_flash.name = "MuzzleFlash"
 	muzzle_flash.color = Color(1.0, 0.92, 0.45, 1.0)
@@ -90,6 +99,11 @@ func _tick_timers(delta: float) -> void:
 		dash_cd -= delta
 	if skill_cd > 0.0:
 		skill_cd -= delta
+		# 쿨다운 종료 — charges 미만이면 +1 (T3 2회 충전).
+		if skill_cd <= 0.0 and skill_charges < skill_max_charges:
+			skill_charges += 1
+			if skill_charges < skill_max_charges:
+				skill_cd = get_skill_cd_max()  # 다음 충전 시작
 	if invuln > 0.0:
 		invuln -= delta
 	if muzzle_flash != null and muzzle_flash.visible:
@@ -255,14 +269,28 @@ func _try_dash() -> void:
 	invuln = max(invuln, iframe)
 
 func _try_skill() -> void:
-	# explosive: T1=쿨다운 3.0s, T2=반경+30% 쿨다운 2.5s, T3=2회 충전(B-2에서는 쿨다운만 적용, 충전 미구현).
+	# explosive: T1=쿨다운 3.0s, T2=반경+30% 쿨다운 2.5s, T3=쿨다운 2.5s + 2회 충전.
 	var ex_tier: int = GameState.get_skill_tier("explosive")
 	if ex_tier == 0:
 		return
-	if skill_cd > 0.0:
+	_refresh_skill_charges()  # 티어 변경(레벨업 직후) 반영
+	if skill_charges <= 0:
 		return
-	skill_cd = SKILL_COOLDOWN if ex_tier == 1 else 2.5
+	skill_charges -= 1
+	if skill_cd <= 0.0:
+		skill_cd = get_skill_cd_max()
 	_spawn_explosion()
+
+# T3에서 max 2 charges. 매 _ready/_try_skill 진입 시 호출해 티어 갱신을 반영.
+func _refresh_skill_charges() -> void:
+	var ex_tier: int = GameState.get_skill_tier("explosive")
+	var new_max: int = 2 if ex_tier >= 3 else 1
+	if new_max != skill_max_charges:
+		skill_max_charges = new_max
+		skill_charges = clampi(skill_charges, 0, skill_max_charges)
+		# T3로 막 진입했으면 충전 1개 추가 보장(이전엔 1/1 상태)
+		if new_max == 2 and skill_charges < new_max and skill_cd <= 0.0:
+			skill_charges = new_max
 
 func _spawn_explosion() -> void:
 	var center: Vector2 = global_position + Vector2(0, -28)
@@ -415,3 +443,16 @@ func _update_visual() -> void:
 	torso.rotation = lean
 	if arm_front != null:
 		arm_front.rotation = arm_rot
+	# 다리 — 걷기 swing. 가랑이 origin이라 회전이 자연스러운 진자 동작.
+	var leg_swing: float = 0.0
+	if grounded and moving:
+		leg_swing = sin(anim_t * 14.0) * 0.45
+	elif not grounded:
+		leg_swing = -0.20  # 점프 중 살짝 굽힘 (양다리 같은 방향)
+	if leg_l != null and leg_r != null:
+		if grounded:
+			leg_l.rotation = -leg_swing
+			leg_r.rotation = leg_swing
+		else:
+			leg_l.rotation = leg_swing
+			leg_r.rotation = leg_swing

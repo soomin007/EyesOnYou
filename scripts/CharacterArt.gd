@@ -39,31 +39,33 @@ static func build_player(parent: Node2D) -> Node2D:
 		Vector2(-9, -20), Vector2(-10, -32),
 	]))
 
-	# 왼 다리 — 허벅지 6 → 종아리 7. 가랑이 -20 ~ 발목 -4 (16px).
-	_filled(torso, Color(0.78, 0.80, 0.84), PackedVector2Array([
-		Vector2(-9, -20), Vector2(-3, -20),
-		Vector2(-4, -12),
-		Vector2(-3, -4),
-		Vector2(-9, -4),
-		Vector2(-10, -12),
+	# 다리 — 가랑이 origin인 LegL/LegR Node2D로 분리. 평행 직사각형
+	# (이전 무릎 부분이 바깥으로 휘어 오다리처럼 보였음). Player.gd가
+	# 이 노드를 회전시켜 걷기 애니메이션을 만든다(번갈아 swing).
+	var leg_l := Node2D.new()
+	leg_l.name = "LegL"
+	leg_l.position = Vector2(-6, -20)
+	torso.add_child(leg_l)
+	_filled(leg_l, Color(0.78, 0.80, 0.84), PackedVector2Array([
+		Vector2(-3, 0), Vector2(3, 0),
+		Vector2(3, 16), Vector2(-3, 16),
 	]))
-	# 오른 다리 — 좌우 대칭, 살짝 밝게(앞다리 인상).
-	_filled(torso, Color(0.84, 0.86, 0.90), PackedVector2Array([
-		Vector2(3, -20), Vector2(9, -20),
-		Vector2(10, -12),
-		Vector2(9, -4),
-		Vector2(3, -4),
-		Vector2(4, -12),
+	_filled(leg_l, Color(0.16, 0.18, 0.22), PackedVector2Array([
+		Vector2(-4, 16), Vector2(4, 16),
+		Vector2(4, 20), Vector2(-4, 20),
 	]))
-	# 왼 신발
-	_filled(torso, Color(0.16, 0.18, 0.22), PackedVector2Array([
-		Vector2(-10, -4), Vector2(-2, -4),
-		Vector2(-2, 0), Vector2(-10, 0),
+
+	var leg_r := Node2D.new()
+	leg_r.name = "LegR"
+	leg_r.position = Vector2(6, -20)
+	torso.add_child(leg_r)
+	_filled(leg_r, Color(0.84, 0.86, 0.90), PackedVector2Array([
+		Vector2(-3, 0), Vector2(3, 0),
+		Vector2(3, 16), Vector2(-3, 16),
 	]))
-	# 오른 신발
-	_filled(torso, Color(0.16, 0.18, 0.22), PackedVector2Array([
-		Vector2(2, -4), Vector2(10, -4),
-		Vector2(10, 0), Vector2(2, 0),
+	_filled(leg_r, Color(0.16, 0.18, 0.22), PackedVector2Array([
+		Vector2(-4, 16), Vector2(4, 16),
+		Vector2(4, 20), Vector2(-4, 20),
 	]))
 
 	# 어깨 패드 — 어깨 라인(-42)에서 살짝 바깥으로
