@@ -43,6 +43,10 @@ var read_lockout_t: float = 0.0
 const READ_LOCKOUT: float = 0.7
 const SCROLL_STEP: float = 200.0
 var close_hint_label: Label = null
+# 페이드인 중 _process가 자동 진행해 line 1/2가 미리 visible되던 버그(사용자:
+# "[A] 인사팀 온보까지만 보이다가 지워졌다 다시 써짐") 차단. _start_typing이
+# 콜백으로 호출될 때 비로소 typing 시작.
+var started: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -134,6 +138,7 @@ func _line_height_for(kind: String) -> float:
 	return LINE_HEIGHT_BODY
 
 func _start_typing() -> void:
+	started = true
 	current_line = 0
 	revealed = 0
 	t = 0.0
@@ -146,6 +151,9 @@ func _process(delta: float) -> void:
 		return
 	# 종이 부드럽게 스크롤 (현재 줄을 화면 중앙 ~40%에 위치)
 	paper.position.y = lerp(paper.position.y, paper_target_y, SCROLL_LERP)
+	# 페이드인 중엔 typing 진행 X — _start_typing 콜백이 started=true로 바꿔야 시작.
+	if not started:
+		return
 	# 다 읽고 나면 자동 진행 멈추고 사용자 스크롤 + 확인 키 대기.
 	if reading_done:
 		if read_lockout_t > 0.0:

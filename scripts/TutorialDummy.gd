@@ -23,7 +23,7 @@ func _ready() -> void:
 	col.position = Vector2(0, -20.0)
 	add_child(col)
 	visual = CharacterArt.build_tutorial_dummy(self)
-	# 스킬 전용 더미는 시각적으로 구분 — 약간 주황 + 외곽 광택. "다른 종류"라는 단서.
+	# 스킬 전용 더미는 시각적으로 구분 — 약간 주황 + 외곽 광택.
 	if skill_only and visual != null:
 		visual.modulate = Color(1.25, 0.85, 0.55)
 		var ring := ColorRect.new()
@@ -31,6 +31,12 @@ func _ready() -> void:
 		ring.position = Vector2(-22.0, -52.0)
 		ring.size = Vector2(44.0, 4.0)
 		add_child(ring)
+	# 사용자 피드백: 슈슉 날아오는 느낌 → 부드러운 페이드인으로 등장.
+	if visual != null:
+		var orig_alpha: float = visual.modulate.a
+		visual.modulate.a = 0.0
+		var tw := visual.create_tween()
+		tw.tween_property(visual, "modulate:a", orig_alpha, 0.3)
 
 func take_damage(amount: int, from_dir: int = 0) -> void:
 	if dead:
@@ -47,4 +53,7 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	if hp <= 0:
 		dead = true
 		emit_signal("killed", global_position)
-		queue_free()
+		# 슈슉 사라지는 느낌 대신 짧은 페이드아웃 후 free.
+		var tw_out := create_tween()
+		tw_out.tween_property(self, "modulate:a", 0.0, 0.2)
+		tw_out.tween_callback(queue_free)

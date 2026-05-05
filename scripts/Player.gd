@@ -141,20 +141,18 @@ func _tick_barrier(delta: float) -> void:
 	if barrier_indicator != null:
 		barrier_indicator.visible = true
 	if barrier_ready:
-		# 충전 완료 — 푸른빛 펄스(alpha + scale)로 강한 신호.
+		# 충전 완료 — 사용자 피드백: 충전 중 색 정도로 연하게. 펄스 폭도 작게.
 		if barrier_indicator != null:
-			var pulse: float = 0.85 + 0.15 * sin(Time.get_ticks_msec() * 0.005)
+			var pulse: float = 0.40 + 0.10 * sin(Time.get_ticks_msec() * 0.004)
 			barrier_indicator.modulate.a = pulse
-			var s: float = 1.0 + 0.15 * sin(Time.get_ticks_msec() * 0.006)
+			var s: float = 1.0 + 0.06 * sin(Time.get_ticks_msec() * 0.005)
 			barrier_indicator.scale = Vector2(s, s)
 		return
-	# 충전 진행
+	# 충전 진행 — 사용자 피드백: 충전 중에는 안 보임.
 	var charge_max: float = BARRIER_CHARGE_T2 if GameState.get_skill_tier("barrier") >= 2 else BARRIER_CHARGE_T1
 	barrier_charge_t += delta
-	# 충전 비율에 따라 alpha 변화 (0.25 → 0.75) + scale 1.0 유지.
 	if barrier_indicator != null:
-		var ratio: float = clamp(barrier_charge_t / charge_max, 0.0, 1.0)
-		barrier_indicator.modulate.a = lerp(0.25, 0.75, ratio)
+		barrier_indicator.modulate.a = 0.0
 		barrier_indicator.scale = Vector2(1.0, 1.0)
 	if barrier_charge_t >= charge_max:
 		barrier_ready = true

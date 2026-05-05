@@ -160,11 +160,12 @@ func _color_for_speaker(sp: String) -> void:
 func _process(delta: float) -> void:
 	if input_lockout_t > 0.0:
 		input_lockout_t -= delta
-	# Stall watchdog — typing이 시작되지 않으면 2s 후 첫 줄 강제 표시.
+	# Stall watchdog — typing이 시작되지 않으면 짧은 시간 후 강제 표시.
+	# 매 _start_line에서 reset되므로 모든 라인에 대해 보호 작동.
 	if not sequence_complete and not waiting_choice and lines.size() > 0 and revealed == 0 and not typing_done:
 		stall_watchdog_t += delta
-		if stall_watchdog_t > 2.0:
-			push_warning("[Ending] stall watchdog 발동 — _process가 typing을 시작 못 함, 강제 표시")
+		if stall_watchdog_t > 0.6:
+			push_warning("[Ending] stall watchdog 발동 line_idx=%d/%d" % [line_idx, lines.size()])
 			var line: Dictionary = lines[line_idx] if line_idx < lines.size() else {}
 			var full: String = str(line.get("text", ""))
 			var prefix: String = "VEIL  —  " if str(line.get("speaker", "")) == "VEIL" else ""
@@ -172,7 +173,8 @@ func _process(delta: float) -> void:
 			revealed = full.length()
 			typing_done = true
 			silent_timer = 0.0
-			stall_watchdog_t = -999.0  # 한 번만
+			# 한 라인만 보호 (stall이 잡힌 라인). 다음 _start_line이 다시 0으로 reset.
+			stall_watchdog_t = -999.0
 	# 시퀀스 완료 후엔 SPACE 누른 시간 누적 → 3초 채우면 타이틀로.
 	if sequence_complete:
 		if Input.is_action_pressed("jump") or Input.is_action_pressed("ui_skip"):
@@ -238,11 +240,22 @@ func _show_choice() -> void:
 	GameState.arm_focus_with_delay(self, b1)
 
 func _pick_choice(asked: bool) -> void:
+	print("[Ending] _pick_choice asked=%s" % str(asked))
 	waiting_choice = false
 	choice_box.visible = false
+	# 이전 choice 버튼 명시 정리 — 잔재 노드가 layout에 영향 주는 일 차단.
+	for c in choice_box.get_children():
+		c.queue_free()
 	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus
 	lines = EndingResolver.get_ending_c_followup(asked, explored_lore)
+	print("[Ending] followup lines.size()=%d" % lines.size())
 	line_idx = 0
+	# typing 상태 변수 다시 정렬 — _start_line이 처리하지만 명시.
+	revealed = 0
+	t = 0.0
+	typing_done = false
+	silent_timer = 0.0
+	stall_watchdog_t = 0.0
 	_start_line()
 
 func _on_sequence_done() -> void:

@@ -413,6 +413,10 @@ func _make_mouse_icon(highlight_left: bool) -> Control:
 	return holder
 
 func _make_keycap(text: String) -> Control:
+	# Xbox 패드 키 (A/B/X/Y/LB/RB/D-Pad/START)는 동그란 컬러 버튼으로.
+	var pad_col: Variant = _xbox_button_color(text)
+	if pad_col != null:
+		return _make_xbox_button(text, pad_col)
 	var box := PanelContainer.new()
 	box.custom_minimum_size = Vector2(48, 48)
 	var sb := StyleBoxFlat.new()
@@ -435,6 +439,55 @@ func _make_keycap(text: String) -> Control:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	box.add_child(l)
 	return box
+
+# Xbox 패드 버튼 색 매핑. null이면 키보드/마우스 키캡으로 처리.
+func _xbox_button_color(text: String) -> Variant:
+	match text:
+		"A": return Color(0.30, 0.78, 0.40)   # 녹색
+		"B": return Color(0.88, 0.32, 0.32)   # 빨강
+		"X": return Color(0.30, 0.55, 0.92)   # 파랑
+		"Y": return Color(0.95, 0.80, 0.30)   # 노랑
+		"LB", "RB", "LT", "RT": return Color(0.50, 0.50, 0.55)
+		"START", "BACK": return Color(0.45, 0.45, 0.50)
+		"←", "→", "↑", "↓": return Color(0.42, 0.42, 0.48)
+	return null
+
+func _make_xbox_button(text: String, color: Color) -> Control:
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(48, 48)
+	# 동그란 채움
+	var bg := Polygon2D.new()
+	bg.color = color
+	var radius: float = 22.0
+	var center := Vector2(24.0, 24.0)
+	var pts: PackedVector2Array = []
+	var n: int = 32
+	for i in n + 1:
+		var a: float = float(i) * TAU / float(n)
+		pts.append(center + Vector2(cos(a) * radius, sin(a) * radius))
+	bg.polygon = pts
+	holder.add_child(bg)
+	# 외곽선 (반사광 느낌)
+	var outline := Line2D.new()
+	outline.points = pts
+	outline.width = 2.0
+	outline.default_color = Color(1.0, 1.0, 1.0, 0.50)
+	outline.closed = true
+	holder.add_child(outline)
+	# 글자
+	var l := Label.new()
+	l.text = text
+	var fs: int = 24 if text.length() <= 1 else (18 if text.length() <= 2 else 14)
+	l.add_theme_font_size_override("font_size", fs)
+	l.add_theme_color_override("font_color", Color(0.98, 0.98, 0.98))
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	l.add_theme_constant_override("outline_size", 3)
+	l.position = Vector2(0, 0)
+	l.size = Vector2(48, 48)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	holder.add_child(l)
+	return holder
 
 func _build_hud() -> void:
 	var hud := CanvasLayer.new()
