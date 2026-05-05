@@ -267,9 +267,9 @@ func _build_signs() -> void:
 	sign_move = _make_keycap_sign(["A", "D"], "이동", Vector2(280.0, GROUND_Y - 200.0))
 	# 점프는 W 와 SPACE 둘 다 가능 — 키캡에 두 개 모두 표시.
 	sign_jump = _make_keycap_sign(["W", "SPACE"], "점프", Vector2(950.0, GROUND_Y - 280.0))
-	# 정상 발판 위 — S로 발 밑 플랫폼 내려가기 안내. one-way 플랫폼 통과는
-	# 본편에서 자주 쓰이는데 안 알려주면 모르고 지나감.
-	sign_drop = _make_keycap_sign(["S"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y - 70.0))
+	# 플랫폼 아래쪽에 표시 — JUMP_PICKUP(초록 마름모, y=270)이 위에 있어서
+	# 위쪽에 두면 겹침. 발판(y=310) 아래 y=400에 배치 → 위에서 내려보면 명확.
+	sign_drop = _make_keycap_sign(["S"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y + 90.0))
 	sign_attack = _make_attack_sign(Vector2(1750.0, GROUND_Y - 200.0))
 	sign_dash = _make_keycap_sign(["SHIFT"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
@@ -554,19 +554,77 @@ func _spawn_orb(pos: Vector2) -> void:
 	orb.global_position = pos
 
 func _build_spike_zone() -> void:
-	# 스파이크 시각
-	var visual := ColorRect.new()
-	visual.color = Color(0.85, 0.20, 0.25, 0.55)
-	visual.position = Vector2(SPIKE_X_START, GROUND_Y - 30.0)
-	visual.size = Vector2(SPIKE_X_END - SPIKE_X_START, 30.0)
-	add_child(visual)
-	for x in range(int(SPIKE_X_START) + 12, int(SPIKE_X_END), 24):
+	# 가시 — Stage._build_spike와 동일 스타일(미니 플랫폼 베이스 + 모서리 캡 + 그림자 절반).
+	# 지면(GROUND_Y)에 박힌 형태. 체인 X.
+	var w: float = SPIKE_X_END - SPIKE_X_START
+	var x_start: float = SPIKE_X_START
+	var x_end: float = SPIKE_X_END
+	var base_y: float = GROUND_Y - 6.0
+	var base_x: float = x_start - 5.0
+	var base_w: float = w + 10.0
+	var base_top: float = base_y - 3.0
+	var dmg_color: Color = Color(0.85, 0.30, 0.30)
+	# 본체(어두운 금속, 10px)
+	var body := ColorRect.new()
+	body.color = Color(0.14, 0.16, 0.20)
+	body.position = Vector2(base_x, base_top + 2.0)
+	body.size = Vector2(base_w, 10.0)
+	add_child(body)
+	# 상단 위험 띠 2px
+	var top_band := ColorRect.new()
+	top_band.color = dmg_color
+	top_band.position = Vector2(base_x, base_top)
+	top_band.size = Vector2(base_w, 2.0)
+	add_child(top_band)
+	# 하단 그림자 2px
+	var bot := ColorRect.new()
+	bot.color = Color(0.04, 0.05, 0.07, 0.95)
+	bot.position = Vector2(base_x, base_top + 12.0)
+	bot.size = Vector2(base_w, 2.0)
+	add_child(bot)
+	# 외곽선
+	var outline := Line2D.new()
+	outline.points = PackedVector2Array([
+		Vector2(base_x, base_top),
+		Vector2(base_x + base_w, base_top),
+		Vector2(base_x + base_w, base_top + 14.0),
+		Vector2(base_x, base_top + 14.0),
+	])
+	outline.closed = true
+	outline.width = 0.8
+	outline.default_color = Color(0.02, 0.03, 0.04, 0.65)
+	outline.antialiased = true
+	add_child(outline)
+	# 좌우 모서리 위험 캡
+	var cap_l := ColorRect.new()
+	cap_l.color = dmg_color
+	cap_l.position = Vector2(base_x - 2.0, base_top + 3.0)
+	cap_l.size = Vector2(3.0, 5.0)
+	add_child(cap_l)
+	var cap_r := ColorRect.new()
+	cap_r.color = dmg_color
+	cap_r.position = Vector2(base_x + base_w - 1.0, base_top + 3.0)
+	cap_r.size = Vector2(3.0, 5.0)
+	add_child(cap_r)
+	# 가시 — 그림자 + 본체. 베이스 안으로 살짝 묻힘.
+	var spike_color: Color = Color(0.95, 0.30, 0.30)
+	var spike_dark: Color = Color(0.55, 0.16, 0.18)
+	for x in range(int(x_start) + 12, int(x_end), 24):
+		var fx: float = float(x)
+		var shadow := Polygon2D.new()
+		shadow.color = spike_dark
+		shadow.polygon = PackedVector2Array([
+			Vector2(fx, base_top + 1.0),
+			Vector2(fx + 6.0, base_top + 1.0),
+			Vector2(fx + 6.0, base_top - 20.0),
+		])
+		add_child(shadow)
 		var spike := Polygon2D.new()
-		spike.color = Color(0.95, 0.30, 0.30)
+		spike.color = spike_color
 		spike.polygon = PackedVector2Array([
-			Vector2(float(x), GROUND_Y),
-			Vector2(float(x) + 12.0, GROUND_Y),
-			Vector2(float(x) + 6.0, GROUND_Y - 18.0),
+			Vector2(fx, base_top + 1.0),
+			Vector2(fx + 12.0, base_top + 1.0),
+			Vector2(fx + 6.0, base_top - 20.0),
 		])
 		add_child(spike)
 

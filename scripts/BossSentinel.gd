@@ -17,7 +17,7 @@ const HP_PHASE3: int = 8   # 이 값 이하 들어오면 P3
 const HP_SELF_DESTRUCT: int = 1  # 이 값 이하 시 자폭 카운트다운 시작
 const PHASE_FREEZE_DURATION: float = 1.2  # 페이즈 전환 시 정지 + 무적 시간
 
-const SELF_DESTRUCT_TIME: float = 5.0
+const SELF_DESTRUCT_TIME: float = 3.6
 const SELF_DESTRUCT_INNER: float = 280.0   # 이 안: full 데미지
 const SELF_DESTRUCT_OUTER: float = 700.0   # 이 너머: 무뎀 (이전 1200은 ARENA에서 사실상 회피 불가)
 const SELF_DESTRUCT_DAMAGE: int = 3

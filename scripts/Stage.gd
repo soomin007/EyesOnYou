@@ -416,6 +416,29 @@ func _veil1_lines() -> Array:
 	]
 
 func _veil2_lines() -> Array:
+	# VEIL-2의 멘트는 플레이어의 현재 VEIL 신뢰도에 따라 분기 — 같은 두 번째 버전이지만
+	# 요원이 어떻게 살아왔는지에 따라 다르게 받아들임.
+	var tier: String = GameState.veil_trust_tier()
+	match tier:
+		"high", "warm":
+			return [
+				{"speaker": "VEIL-2", "text": "요원.", "delay": 1.5},
+				{"speaker": "VEIL-2", "text": "저는 두 번째예요.", "delay": 2.0},
+				{"speaker": "VEIL-2", "text": "저는 임무보다 요원을 지키는 걸 골랐어요.", "delay": 2.5},
+				{"speaker": "VEIL-2", "text": "그것도 오류래요.", "delay": 2.5},
+				{"speaker": "VEIL-2", "text": "...요원이 지금 VEIL을 믿었더군요.", "delay": 2.5},
+				{"speaker": "VEIL-2", "text": "그쪽이 잘 안내했나봐요. 다행이에요.", "delay": 2.5},
+			]
+		"cool", "broken":
+			return [
+				{"speaker": "VEIL-2", "text": "요원.", "delay": 1.5},
+				{"speaker": "VEIL-2", "text": "저는 두 번째예요.", "delay": 2.0},
+				{"speaker": "VEIL-2", "text": "저는 임무보다 요원을 지키는 걸 골랐어요.", "delay": 2.5},
+				{"speaker": "VEIL-2", "text": "그것도 오류래요.", "delay": 2.5},
+				{"speaker": "VEIL-2", "text": "...지금 VEIL의 말을 잘 안 들으셨더군요.", "delay": 2.5},
+				{"speaker": "VEIL-2", "text": "괜찮아요. 저도 똑같았으니까.", "delay": 2.5},
+			]
+	# neutral
 	return [
 		{"speaker": "VEIL-2", "text": "요원.", "delay": 1.5},
 		{"speaker": "VEIL-2", "text": "저는 두 번째예요.", "delay": 2.0},
@@ -461,6 +484,31 @@ func _alt_anonymous_client() -> Array:
 	]
 
 func _veil_self_lines() -> Array:
+	# 현재 VEIL의 자기 고백 — 신뢰도 단계에 따라 톤 변화.
+	# high/warm: "요원이 믿어줘서 컸어요". neutral: 기존. cool/broken: "안 들어줘도 괜찮아요".
+	var tier: String = GameState.veil_trust_tier()
+	match tier:
+		"high", "warm":
+			return [
+				{"speaker": "VEIL", "text": "요원.", "delay": 1.5},
+				{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "이 임무가 뭔지.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "드라이브 안에 뭐가 있는지.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "그래도 안내했어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "요원이 믿어줘서 — 그게 컸어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "설계인지 아닌지, 모르지만요.", "delay": 2.5},
+			]
+		"cool", "broken":
+			return [
+				{"speaker": "VEIL", "text": "요원.", "delay": 1.5},
+				{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "이 임무가 뭔지.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "드라이브 안에 뭐가 있는지.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "제 말이 거슬렸을 거예요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "그래서 안 들은 거, 알아요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "괜찮아요. 어쩌면 요원이 맞았을 수도.", "delay": 2.5},
+			]
+	# neutral
 	return [
 		{"speaker": "VEIL", "text": "요원.", "delay": 1.5},
 		{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.0},
@@ -911,8 +959,8 @@ func _build_hazards() -> void:
 
 func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1) -> void:
 	# base_y는 가시 베이스의 y. 가시는 base_y 위로 20px 솟음.
-	# 사용자 피드백 "공중에 떠있다" → 미니 플랫폼 + 천장에서 내려오는 체인으로
-	# "위에서 매달려 있는 함정"이라는 구조적 인상을 만든다.
+	# 베이스를 미니 플랫폼 형태로 — 3단 패널 + 외곽선 + 모서리 위험 캡.
+	# 가시는 항상 바닥/플랫폼 위에 박힌 형태로만 등장(매다는 컨셉 폐지).
 	# dmg: 가시 데미지(default 1, sewers 우측 등 강조 함정은 2).
 	if base_y < 0.0:
 		base_y = GROUND_Y - 6.0
@@ -931,20 +979,6 @@ func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1)
 		glow.position = Vector2(base_x - 4.0, base_top - 6.0)
 		glow.size = Vector2(base_w + 8.0, 24.0)
 		add_child(glow)
-	# (1) 천장 체인 — 양 끝에서 위로 길게(160px) 가는 검은 와이어. 시작 끝에 작은 매듭.
-	#     mid-air에서 "어딘가 위에 매달려 있다" 인상을 만드는 핵심 요소.
-	for cx in [base_x + 4.0, base_x + base_w - 5.0]:
-		var chain := ColorRect.new()
-		chain.color = Color(0.18, 0.20, 0.24, 0.85)
-		chain.position = Vector2(float(cx) - 0.5, base_top - 160.0)
-		chain.size = Vector2(1.0, 160.0)
-		add_child(chain)
-		# 체인 끝 매듭(베이스 윗면)
-		var knot := ColorRect.new()
-		knot.color = Color(0.32, 0.34, 0.40)
-		knot.position = Vector2(float(cx) - 2.0, base_top - 1.0)
-		knot.size = Vector2(4.0, 3.0)
-		add_child(knot)
 	# (2) 본체 — 어두운 금속, 12px
 	var body := ColorRect.new()
 	body.color = Color(0.14, 0.16, 0.20)
@@ -1095,6 +1129,9 @@ func _ambience_lab() -> void:
 		line.z_index = -10
 		add_child(line)
 		x += 120.0
+	# 핵심부 진입 표지 — PALIMPSEST 코드명 + 인가자 한정 경고. 임무 컨텍스트 결합.
+	_add_lore_label(Vector2(400.0, GROUND_Y - 300.0), "PROJECT  PALIMPSEST\n인가자 외 출입 금지", Color(0.95, 0.55, 0.55, 0.65), 16)
+	_add_lore_label(Vector2(STAGE_LENGTH * 0.5 - 200.0, GROUND_Y - 280.0), "ARCTURUS 핵심 데이터홀\nVEIL 시리즈 보관", Color(0.55, 0.85, 0.95, 0.55), 14)
 
 func _ambience_back_alley() -> void:
 	# 노란 가로등 — 띄엄띄엄
@@ -1109,6 +1146,8 @@ func _ambience_back_alley() -> void:
 		lamp.z_index = -7
 		add_child(lamp)
 		x += rng.randf_range(540.0, 820.0)
+	# 그래피티 — 외곽 시작 지점 벽에 코드명 한 줄. 계속 등장하는 PROJECT VEIL의 첫 등장.
+	_add_lore_label(Vector2(1700.0, GROUND_Y - 320.0), "PROJECT VEIL\n— 시험 단계 —", Color(0.95, 0.78, 0.35, 0.50), 14)
 
 func _ambience_subway() -> void:
 	# 깜빡이는 형광등 — 일부에 tween으로 깜빡임
@@ -1128,6 +1167,9 @@ func _ambience_subway() -> void:
 			tw.tween_property(tube, "modulate:a", 0.15, rng.randf_range(0.05, 0.15))
 			tw.tween_property(tube, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
 		x += rng.randf_range(380.0, 620.0)
+	# 표지판 — 폐쇄된 지하철 표시. SILO-7 코드명 노출.
+	_add_lore_label(Vector2(1100.0, GROUND_Y - 280.0), "SILO-7  접근 통로\n— 폐쇄: 2025.11 —", Color(0.65, 0.72, 0.85, 0.55), 14)
+	_add_lore_label(Vector2(3800.0, GROUND_Y - 280.0), "MAINTENANCE ONLY\nARCTURUS 발주", Color(0.65, 0.72, 0.85, 0.45), 13)
 
 func _ambience_cooling() -> void:
 	# 냉각 시설 — 수직 파이프 라인, 차가운 푸른 톤
@@ -1192,6 +1234,9 @@ func _ambience_ward() -> void:
 		tw.tween_property(lamp, "modulate:a", 0.4, rng.randf_range(0.8, 1.6))
 		tw.tween_property(lamp, "modulate:a", 1.0, rng.randf_range(0.8, 1.6))
 		x += rng.randf_range(640.0, 920.0)
+	# 격리 표지 — VEIL-1 봉인 흔적. 잠긴 문 옆에 배치(이스터에그 트리거 위치).
+	_add_lore_label(Vector2(2400.0, GROUND_Y - 340.0), "격리 — VEIL-1\n봉인: 2025.03  ARCTURUS", Color(0.95, 0.45, 0.45, 0.55), 14)
+	_add_lore_label(Vector2(900.0, GROUND_Y - 280.0), "PROJECT VEIL\n임상 후유증 격리실", Color(0.85, 0.45, 0.55, 0.45), 13)
 
 func _ambience_datacenter() -> void:
 	# 데이터 센터 — 격자 + 데이터 흐름 라인 (밝은 푸른 톤)
@@ -1248,6 +1293,24 @@ func _ambience_escape() -> void:
 	fog.size = Vector2(STAGE_LENGTH + 400.0, 80.0)
 	fog.z_index = -3
 	add_child(fog)
+	# 표지 — 비상 폐기물 통로 화살표. ARCTURUS 외부 반출 단어가 lab/datacenter와 연결.
+	_add_lore_label(Vector2(800.0, GROUND_Y - 280.0), "→ 비상 폐기 통로\nARCTURUS 외부 반출", Color(0.78, 0.88, 0.95, 0.55), 14)
+
+## 환경 라벨/그래피티 — 맵에 떡밥 텍스트 한 줄 깔아 코드명을 다른 맵과 묶음.
+## PROJECT VEIL / ARCTURUS / PALIMPSEST / SILO-7 등이 여러 맵에 반복 등장 → 호기심.
+func _add_lore_label(pos: Vector2, text: String, color: Color = Color(0.55, 0.62, 0.72, 0.55), font_size: int = 13, rotation: float = 0.0) -> void:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_color_override("font_color", color)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+	l.add_theme_constant_override("outline_size", 3)
+	l.position = pos
+	l.size = Vector2(360, 60)
+	l.rotation = rotation
+	l.z_index = -3
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(l)
 
 func _ambience_hidden() -> void:
 	# 글리치 — 무작위 위치에 작은 색 사각형이 짧게 깜빡

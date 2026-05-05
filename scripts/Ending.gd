@@ -31,7 +31,10 @@ func _ready() -> void:
 	stats_label.text = "신뢰  %d   |   공격성  %d   |   사망  %d   |   스코어  %d" % [
 		GameState.trust_score, GameState.aggression_score, GameState.death_count, GameState.score
 	]
-	lines = EndingResolver.get_ending_lines(ending_id)
+	# ??? 방 방문(hidden_visit_count > 0) 또는 ARCTURUS 아카이브 읽음(visited_arcturus) 시
+	# 라이브 lore 라인을 보여주고, 미방문 시엔 짧고 호기심 hint 라인.
+	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus
+	lines = EndingResolver.get_ending_lines(ending_id, explored_lore)
 	choice_box.visible = false
 	hint_label.text = ""
 	text_label.text = ""
@@ -199,7 +202,8 @@ func _show_choice() -> void:
 func _pick_choice(asked: bool) -> void:
 	waiting_choice = false
 	choice_box.visible = false
-	lines = EndingResolver.get_ending_c_followup(asked)
+	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus
+	lines = EndingResolver.get_ending_c_followup(asked, explored_lore)
 	line_idx = 0
 	_start_line()
 

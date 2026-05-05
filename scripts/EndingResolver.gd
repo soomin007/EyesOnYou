@@ -26,7 +26,12 @@ static func get_ending_title(ending: String) -> String:
 		ENDING_D: return "유령 임무"
 	return ""
 
-static func get_ending_lines(ending: String) -> Array:
+static func get_ending_lines(ending: String, explored_lore: bool = true) -> Array:
+	# explored_lore: ??? 방을 방문했거나 ARCTURUS 아카이브를 읽은 적 있는가.
+	# 미방문 시엔 "드라이브"/"VEIL 소스코드" 등의 컨텍스트를 모르므로 — 짧은 멘트 + 호기심 hint
+	# (잠긴 문, 지나친 단말기 등을 언급해 2회차 동기 부여).
+	if not explored_lore:
+		return _get_ending_lines_brief(ending)
 	match ending:
 		ENDING_A:
 			return [
@@ -69,7 +74,64 @@ static func get_ending_lines(ending: String) -> Array:
 			]
 	return []
 
-static func get_ending_c_followup(asked: bool) -> Array:
+# ??? 방/ARCTURUS 미방문 시 — 짧고, 명확하지 않은 부분을 콕 짚어 다음 회차 동기 부여.
+# "드라이브 내용" 같은 lore는 굳이 꺼내지 않음. 대신 "잠긴 문", "지나친 단말기", "도면에 없던 길" 같은
+# 플레이어가 게임 안에서 "있었다"고 알 만한 단서를 던진다.
+static func _get_ending_lines_brief(ending: String) -> Array:
+	match ending:
+		ENDING_A:
+			return [
+				{"speaker": "VEIL", "text": "임무 완료예요, 요원. 수고했어요.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "당신은 빈틈없었어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "...한 가지만 묻고 싶었는데.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "이 임무가 정확히 뭐였는지, 알아요?", "delay": 2.5},
+				{"speaker": "VEIL", "text": "저도 잘 몰라요.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "임무는 완수됐다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "그러나 이 시설엔 도면에 없던 구역이 있었다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "거기 무엇이 있었는지는, 누구도 모른다.", "delay": 2.5},
+			]
+		ENDING_B:
+			return [
+				{"speaker": "VEIL", "text": "임무 완료예요.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "요원, 제 말 거의 안 들었죠.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "그래도 살아남았어요. 잘 했어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "...하나 궁금한 게 있어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "그 잠긴 문, 한 번도 안 열어봤죠?", "delay": 2.5},
+				{"speaker": "VEIL", "text": "왜 안 열었어요?", "delay": 2.5},
+				{"speaker": "SUB",  "text": "잠긴 문은 그대로 잠겨 있었다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "안에 무엇이 있었는지는 알 수 없다.", "delay": 2.5},
+			]
+		ENDING_C:
+			return [
+				{"speaker": "VEIL", "text": "임무 완료예요, 요원.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "...하나만 물어봐도 돼요?", "delay": 0.0, "choice": true},
+			]
+		ENDING_D:
+			return [
+				{"speaker": "SYS", "text": "...", "delay": 8.0, "silent": true},
+				{"speaker": "SUB", "text": "이 임무는 공식 기록에 없습니다.", "delay": 3.0},
+				{"speaker": "SUB", "text": "기록되지 않은 구역도, 마찬가지로.", "delay": 3.0},
+			]
+	return []
+
+static func get_ending_c_followup(asked: bool, explored_lore: bool = true) -> Array:
+	if not explored_lore:
+		# ??? 미방문 — 더 짧고 호기심 hint
+		if asked:
+			return [
+				{"speaker": "VEIL", "text": "...", "delay": 1.5},
+				{"speaker": "VEIL", "text": "그 봉인된 구역, 기억나요?", "delay": 2.5},
+				{"speaker": "VEIL", "text": "거기 뭐가 있었을지 — 가끔 생각해요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "다음에 가게 되면 — 그때 말해줘요.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "이 임무에는 닿지 못한 구역이 있었다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "그것은 아직 기록되지 않은 것이다.", "delay": 2.5},
+			]
+		return [
+			{"speaker": "VEIL", "text": "...그래요.", "delay": 2.0},
+			{"speaker": "VEIL", "text": "수고했어요, 요원.", "delay": 3.0},
+			{"speaker": "SUB",  "text": "어떤 관계는 이유 없이 끝난다.", "delay": 2.0},
+			{"speaker": "SUB",  "text": "어떤 구역은 끝까지 잠겨 있다.", "delay": 2.0},
+		]
 	if asked:
 		return [
 			{"speaker": "VEIL", "text": "...", "delay": 1.5},
