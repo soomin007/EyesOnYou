@@ -1588,10 +1588,19 @@ func _build_hud() -> void:
 	cd_row.add_child(cd_barrier_slot)
 
 	var keys := Label.new()
-	keys.text = "A/D 이동   W/SPACE 점프   S 발 밑 내려가기   J/마우스 좌클릭 사격   SHIFT 대시   Q/마우스 우클릭 스킬   ESC 일시정지"
+	keys.name = "KeysHint"
+	keys.text = _keys_hint_text()
 	keys.add_theme_font_size_override("font_size", 13)
 	keys.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
 	bottom_v.add_child(keys)
+	GameState.input_kind_changed.connect(func(_k: String) -> void:
+		if is_instance_valid(keys):
+			keys.text = _keys_hint_text())
+
+func _keys_hint_text() -> String:
+	return GameState.hint(
+		"A/D 이동   W/SPACE 점프   S 내려가기   J/마우스 좌 사격   SHIFT 대시   Q/마우스 우 스킬   ESC 일시정지",
+		"좌스틱/D-Pad 이동   A 점프   ↓ 내려가기   X/RT 사격   B/RB 대시   Y 스킬   START 일시정지")
 
 func _make_cd_slot(label_text: String) -> Control:
 	var v := VBoxContainer.new()

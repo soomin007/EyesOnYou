@@ -23,7 +23,22 @@ func _ready() -> void:
 	# 다시 뜨도록.
 	GameState.seen_enemies.clear()
 	GameState.save_settings()
+	GameState.input_kind_changed.connect(_on_input_kind_changed)
 	_set_state(STATE_MAIN)
+
+func _on_input_kind_changed(_kind: String) -> void:
+	_refresh_hint()
+
+func _refresh_hint() -> void:
+	if hint_label == null:
+		return
+	match state:
+		STATE_MAIN:
+			hint_label.text = GameState.hint("[ ↑↓ 이동   Enter 선택 ]", "[ ↑↓ D-Pad   A 선택 ]")
+		STATE_MODE:
+			hint_label.text = GameState.hint("[ 모드 선택   ESC 뒤로 ]", "[ 모드 선택   B 뒤로 ]")
+		STATE_TUTOR:
+			hint_label.text = "[ 튜토리얼부터 진행할까요? ]"
 
 func _process(delta: float) -> void:
 	blink_t += delta
@@ -36,7 +51,6 @@ func _set_state(new_state: int) -> void:
 		c.queue_free()
 	match state:
 		STATE_MAIN:
-			hint_label.text = "[ ↑↓ 이동   A/Enter 선택 ]"
 			var b_start := _make_button("게임 시작")
 			b_start.pressed.connect(_on_start_pressed)
 			buttons_box.add_child(b_start)
@@ -48,7 +62,6 @@ func _set_state(new_state: int) -> void:
 			buttons_box.add_child(b_quit)
 			b_start.grab_focus.call_deferred()
 		STATE_MODE:
-			hint_label.text = "[ 모드 선택   ESC/B 뒤로 ]"
 			var b_normal := _make_button("일반 모드")
 			b_normal.pressed.connect(_on_mode_pressed.bind(false))
 			buttons_box.add_child(b_normal)
@@ -60,7 +73,6 @@ func _set_state(new_state: int) -> void:
 			buttons_box.add_child(b_back)
 			b_normal.grab_focus.call_deferred()
 		STATE_TUTOR:
-			hint_label.text = "[ 튜토리얼부터 진행할까요? ]"
 			var b_yes := _make_button("예 — 튜토리얼부터")
 			b_yes.pressed.connect(_on_tutor_pressed.bind(true))
 			buttons_box.add_child(b_yes)
@@ -71,6 +83,7 @@ func _set_state(new_state: int) -> void:
 			b_back.pressed.connect(_on_back_pressed)
 			buttons_box.add_child(b_back)
 			b_yes.grab_focus.call_deferred()
+	_refresh_hint()
 
 func _make_button(text: String) -> Button:
 	var b := Button.new()
@@ -127,6 +140,11 @@ func _on_settings_closed() -> void:
 	if settings_overlay != null:
 		settings_overlay.queue_free()
 		settings_overlay = null
+	# 설정 닫힌 뒤 포커스가 사라져 키/패드 입력이 먹히지 않던 버그 — 첫 버튼에 다시 포커스.
+	if buttons_box.get_child_count() > 0:
+		var first := buttons_box.get_child(0) as Button
+		if first != null:
+			first.grab_focus.call_deferred()
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()

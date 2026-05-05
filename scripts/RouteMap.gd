@@ -27,7 +27,16 @@ func _ready() -> void:
 	_setup_trust_gauge()
 	_build_node_buttons()
 	_update_veil_comment()
-	hint_label.text = "[ ←/→ : 선택 이동   SPACE/ENTER : 결정 ]"
+	_refresh_hint()
+	GameState.input_kind_changed.connect(_on_input_kind_changed)
+
+func _on_input_kind_changed(_kind: String) -> void:
+	_refresh_hint()
+
+func _refresh_hint() -> void:
+	hint_label.text = GameState.hint(
+		"[ ←/→ : 선택 이동   ENTER : 결정 ]",
+		"[ D-Pad/스틱 : 선택 이동   A : 결정 ]")
 
 func _setup_trust_gauge() -> void:
 	# 상단 Header에 신뢰도 게이지 추가. (이전엔 VeilBox 안에 있어서 하단 Footer
@@ -67,7 +76,8 @@ func _build_node_buttons() -> void:
 		nodes_container.add_child(b)
 		buttons.append(b)
 	if buttons.size() > 0:
-		buttons[0].grab_focus()
+		# 점프/A를 누르던 입력이 떨어질 때까지 포커스 보류 — 자동 활성화 방지.
+		GameState.arm_focus_after_release(self, buttons[0], PackedStringArray(["ui_accept", "jump", "ui_skip"]))
 
 func _format_button_text(route: Dictionary, recommended: bool) -> String:
 	var route_name: String = route.get("name", "?")

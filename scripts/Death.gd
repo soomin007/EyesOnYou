@@ -20,6 +20,16 @@ func _ready() -> void:
 	stats_label.text = "사망 횟수  %d  /  도달 스테이지  %d" % [GameState.death_count, GameState.current_stage + 1]
 	text_label.text = ""
 	hint_label.text = ""
+	GameState.input_kind_changed.connect(_on_input_kind_changed)
+
+func _on_input_kind_changed(_kind: String) -> void:
+	if done:
+		hint_label.text = _done_hint()
+
+func _done_hint() -> String:
+	return GameState.hint(
+		"[ SPACE — 다시 시도 ]   [ ESC — 타이틀 ]",
+		"[ A — 다시 시도 ]   [ B — 타이틀 ]")
 
 func _process(delta: float) -> void:
 	if done:
@@ -31,11 +41,11 @@ func _process(delta: float) -> void:
 		if revealed >= full_text.length():
 			revealed = full_text.length()
 			done = true
-			hint_label.text = "[ SPACE — 다시 시도 ]   [ ESC — 타이틀 ]"
+			hint_label.text = _done_hint()
 		text_label.text = full_text.substr(0, revealed)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+	if event.is_action_pressed("ui_cancel"):
 		GameState.reset()
 		get_tree().change_scene_to_file(SceneRouter.TITLE)
 		return
@@ -44,7 +54,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			revealed = full_text.length()
 			text_label.text = full_text
 			done = true
-			hint_label.text = "[ SPACE — 다시 시도 ]   [ ESC — 타이틀 ]"
+			hint_label.text = _done_hint()
 			return
 		_restart_stage()
 

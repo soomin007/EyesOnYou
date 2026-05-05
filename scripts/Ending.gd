@@ -23,6 +23,11 @@ var silent_timer: float = 0.0
 var hold_progress: float = 0.0
 var hold_hint: Label
 var hold_progress_bar: ColorRect
+# 입력 무장 — 인게임에서 점프 누르고 있던 사람이 ending 들어오자마자 대사 전부
+# 스킵하던 버그 (사용자: "결말 C 멘트 안 나옴"). 진입 시 점프/A가 눌려있으면
+# 떨어질 때까지 + 최소 0.4s 동안 ui_skip/jump 입력을 무시.
+var input_armed: bool = false
+var arm_min_t: float = 0.4
 
 func _ready() -> void:
 	ending_id = EndingResolver.resolve(GameState.trust_score, GameState.aggression_score)
@@ -45,6 +50,13 @@ func _ready() -> void:
 	_build_hold_hint()
 	_start_line()
 
+func _hold_hint_text() -> String:
+	return GameState.hint("SPACE 길게 — 타이틀로 (3초)", "A 길게 — 타이틀로 (3초)")
+
+func _on_input_kind_changed(_kind: String) -> void:
+	if hold_hint != null:
+		hold_hint.text = _hold_hint_text()
+
 func _build_hold_hint() -> void:
 	# 우측 하단 안내 — 시퀀스 완료 후에만 표시. SPACE를 3초간 누르고 있어야 타이틀로 이동.
 	var layer := CanvasLayer.new()
@@ -56,9 +68,10 @@ func _build_hold_hint() -> void:
 	box.size = Vector2(260, 50)
 	layer.add_child(box)
 	hold_hint = Label.new()
-	hold_hint.text = "SPACE 길게 — 타이틀로 (3초)"
+	hold_hint.text = _hold_hint_text()
 	hold_hint.add_theme_font_size_override("font_size", 12)
 	hold_hint.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
+	GameState.input_kind_changed.connect(_on_input_kind_changed)
 	hold_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hold_hint.size = Vector2(260, 16)
 	hold_hint.visible = false
@@ -135,6 +148,11 @@ func _color_for_speaker(sp: String) -> void:
 			text_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 
 func _process(delta: float) -> void:
+	# 입력 무장 카운트 — 최소 시간이 흐르고 점프/A/skip이 모두 떨어져야 입력 허용.
+	if not input_armed:
+		arm_min_t -= delta
+		if arm_min_t <= 0.0 and not (Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept") or Input.is_action_pressed("ui_skip")):
+			input_armed = true
 	# 시퀀스 완료 후엔 SPACE 누른 시간 누적 → 3초 채우면 타이틀로.
 	if sequence_complete:
 		if Input.is_action_pressed("jump") or Input.is_action_pressed("ui_skip"):
@@ -197,7 +215,7 @@ func _show_choice() -> void:
 	b2.add_theme_font_size_override("font_size", 16)
 	b2.pressed.connect(_pick_choice.bind(false))
 	choice_box.add_child(b2)
-	b1.grab_focus()
+	GameState.arm_focus_after_release(self, b1, PackedStringArray(["ui_accept", "jump", "ui_skip"]))
 
 func _pick_choice(asked: bool) -> void:
 	waiting_choice = false
@@ -220,6 +238,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	# 시퀀스 완료 후엔 SPACE 단발은 무시 — 길게 누르기로만 타이틀 이동 (process에서 처리).
 	if sequence_complete:
+		return
+	if not input_armed:
+		# 점프 누르고 있던 잔여 입력 — 무시. 떨어진 뒤에야 진짜 사용자 의지로 인정.
 		return
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
 		# 한 줄 즉시 완성

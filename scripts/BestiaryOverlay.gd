@@ -78,9 +78,9 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	btn.process_mode = Node.PROCESS_MODE_ALWAYS
 	btn.pressed.connect(func() -> void: _close(layer))
 	v.add_child(btn)
-	btn.grab_focus.call_deferred()
 
 	host.add_child(layer)
+	GameState.arm_focus_after_release(layer, btn, PackedStringArray(["ui_accept", "jump", "ui_skip"]))
 	return layer
 
 # 행동 단서 단어를 노란색으로 강조 — 정보를 글로 풀지 않고 시선만 유도.

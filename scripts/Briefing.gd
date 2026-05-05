@@ -21,6 +21,15 @@ func _ready() -> void:
 	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	lines = _build_lines()
 	_start_line()
+	GameState.input_kind_changed.connect(_on_input_kind_changed)
+
+func _on_input_kind_changed(_kind: String) -> void:
+	# 타이핑 진행 중엔 hint 비어 있음. 완료 상태에서만 갱신.
+	if done:
+		hint_label.text = _continue_hint()
+
+func _continue_hint() -> String:
+	return GameState.hint("[ SPACE — 계속 ]", "[ A — 계속 ]")
 
 func _build_lines() -> Array:
 	var out: Array = []
@@ -58,7 +67,7 @@ func _process(delta: float) -> void:
 		if revealed_chars >= full.length():
 			revealed_chars = full.length()
 			done = true
-			hint_label.text = "[ SPACE — 계속 ]"
+			hint_label.text = _continue_hint()
 		text_label.text = full.substr(0, revealed_chars)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -69,7 +78,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			revealed_chars = full.length()
 			text_label.text = full
 			done = true
-			hint_label.text = "[ SPACE — 계속 ]"
+			hint_label.text = _continue_hint()
 			return
 		_advance()
 

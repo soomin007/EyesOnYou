@@ -264,14 +264,14 @@ func _make_platform(x: float, y: float, w: float) -> void:
 func _build_signs() -> void:
 	# show-don't-tell — 키캡(둥근 박스 + 큰 글자) + 한 단어. 부연 설명은 환경/연출에 맡김.
 	# 이중 점프는 PLATFORM_3가 1단 한계 위에 있어 자연 학습되므로 별도 안내 안 함.
-	sign_move = _make_keycap_sign(["A", "D"], "이동", Vector2(280.0, GROUND_Y - 200.0))
-	# 점프는 W 와 SPACE 둘 다 가능 — 키캡에 두 개 모두 표시.
-	sign_jump = _make_keycap_sign(["W", "SPACE"], "점프", Vector2(950.0, GROUND_Y - 280.0))
+	sign_move = _make_keycap_sign(["A", "D"], ["←", "→"], "이동", Vector2(280.0, GROUND_Y - 200.0))
+	# 점프는 W 와 SPACE 둘 다 가능 (패드는 A 한 버튼).
+	sign_jump = _make_keycap_sign(["W", "SPACE"], ["A"], "점프", Vector2(950.0, GROUND_Y - 280.0))
 	# 플랫폼 아래쪽에 표시 — JUMP_PICKUP(초록 마름모, y=270)이 위에 있어서
 	# 위쪽에 두면 겹침. 발판(y=310) 아래 y=400에 배치 → 위에서 내려보면 명확.
-	sign_drop = _make_keycap_sign(["S"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y + 90.0))
-	sign_attack = _make_attack_sign(Vector2(1750.0, GROUND_Y - 200.0))
-	sign_dash = _make_keycap_sign(["SHIFT"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
+	sign_drop = _make_keycap_sign(["S"], ["↓"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y + 90.0))
+	sign_attack = _make_keycap_sign(["J"], ["X"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
+	sign_dash = _make_keycap_sign(["SHIFT"], ["B"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
 	sign_levelup = Label.new()
 	sign_levelup.add_theme_font_size_override("font_size", 17)
@@ -290,7 +290,7 @@ func _build_signs() -> void:
 	sign_attack.visible = false
 	sign_dash.visible = false
 
-func _make_keycap_sign(keys: Array, label_text: String, pos: Vector2) -> Control:
+func _make_keycap_sign(kb_keys: Array, pad_keys: Array, label_text: String, pos: Vector2) -> Control:
 	var holder := Control.new()
 	holder.position = pos - Vector2(160, 60)
 	holder.size = Vector2(320, 96)
@@ -302,8 +302,11 @@ func _make_keycap_sign(keys: Array, label_text: String, pos: Vector2) -> Control
 	hbox.size = Vector2(320, 56)
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	holder.add_child(hbox)
-	for k in keys:
-		hbox.add_child(_make_keycap(str(k)))
+	# 입력 모드 변경 시 키캡 children을 재구성할 수 있게 meta로 양쪽 라벨 보관.
+	holder.set_meta("hbox", hbox)
+	holder.set_meta("kb_keys", kb_keys)
+	holder.set_meta("pad_keys", pad_keys)
+	_populate_keycap_hbox(hbox, kb_keys, pad_keys)
 	var l := Label.new()
 	l.text = label_text
 	l.add_theme_font_size_override("font_size", 14)
@@ -313,6 +316,24 @@ func _make_keycap_sign(keys: Array, label_text: String, pos: Vector2) -> Control
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	holder.add_child(l)
 	return holder
+
+func _populate_keycap_hbox(hbox: HBoxContainer, kb_keys: Array, pad_keys: Array) -> void:
+	for c in hbox.get_children():
+		c.queue_free()
+	var keys: Array = pad_keys if GameState.is_pad_mode() else kb_keys
+	for k in keys:
+		hbox.add_child(_make_keycap(str(k)))
+
+func _refresh_keycap_signs() -> void:
+	for sign in [sign_move, sign_jump, sign_drop, sign_dash, sign_attack, sign_skill]:
+		if sign == null or not is_instance_valid(sign):
+			continue
+		if not sign.has_meta("hbox"):
+			continue
+		var hbox: HBoxContainer = sign.get_meta("hbox") as HBoxContainer
+		if hbox == null:
+			continue
+		_populate_keycap_hbox(hbox, sign.get_meta("kb_keys", []), sign.get_meta("pad_keys", []))
 
 # 사격 표지 — 마우스 그림(좌버튼만 빨강) + 보조 키 J 키캡 + 한 단어.
 func _make_attack_sign(pos: Vector2) -> Control:
@@ -438,8 +459,19 @@ func _build_hud() -> void:
 	hint_label = Label.new()
 	hint_label.add_theme_font_size_override("font_size", 13)
 	hint_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
-	hint_label.text = "A/D 이동   W/SPACE 점프   S 발 밑 내려가기   J/마우스 좌클릭 사격   SHIFT 대시   Q/마우스 우클릭 스킬   ESC 일시정지"
+	hint_label.text = _keys_hint_text()
 	bottom.add_child(hint_label)
+	GameState.input_kind_changed.connect(_on_input_kind_changed)
+
+func _keys_hint_text() -> String:
+	return GameState.hint(
+		"A/D 이동   W/SPACE 점프   S 내려가기   J/마우스 좌 사격   SHIFT 대시   Q/마우스 우 스킬   ESC 일시정지",
+		"좌스틱/D-Pad 이동   A 점프   ↓ 내려가기   X/RT 사격   B/RB 대시   Y 스킬   START 일시정지")
+
+func _on_input_kind_changed(_kind: String) -> void:
+	if is_instance_valid(hint_label):
+		hint_label.text = _keys_hint_text()
+	_refresh_keycap_signs()
 
 func _refresh_hud() -> void:
 	var step_name := ""
@@ -762,16 +794,22 @@ func _build_skill_sign() -> void:
 	var skill: Dictionary = SkillSystem.find_by_id(skill_picked_id)
 	if bool(skill.get("active", false)):
 		var key_action: String = str(skill.get("key", ""))
-		# skill 액션은 Main.gd가 마우스 우클릭도 추가 — 키보드/마우스 둘 다 안내.
-		# 기타 액티브(예: dash)는 키 한 개만.
-		var keys: Array
+		# kb 슬롯은 키보드/마우스 표시, pad 슬롯은 패드 버튼 표시.
+		var kb_keys: Array
+		var pad_keys: Array
 		if key_action == "skill":
-			keys = ["Q", "RMB"]
+			kb_keys = ["Q", "RMB"]
+			pad_keys = ["Y"]
+		elif key_action == "dash":
+			kb_keys = ["SHIFT"]
+			pad_keys = ["B"]
 		elif key_action != "":
-			keys = [_label_for_action(key_action)]
+			kb_keys = [_label_for_action(key_action)]
+			pad_keys = [_label_for_action(key_action)]
 		else:
-			keys = ["Q"]
-		sign_skill = _make_keycap_sign(keys, "스킬 사용", pos)
+			kb_keys = ["Q"]
+			pad_keys = ["Y"]
+		sign_skill = _make_keycap_sign(kb_keys, pad_keys, "스킬 사용", pos)
 	else:
 		var sname: String = str(skill.get("name", "패시브"))
 		sign_skill = _make_text_sign("[%s] 자동 적용 — 처리하면 진행" % sname, pos)
@@ -798,10 +836,40 @@ func _make_text_sign(text: String, pos: Vector2) -> Control:
 func _spawn_skill_dummies() -> void:
 	for pos in [SKILL_DUMMY_A, SKILL_DUMMY_B]:
 		var d := TutorialDummy.new()
+		# 총으로는 안 죽고 스킬(폭발물)로만 처치되도록 — 스킬 사용법 학습 강제.
+		d.skill_only = true
 		add_child(d)
 		d.global_position = pos
 		d.killed.connect(_on_skill_dummy_killed)
+		d.bullet_deflected.connect(_on_skill_dummy_bullet_deflected)
 		skill_dummies.append(d)
+
+var skill_deflect_hint_shown: bool = false
+
+func _on_skill_dummy_bullet_deflected() -> void:
+	# 첫 튕김에만 안내. 이후엔 시각만으로 (주황 + 외곽 광택).
+	if skill_deflect_hint_shown:
+		return
+	skill_deflect_hint_shown = true
+	_show_skill_hint_toast()
+
+func _show_skill_hint_toast() -> void:
+	var toast := Label.new()
+	toast.text = GameState.hint(
+		"이 적은 총알이 안 들어가요. 폭발물(Q / 마우스 우클릭)로 처치해요.",
+		"이 적은 총알이 안 들어가요. 폭발물(Y 버튼)로 처치해요.")
+	toast.add_theme_font_size_override("font_size", 18)
+	toast.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45))
+	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast.size = Vector2(900, 30)
+	toast.position = Vector2((1280 - 900) * 0.5, 120)
+	toast.modulate.a = 0.0
+	add_child(toast)
+	var tw := toast.create_tween()
+	tw.tween_property(toast, "modulate:a", 1.0, 0.25)
+	tw.tween_interval(3.0)
+	tw.tween_property(toast, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(toast.queue_free)
 
 func _on_skill_dummy_killed(_pos: Vector2) -> void:
 	if step != Step.SKILL:

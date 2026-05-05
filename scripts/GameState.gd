@@ -1,5 +1,12 @@
 extends Node
 
+# 입력 모드 — 마지막으로 들어온 이벤트가 키보드/마우스인지 패드인지 추적.
+# UI hint 라벨/키캡 표지가 이 값에 따라 실시간 swap된다.
+# 변경 시 input_kind_changed 시그널 → 각 UI가 _refresh_hints 갱신.
+signal input_kind_changed(kind: String)
+const PAD_AXIS_DEADZONE: float = 0.4
+var last_input_kind: String = "kb"  # "kb" | "pad"
+
 const TOTAL_STAGES: int = 7
 const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
@@ -56,6 +63,60 @@ var seen_enemies: Array = []
 var hidden_visit_count: int = 0
 # 이스터에그 방(ARCTURUS 아카이브) 방문 여부 — 1회만 트리거되도록 영속.
 var visited_arcturus: bool = false
+
+func _input(event: InputEvent) -> void:
+	# 입력 모드 자동 감지. autoload Node여서 모든 InputEvent를 받는다.
+	# 패드 motion은 데드존 이상만 인정 (스틱 미세 떨림 무시).
+	var kind: String = ""
+	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
+		kind = "kb"
+	elif event is InputEventJoypadButton:
+		kind = "pad"
+	elif event is InputEventJoypadMotion:
+		if absf((event as InputEventJoypadMotion).axis_value) < PAD_AXIS_DEADZONE:
+			return
+		kind = "pad"
+	if kind == "" or kind == last_input_kind:
+		return
+	last_input_kind = kind
+	emit_signal("input_kind_changed", kind)
+
+func is_pad_mode() -> bool:
+	return last_input_kind == "pad"
+
+# 입력 무장 — 인게임에서 점프/A를 누르고 있던 사람이 메뉴 등장 직후 첫 버튼을
+# 자동 활성화시키는 사고 방지. 액션이 모두 떨어진 뒤(또는 처음부터 떨어져 있으면
+# 즉시) first_btn에 grab_focus. 호스트(layer/scene)가 free되면 timer도 함께.
+func arm_focus_after_release(host: Node, first_btn: Button, actions: PackedStringArray) -> void:
+	if first_btn == null:
+		return
+	if not _any_action_pressed(actions):
+		first_btn.grab_focus.call_deferred()
+		return
+	var timer := Timer.new()
+	timer.wait_time = 0.05
+	timer.autostart = true
+	host.add_child(timer)
+	var btn_ref: WeakRef = weakref(first_btn)
+	timer.timeout.connect(func() -> void:
+		if _any_action_pressed(actions):
+			return
+		if is_instance_valid(timer):
+			timer.queue_free()
+		var b := btn_ref.get_ref() as Button
+		if b != null and is_instance_valid(b):
+			b.grab_focus()
+	)
+
+func _any_action_pressed(actions: PackedStringArray) -> bool:
+	for a in actions:
+		if InputMap.has_action(a) and Input.is_action_pressed(a):
+			return true
+	return false
+
+# 짧은 헬퍼 — 입력 모드에 따라 둘 중 하나를 반환. UI 라벨에서 사용.
+func hint(kb_text: String, pad_text: String) -> String:
+	return pad_text if last_input_kind == "pad" else kb_text
 
 func reset() -> void:
 	current_stage = 0
