@@ -89,8 +89,6 @@ func _setup_veil_mistakes() -> void:
 	if GameState.current_stage == 0 and GameState.current_route_id != "route_rooftops":
 		# 첫 적 구역 진입 — 미션 컨텍스트 한 줄. 적 수 카운팅 같은 친절한 안내는 의도적으로 안 함.
 		_arm_veil_mistake_at(680.0, "정문은 봉쇄됐어요. 외벽으로 우회해요.", "")
-	elif GameState.current_stage == 2:
-		_arm_veil_mistake_at(1400.0, "여기 시야 자주 가려요. 발밑 조심해요.", "")
 	# 격리 병동 통과 시 ??? 맵 복선 (stage 3 또는 4).
 	# x=900 — 진입 직후 분기 결정 전에 분위기 깔리도록 일찍 트리거.
 	if GameState.current_route_id == "route_ward":
@@ -125,10 +123,9 @@ func _on_ward_foreshadow_zone(body: Node) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
 	ward_foreshadow_triggered = true
-	# 자막 큐에 차례로 enqueue — _drain_subtitles가 겹치지 않게 순차 재생.
-	_show_veil_subtitle("...", 1.2)
-	_show_veil_subtitle("이 구역은 오래됐어요.", 3.0)
-	_show_veil_subtitle("누가 봉인했는지 저도 몰라요.", 3.0)
+	# 한 줄에 합쳐 큐 부담 최소화 — 이전 3줄(...,오래됐어요,봉인했는지 몰라요)이
+	# 이스터에그 paused 동안 쌓였다가 풀린 뒤 줄줄이 표시되어 겹친 듯 보이던 문제.
+	_show_veil_subtitle("이 구역은 오래됐어요. 누가 봉인했는지 저도 몰라요.", 3.6)
 
 func _arm_veil_mistake_at(trigger_x: float, before_line: String, after_line: String) -> void:
 	# 트리거가 월드 밖이면 (vertical 등 좁은 맵) 건너뛰기
@@ -1122,9 +1119,7 @@ func _ambience_lab() -> void:
 		line.z_index = -10
 		add_child(line)
 		x += 120.0
-	# 핵심부 진입 표지 — PALIMPSEST 코드명 + 인가자 한정 경고. 임무 컨텍스트 결합.
-	_add_lore_label(Vector2(400.0, GROUND_Y - 300.0), "PROJECT  PALIMPSEST\n인가자 외 출입 금지", Color(0.95, 0.55, 0.55, 0.65), 16)
-	_add_lore_label(Vector2(STAGE_LENGTH * 0.5 - 200.0, GROUND_Y - 280.0), "ARCTURUS 핵심 데이터홀\nVEIL 시리즈 보관", Color(0.55, 0.85, 0.95, 0.55), 14)
+	# 배경 텍스트 라벨은 정신 사납다는 사용자 피드백으로 제거 — 격자 라인 ambience만 유지.
 
 func _ambience_back_alley() -> void:
 	# 노란 가로등 — 띄엄띄엄
@@ -1227,9 +1222,8 @@ func _ambience_ward() -> void:
 		tw.tween_property(lamp, "modulate:a", 0.4, rng.randf_range(0.8, 1.6))
 		tw.tween_property(lamp, "modulate:a", 1.0, rng.randf_range(0.8, 1.6))
 		x += rng.randf_range(640.0, 920.0)
-	# 격리 표지 — VEIL-1 봉인 흔적. 잠긴 문 옆에 배치(이스터에그 트리거 위치).
-	_add_lore_label(Vector2(2400.0, GROUND_Y - 340.0), "격리 — VEIL-1\n봉인: 2025.03  ARCTURUS", Color(0.95, 0.45, 0.45, 0.55), 14)
-	_add_lore_label(Vector2(900.0, GROUND_Y - 280.0), "PROJECT VEIL\n임상 후유증 격리실", Color(0.85, 0.45, 0.55, 0.45), 13)
+	# 격리 표지 라벨은 사용자 피드백으로 제거 — 비네트+붉은 비상등 ambience로 분위기 표현.
+	# VEIL-1 봉인 lore는 이스터에그 ARCTURUS 문서가 같은 맵에 있어 기능적으로 중복.
 
 func _ambience_datacenter() -> void:
 	# 데이터 센터 — 격자 + 데이터 흐름 라인 (밝은 푸른 톤)
@@ -1286,8 +1280,7 @@ func _ambience_escape() -> void:
 	fog.size = Vector2(STAGE_LENGTH + 400.0, 80.0)
 	fog.z_index = -3
 	add_child(fog)
-	# 표지 — 비상 폐기물 통로 화살표. ARCTURUS 외부 반출 단어가 lab/datacenter와 연결.
-	_add_lore_label(Vector2(800.0, GROUND_Y - 280.0), "→ 비상 폐기 통로\nARCTURUS 외부 반출", Color(0.78, 0.88, 0.95, 0.55), 14)
+	# 표지 라벨은 사용자 피드백으로 제거 — 천장 형광등+안개 ambience로만 출구 분위기 표현.
 
 ## 환경 라벨/그래피티 — 맵에 떡밥 텍스트 한 줄 깔아 코드명을 다른 맵과 묶음.
 ## PROJECT VEIL / ARCTURUS / PALIMPSEST / SILO-7 등이 여러 맵에 반복 등장 → 호기심.
@@ -2541,6 +2534,10 @@ func _update_arcturus_indicator() -> void:
 # 5초 hold 완료 — ArcturusDocumentOverlay (풀스크린 문서 + 카메라 스크롤 + 시간 정지).
 func _start_arcturus_sequence() -> void:
 	GameState.restrict_combat_input = true
+	# 큐에 남아 있던 ward foreshadow 자막 정리 — paused 동안 timer가 멈췄다가
+	# 풀린 뒤 누적 자막이 한꺼번에 흐르며 outro와 겹치는 현상 차단.
+	_subtitle_queue.clear()
+	_subtitle_active = false
 	var doc := ArcturusDocumentOverlay.new()
 	doc.name = "ArcturusDoc"
 	add_child(doc)
@@ -2559,11 +2556,8 @@ func _on_arcturus_lines_done() -> void:
 	if arcturus_indicator != null and is_instance_valid(arcturus_indicator):
 		arcturus_indicator.queue_free()
 		arcturus_indicator = null
-	# VEIL outro — 문서가 아니라 게임 화면 자막으로 (사용자 요청). 큐가 순차 처리.
-	_show_veil_subtitle("여기까지 왔군요.", 2.4)
-	_show_veil_subtitle("...", 1.4)
-	_show_veil_subtitle("저도 이 파일들 읽은 적 있어요.", 2.8)
-	_show_veil_subtitle("...", 1.4)
+	# VEIL outro — 짧게 두 줄. 이전 5줄(... 포함)이 길게 늘어져 겹침 인상 줬음.
+	_show_veil_subtitle("저도 이 파일들 읽은 적 있어요.", 3.0)
 	_show_veil_subtitle("계속 가요, 요원.", 2.6)
 
 # ARCTURUS 아카이브 문서 — 3 단말기.
