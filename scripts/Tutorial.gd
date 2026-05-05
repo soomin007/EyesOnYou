@@ -96,7 +96,7 @@ func _ready() -> void:
 	_build_camera()
 	_build_signs()
 	_build_jump_pickup()
-	_build_attack_dummy()
+	# attack_dummy는 ATTACK 단계 진입 시점에 spawn — 점프 단계 미리 죽이는 사고 방지.
 	_build_spike_zone()
 	_build_barrier()
 	_build_goal()
@@ -550,6 +550,8 @@ func _on_pickup_taken(body: Node) -> void:
 	_advance_to(Step.ATTACK)
 
 func _build_attack_dummy() -> void:
+	# ATTACK 단계 진입 직전 lazy spawn — 점프 단계에 미리 등장하면 사용자가 도달해서
+	# 사격 트리거가 무력화되는 버그(사용자 보고) 차단.
 	attack_dummy = TutorialDummy.new()
 	add_child(attack_dummy)
 	attack_dummy.global_position = ATTACK_DUMMY
@@ -720,6 +722,7 @@ func _advance_to(next: int) -> void:
 			sign_drop.visible = true
 		Step.ATTACK:
 			sign_attack.visible = true
+			_build_attack_dummy()
 		Step.LEVELUP:
 			sign_levelup.visible = true
 			_spawn_levelup_dummies()

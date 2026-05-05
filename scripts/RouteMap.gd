@@ -11,6 +11,9 @@ var pool: Array = []
 var recommended_id: String = ""
 var hovered_idx: int = 0
 var buttons: Array = []
+# 고위험/고보상 별도 패널 (사용자 피드백: 본 멘트에 겹치면 너무 많아짐).
+var risk_reward_panel: PanelContainer = null
+var risk_reward_label: Label = null
 
 func _ready() -> void:
 	stage_label.text = "STAGE %d / %d  —  루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
@@ -25,10 +28,41 @@ func _ready() -> void:
 	veil_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	veil_text.custom_minimum_size = Vector2(560, 0)
 	_setup_trust_gauge()
+	_build_risk_reward_panel()
 	_build_node_buttons()
 	_update_veil_comment()
 	_refresh_hint()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
+
+func _build_risk_reward_panel() -> void:
+	# VeilBox 우측에 작은 패널 — 고위험/고보상 경고를 본 멘트와 분리해서 표시.
+	risk_reward_panel = PanelContainer.new()
+	risk_reward_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	risk_reward_panel.anchor_left = 0.78
+	risk_reward_panel.anchor_top = 0.62
+	risk_reward_panel.anchor_right = 0.97
+	risk_reward_panel.anchor_bottom = 0.74
+	risk_reward_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.13, 0.10, 0.08, 0.88)
+	sb.border_color = Color(0.85, 0.55, 0.35, 0.55)
+	sb.set_border_width_all(1)
+	sb.content_margin_left = 14
+	sb.content_margin_right = 14
+	sb.content_margin_top = 10
+	sb.content_margin_bottom = 10
+	sb.corner_radius_top_left = 4
+	sb.corner_radius_top_right = 4
+	sb.corner_radius_bottom_left = 4
+	sb.corner_radius_bottom_right = 4
+	risk_reward_panel.add_theme_stylebox_override("panel", sb)
+	risk_reward_panel.visible = false
+	add_child(risk_reward_panel)
+	risk_reward_label = Label.new()
+	risk_reward_label.add_theme_font_size_override("font_size", 13)
+	risk_reward_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.65))
+	risk_reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	risk_reward_panel.add_child(risk_reward_label)
 
 func _on_input_kind_changed(_kind: String) -> void:
 	_refresh_hint()
@@ -111,15 +145,28 @@ func _update_veil_comment() -> void:
 		msg += desc + "\n\n"
 	# prefix 시스템 폐지 — 짧은 prefix가 뒷 문장과 부자연스러움. 신뢰도는 색으로.
 	msg += "VEIL  —  " + str(route.get("veil_comment", ""))
-	# 위험도가 보이는 루트(hidden 아님)에서만 명시 경고
-	if not route.get("hidden", false):
-		var risk: int = int(route.get("risk", 0))
-		if risk >= 3:
-			msg += "\n[고위험] 적 수가 더 많고 반응 속도도 빨라요."
-		var reward: int = int(route.get("reward", 0))
-		if reward >= 3:
-			msg += "\n[고보상] 클리어 보너스 경험치가 큽니다."
 	veil_text.text = msg
+	# 고위험/고보상 경고는 별도 우측 패널로 — 본 멘트와 시각 분리.
+	_update_risk_reward_panel(route)
+
+func _update_risk_reward_panel(route: Dictionary) -> void:
+	if risk_reward_panel == null or risk_reward_label == null:
+		return
+	if route.get("hidden", false):
+		risk_reward_panel.visible = false
+		return
+	var lines: Array = []
+	var risk: int = int(route.get("risk", 0))
+	if risk >= 3:
+		lines.append("[고위험]\n적 수와 반응 속도가 강해요.")
+	var reward: int = int(route.get("reward", 0))
+	if reward >= 3:
+		lines.append("[고보상]\n클리어 보너스 경험치가 큽니다.")
+	if lines.is_empty():
+		risk_reward_panel.visible = false
+		return
+	risk_reward_label.text = "\n\n".join(lines)
+	risk_reward_panel.visible = true
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):

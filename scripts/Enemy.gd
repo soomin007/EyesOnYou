@@ -104,7 +104,8 @@ var bomber_state_timer: float = 0.0
 
 # 방패병 정면 회전 지연 — 한 번 돈 뒤 일정 시간 다시 못 돌게.
 # 대시 쿨다운(0.7s)보다 충분히 길어야 측면/후면 잡고 돌아갈 시간이 생김.
-const SHIELD_DIR_LOCK_DURATION: float = 2.0
+# 사용자 후속 피드백: 좀 더 늘려달라 → 2.0 → 2.8.
+const SHIELD_DIR_LOCK_DURATION: float = 2.8
 var shield_dir_lock_timer: float = 0.0
 
 var encountered: bool = false
@@ -117,6 +118,9 @@ func _ready() -> void:
 		EnemyType.PATROL:
 			hp = 2
 			visual = CharacterArt.build_patrol(self)
+			# 사용자: patrol 크기 키우기 — 콜리전과 함께 시각도 1.3배.
+			if visual != null:
+				visual.scale = Vector2(1.3, 1.3)
 		EnemyType.SNIPER:
 			hp = 1
 			visual = CharacterArt.build_sniper(self)
@@ -129,6 +133,9 @@ func _ready() -> void:
 		EnemyType.SHIELD:
 			hp = 3
 			visual = CharacterArt.build_shield(self)
+			# 사용자: shield 크기 키우기 — 콜리전과 함께 시각도 1.4배.
+			if visual != null:
+				visual.scale = Vector2(1.4, 1.4)
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
 	# 지면형 적은 spawn pos가 발판 살짝 위/아래여도 발판 top에 정확히 붙도록 snap.

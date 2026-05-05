@@ -52,7 +52,7 @@ var skill_max_charges: int = 1
 # barrier 상태
 var barrier_ready: bool = false
 var barrier_charge_t: float = 0.0
-var barrier_indicator: ColorRect = null
+var barrier_indicator: Node2D = null
 
 func _ready() -> void:
 	add_to_group("player")
@@ -72,26 +72,32 @@ func _ready() -> void:
 	muzzle_flash.visible = false
 	add_child(muzzle_flash)
 	# barrier indicator — 머리 위 점, 충전 완료 시 푸른빛 펄스. 사용자
-	# 피드백: 작아서 안 띄임 → 12x12로 키우고 외곽선 라인 추가.
-	barrier_indicator = ColorRect.new()
-	barrier_indicator.name = "BarrierIndicator"
-	# color.a는 1.0로 두고 modulate로 fade. modulate는 자식 ring에도 전파됨.
-	barrier_indicator.color = Color(0.45, 0.75, 1.0, 0.85)
+	# 사용자: "머리 위 파란 네모"가 안 어울림 → 캐릭터 본체에 하늘색 아우라.
+	# Node2D 안에 동심원 3겹 (외곽 옅음 → 내곽 진함)으로 부드러운 발광 효과.
+	barrier_indicator = Node2D.new()
+	barrier_indicator.name = "BarrierAura"
+	barrier_indicator.position = Vector2(0.0, -10.0)  # 캐릭터 몸통 중심 근처
 	barrier_indicator.modulate.a = 0.0
-	barrier_indicator.size = Vector2(12.0, 12.0)
-	barrier_indicator.position = Vector2(-6.0, -70.0)
-	barrier_indicator.pivot_offset = Vector2(6.0, 6.0)
 	add_child(barrier_indicator)
-	var ring := ColorRect.new()
-	ring.color = Color(0.85, 0.92, 1.0, 0.65)
-	ring.size = Vector2(14.0, 1.0)
-	ring.position = Vector2(-1.0, -1.0)
-	barrier_indicator.add_child(ring)
-	var ring2 := ColorRect.new()
-	ring2.color = Color(0.85, 0.92, 1.0, 0.65)
-	ring2.size = Vector2(14.0, 1.0)
-	ring2.position = Vector2(-1.0, 12.0)
-	barrier_indicator.add_child(ring2)
+	var aura_outer := Polygon2D.new()
+	aura_outer.color = Color(0.55, 0.85, 1.0, 0.18)
+	aura_outer.polygon = _make_circle_polygon(34.0)
+	barrier_indicator.add_child(aura_outer)
+	var aura_mid := Polygon2D.new()
+	aura_mid.color = Color(0.65, 0.92, 1.0, 0.28)
+	aura_mid.polygon = _make_circle_polygon(26.0)
+	barrier_indicator.add_child(aura_mid)
+	var aura_inner := Polygon2D.new()
+	aura_inner.color = Color(0.85, 0.97, 1.0, 0.42)
+	aura_inner.polygon = _make_circle_polygon(18.0)
+	barrier_indicator.add_child(aura_inner)
+
+func _make_circle_polygon(radius: float, n: int = 32) -> PackedVector2Array:
+	var pts: PackedVector2Array = []
+	for i in n + 1:
+		var a: float = float(i) * TAU / float(n)
+		pts.append(Vector2(cos(a) * radius, sin(a) * radius))
+	return pts
 
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
@@ -366,7 +372,7 @@ func take_hit(amount: int) -> void:
 		barrier_ready = false
 		barrier_charge_t = 0.0
 		if barrier_indicator != null:
-			barrier_indicator.color.a = 0.0
+			barrier_indicator.modulate.a = 0.0
 		_show_shield_flash()
 		if GameState.get_skill_tier("barrier") >= 3:
 			invuln = max(invuln, BARRIER_INVULN_T3)

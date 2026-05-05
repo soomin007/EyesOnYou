@@ -2097,9 +2097,16 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	# kind: 0=patrol, 1=sniper, 2=drone, 3=bomber, 4=shield
+	# 사용자: patrol/shield 크기 좀 키우기 (28×40 → 36×52, shield는 40×56).
 	if kind == 2:
 		shape.size = Vector2(32.0, 24.0)
 		col.position = Vector2(0, 0)
+	elif kind == 0:
+		shape.size = Vector2(36.0, 52.0)
+		col.position = Vector2(0, -26.0)
+	elif kind == 4:
+		shape.size = Vector2(40.0, 56.0)
+		col.position = Vector2(0, -28.0)
 	else:
 		shape.size = Vector2(28.0, 40.0)
 		col.position = Vector2(0, -20.0)
