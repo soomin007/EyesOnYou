@@ -226,9 +226,29 @@ static func _get_story_route_pool(stage_index: int) -> Array:
 		for r in ALL_ROUTES:
 			var route: Dictionary = r
 			if route.get("id", "") == rid:
-				out.append(route)
+				out.append(_apply_story_overrides(route))
 				break
 	return out
+
+# 스토리 모드에서 명칭/설명/멘트가 일반 모드와 의미가 다른 경우 override.
+# 사용자 피드백: "비상 탈출로"가 보스 후 stage라 임무 시작 단계에서 어색했음.
+const STORY_OVERRIDES: Dictionary = {
+	"route_escape": {
+		"name": "최종 탈출",
+		"description": "임무를 마치고 시설 밖으로 빠져나가는 길. 마지막 한 걸음.",
+		"veil_comment": "조용히 빠져요. 거의 다 왔어요.",
+	},
+}
+
+static func _apply_story_overrides(route: Dictionary) -> Dictionary:
+	var rid: String = str(route.get("id", ""))
+	if not STORY_OVERRIDES.has(rid):
+		return route
+	var copy: Dictionary = route.duplicate()
+	var override: Dictionary = STORY_OVERRIDES[rid]
+	for k in override.keys():
+		copy[k] = override[k]
+	return copy
 
 static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 	# 명시적 available_stages가 있으면 우선 (디버그/특수 용도).

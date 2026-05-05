@@ -130,6 +130,9 @@ func _setup_ending_d_atmosphere() -> void:
 	blink_tw.tween_property(veil_blink, "modulate:a", 0.0, 1.5)
 
 func _start_line() -> void:
+	# 매 새 라인마다 watchdog reset — 첫 라인뿐 아니라 followup·이후 라인 모두 보호.
+	stall_watchdog_t = 0.0
+	print("[Ending] _start_line idx=%d/%d" % [line_idx, lines.size()])
 	if line_idx >= lines.size():
 		_on_sequence_done()
 		return

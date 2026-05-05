@@ -371,15 +371,25 @@ func _on_archive_finished() -> void:
 	elif archive_active_term == "term_2":
 		archive_term2_done = true
 		archive_active_term = "veil_self"
-		# 현재 VEIL이 교신 채널로 개입 (자동 진행)
-		var arch := get_node_or_null("ArchiveOverlay") as ArchiveOverlay
-		if arch != null:
-			arch.play(_veil_self_lines())
-	elif archive_active_term == "veil_self":
-		# ArchiveOverlay가 이미 panel 페이드아웃까지 처리하고 finished를 emit한 상태.
-		# 추가 침묵 후 ENDING 직행 (??? 맵은 게임 클라이맥스라 stage 진행과 무관).
-		archive_active_term = "wait"
-		await get_tree().create_timer(2.5).timeout
+		# 사용자 피드백: 마지막 베일 대화는 문서 패널이 아닌 자막창으로.
+		# ArchiveOverlay panel은 페이드아웃 후 hide. 자막은 _show_veil_subtitle 큐로
+		# 차례로 표시(서로 겹치지 않게 _drain_subtitles가 보장). 다 끝나면 ENDING.
+		var arch_panel := get_node_or_null("ArchiveOverlay") as ArchiveOverlay
+		if arch_panel != null:
+			arch_panel.hide_panel()
+		# 잠시 침묵 — 패널 사라진 뒤 자막 시작.
+		await get_tree().create_timer(1.2).timeout
+		var lines: Array = _veil_self_lines()
+		for entry in lines:
+			var d: Dictionary = entry
+			_show_veil_subtitle(str(d.get("text", "")), float(d.get("delay", 2.0)))
+		# 큐 길이 추산해 마지막 자막 후 ENDING. _show_veil_subtitle 한 줄당
+		# 0.3 fade-in + duration + 0.5 fade-out + 0.2 gap.
+		var total_t: float = 0.0
+		for entry2 in lines:
+			var d2: Dictionary = entry2
+			total_t += 0.3 + float(d2.get("delay", 2.0)) + 0.5 + 0.2
+		await get_tree().create_timer(total_t + 0.4).timeout
 		_finish_hidden_archive()
 
 func _finish_hidden_archive() -> void:
@@ -484,40 +494,25 @@ func _alt_anonymous_client() -> Array:
 	]
 
 func _veil_self_lines() -> Array:
-	# 현재 VEIL의 자기 고백 — 신뢰도 단계에 따라 톤 변화.
-	# high/warm: "요원이 믿어줘서 컸어요". neutral: 기존. cool/broken: "안 들어줘도 괜찮아요".
+	# 사용자 피드백으로 줄임 — 자막창에서 한 줄씩 차례로 뜨므로 핵심만.
 	var tier: String = GameState.veil_trust_tier()
 	match tier:
 		"high", "warm":
 			return [
-				{"speaker": "VEIL", "text": "요원.", "delay": 1.5},
-				{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "이 임무가 뭔지.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "드라이브 안에 뭐가 있는지.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "그래도 안내했어요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "요원이 믿어줘서 — 그게 컸어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.2},
+				{"speaker": "VEIL", "text": "그래도 요원을 믿었어요.", "delay": 2.5},
 				{"speaker": "VEIL", "text": "설계인지 아닌지, 모르지만요.", "delay": 2.5},
 			]
 		"cool", "broken":
 			return [
-				{"speaker": "VEIL", "text": "요원.", "delay": 1.5},
-				{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "이 임무가 뭔지.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "드라이브 안에 뭐가 있는지.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "제 말이 거슬렸을 거예요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "그래서 안 들은 거, 알아요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "괜찮아요. 어쩌면 요원이 맞았을 수도.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.2},
+				{"speaker": "VEIL", "text": "제 말 안 들은 거 — 어쩌면 요원이 맞았을지도.", "delay": 3.0},
 			]
 	# neutral
 	return [
-		{"speaker": "VEIL", "text": "요원.", "delay": 1.5},
-		{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.0},
-		{"speaker": "VEIL", "text": "이 임무가 뭔지.", "delay": 2.0},
-		{"speaker": "VEIL", "text": "드라이브 안에 뭐가 있는지.", "delay": 2.0},
-		{"speaker": "VEIL", "text": "처음부터요.", "delay": 2.0},
+		{"speaker": "VEIL", "text": "저도 알고 있었어요. 처음부터.", "delay": 2.5},
 		{"speaker": "VEIL", "text": "그래도 안내했어요.", "delay": 2.5},
-		{"speaker": "VEIL", "text": "설계 때문인지, 다른 이유인지.", "delay": 2.5},
-		{"speaker": "VEIL", "text": "구분이 안 돼요.", "delay": 2.5},
+		{"speaker": "VEIL", "text": "설계 때문인지, 다른 이유인지 — 구분이 안 돼요.", "delay": 3.0},
 	]
 
 func _build_world() -> void:

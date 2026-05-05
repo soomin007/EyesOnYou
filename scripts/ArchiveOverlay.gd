@@ -9,7 +9,10 @@ extends Node
 
 signal finished
 
-const TYPE_INTERVAL: float = 0.045
+# 텍스트 속도 — 사용자: "좀 늦춰줘". 기존 0.045 → 0.08로 한 박자 느리게.
+const TYPE_INTERVAL: float = 0.08
+# 시작 전 정지 — 사용자: "시작하기 전에 1초 정도 딜레이".
+const START_DELAY: float = 1.0
 
 var layer: CanvasLayer
 var panel: PanelContainer
@@ -63,11 +66,17 @@ func _ready() -> void:
 
 func play(lines: Array) -> void:
 	queued_lines = lines
-	line_idx = 0
+	# -1로 시작 → _process가 pause_remaining 다 쓰고 line_idx += 1 = 0 → _start_line(line 0).
+	line_idx = -1
 	_finalizing = false
 	panel.visible = true
 	panel.modulate.a = 1.0
-	_start_line()
+	# 시작 전 한 박자 — 텍스트가 갑자기 떠오르는 느낌 줄이고 패널이 인지된 뒤 전개.
+	speaker_label.text = ""
+	text_label.text = ""
+	typing = false
+	pause_remaining = START_DELAY
+	t = 0.0
 
 func _start_line() -> void:
 	if line_idx >= queued_lines.size():
