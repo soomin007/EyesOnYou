@@ -52,6 +52,7 @@ var hint_label: Label
 
 var sign_move: Control
 var sign_jump: Control
+var sign_drop: Control  # JUMP 단계 정상에서 S 키로 내려가는 안내
 var sign_attack: Control
 var sign_levelup: Label  # 레벨업 후 스킬 이름이 표시되는 텍스트라 텍스트 라벨 유지
 var sign_skill: Control
@@ -266,6 +267,9 @@ func _build_signs() -> void:
 	sign_move = _make_keycap_sign(["A", "D"], "이동", Vector2(280.0, GROUND_Y - 200.0))
 	# 점프는 W 와 SPACE 둘 다 가능 — 키캡에 두 개 모두 표시.
 	sign_jump = _make_keycap_sign(["W", "SPACE"], "점프", Vector2(950.0, GROUND_Y - 280.0))
+	# 정상 발판 위 — S로 발 밑 플랫폼 내려가기 안내. one-way 플랫폼 통과는
+	# 본편에서 자주 쓰이는데 안 알려주면 모르고 지나감.
+	sign_drop = _make_keycap_sign(["S"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y - 70.0))
 	sign_attack = _make_attack_sign(Vector2(1750.0, GROUND_Y - 200.0))
 	sign_dash = _make_keycap_sign(["SHIFT"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
@@ -282,6 +286,7 @@ func _build_signs() -> void:
 	# sign_skill은 LEVELUP 종료 후 picked 스킬에 따라 동적으로 만든다.
 	sign_levelup.visible = false
 	sign_jump.visible = false
+	sign_drop.visible = false
 	sign_attack.visible = false
 	sign_dash.visible = false
 
@@ -433,7 +438,7 @@ func _build_hud() -> void:
 	hint_label = Label.new()
 	hint_label.add_theme_font_size_override("font_size", 13)
 	hint_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
-	hint_label.text = "A/D 이동   W/SPACE 점프   J/마우스 좌클릭 사격   SHIFT 대시   Q/마우스 우클릭 스킬   ESC 일시정지"
+	hint_label.text = "A/D 이동   W/SPACE 점프   S 발 밑 내려가기   J/마우스 좌클릭 사격   SHIFT 대시   Q/마우스 우클릭 스킬   ESC 일시정지"
 	bottom.add_child(hint_label)
 
 func _refresh_hud() -> void:
@@ -622,6 +627,7 @@ func _advance_to(next: int) -> void:
 	match step:
 		Step.JUMP:
 			sign_jump.visible = true
+			sign_drop.visible = true
 		Step.ATTACK:
 			sign_attack.visible = true
 		Step.LEVELUP:
@@ -666,7 +672,15 @@ func _on_xp_collected(leveled_up: bool) -> void:
 
 func _show_levelup() -> void:
 	get_tree().paused = true
-	levelup_overlay = LevelUpOverlay.show(self, "원하는 능력을 골라요. 한 번 고른 스킬은 남은 게임 동안 유지돼요.", _on_levelup_picked)
+	# 튜토리얼은 폭발물 스킬 단일 강제 — 액티브 스킬 사용법 학습 목적.
+	# VEIL 멘트로 "튜토리얼이라 잠깐 빌려준다 — 본편엔 안 들어가요" 명시.
+	# 본편 진입 시 GameState.start_main_game()이 skills를 STARTING_SKILLS로 초기화함.
+	var explosive_card: Dictionary = SkillTreeData.make_card("explosive", 1)
+	var advice: Dictionary = {
+		"line": "이건 잠깐 빌려드릴게요. 튜토리얼 안에서만 — 본편엔 안 들어가요.",
+		"family": "",  # 단일 카드라 추천 표시 불필요
+	}
+	levelup_overlay = LevelUpOverlay.show(self, advice, _on_levelup_picked, [explosive_card])
 
 func _on_levelup_picked(picked_id: String) -> void:
 	levelup_overlay = null

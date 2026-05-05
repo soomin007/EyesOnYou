@@ -70,8 +70,9 @@ func reset() -> void:
 	player_xp = 0
 	player_level = 1
 
-# 튜토리얼 종료 후 본편 시작 시 호출. 진행 상태는 초기화하되
-# 튜토리얼에서 고른 스킬은 그대로 들고감.
+# 튜토리얼 종료 후 본편 시작 시 호출. 진행/스킬/XP 모두 초기화 — 튜토리얼은
+# 연습용이라 본편에 영향 없음. VEIL이 "잠깐 빌려드려요" 멘트로 명시.
+# (이전엔 튜토리얼에서 고른 스킬을 본편에 들고갔지만, 사용자 피드백으로 분리)
 func start_main_game() -> void:
 	current_stage = 0
 	death_count = 0
@@ -85,10 +86,11 @@ func start_main_game() -> void:
 	current_route_tags = []
 	current_route_risk = 1
 	current_route_reward = 1
+	player_max_hp = 3
 	player_hp = player_max_hp
 	player_xp = 0
 	player_level = 1
-	# skills 보존
+	skills = STARTING_SKILLS.duplicate()
 
 func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	var rid: String = route.get("id", "")
@@ -140,10 +142,11 @@ func veil_tone_color() -> Color:
 	return Color(0.55, 0.85, 0.95)
 
 # 신뢰도 단계별 prefix 풀. 매 호출 random 선택 — 단조롭지 않게.
+# neutral의 "그럼, "은 뒷 문장과 어색하게 붙어 제거 (사용자 피드백). 대신 정보형 톤.
 const TONE_PREFIXES: Dictionary = {
 	"high":    ["당신이라면, ", "역시 당신이에요. ", "맞춰가볼게요. ", "믿어요. "],
 	"warm":    ["", "들어봐요, ", "", "제 의견은요, "],
-	"neutral": ["", "", "", "그럼, "],
+	"neutral": ["", "", "참고로, ", "보세요, "],
 	"cool":    ["음… ", "글쎄요. ", "흠… ", "잘 모르겠지만, "],
 	"broken":  ["마음대로 하세요. ", "원하는 대로요. ", "당신 결정이에요. ", "더는 안 말려요. "],
 }

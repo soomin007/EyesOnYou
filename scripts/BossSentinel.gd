@@ -18,10 +18,13 @@ const HP_SELF_DESTRUCT: int = 1  # 이 값 이하 시 자폭 카운트다운 시
 const PHASE_FREEZE_DURATION: float = 1.2  # 페이즈 전환 시 정지 + 무적 시간
 
 const SELF_DESTRUCT_TIME: float = 5.0
-const SELF_DESTRUCT_INNER: float = 380.0   # 이 안: full 데미지
-const SELF_DESTRUCT_OUTER: float = 1200.0  # 이 너머: 1뎀 (멀리 있으면 약한 회피)
+const SELF_DESTRUCT_INNER: float = 280.0   # 이 안: full 데미지
+const SELF_DESTRUCT_OUTER: float = 700.0   # 이 너머: 무뎀 (이전 1200은 ARENA에서 사실상 회피 불가)
 const SELF_DESTRUCT_DAMAGE: int = 3
-const SELF_DESTRUCT_DAMAGE_MIN: int = 1
+const SELF_DESTRUCT_DAMAGE_MIN: int = 0  # outer 너머는 완전 회피
+const SELF_DESTRUCT_CHASE_SPEED: float = 50.0  # 자폭 중 느린 추적
+const SELF_DESTRUCT_FALL_ACCEL: float = 90.0   # 자폭 중 추락 가속
+const SPARK_INTERVAL: float = 0.12  # 파지직 파티클 간격
 
 const TOUCH_DAMAGE: int = 1
 const TOUCH_COOLDOWN: float = 1.0
@@ -64,8 +67,10 @@ var self_destruct_active: bool = false
 var self_destruct_t: float = 0.0
 var phase_freeze_t: float = 0.0  # 페이즈 전환 시 잠깐 정지 (시각적 강조)
 var summoned_minions: Array = []  # 페이즈 소환 잔당 — 보스 처치 시 함께 정리.
-var danger_ring_inner: Line2D = null  # 자폭 inner(380) 빨간 외곽선
-var danger_ring_outer: Line2D = null  # 자폭 outer(1200) 노랑 외곽선
+var danger_ring_inner: Line2D = null  # 자폭 inner 빨간 외곽선
+var danger_ring_outer: Line2D = null  # 자폭 outer 노랑 외곽선
+var self_destruct_fall_v: float = 0.0  # 자폭 중 추락 속도 누적 (gravity-like)
+var spark_t: float = 0.0  # 파지직 spawn 타이머
 
 # 텔레그래프 시각 노드
 var bomb_dot: ColorRect = null
@@ -110,12 +115,15 @@ func _physics_process(delta: float) -> void:
 	if dead:
 		return
 	touch_cd = max(0.0, touch_cd - delta)
-	# 자폭 카운트다운 진행
+	# 자폭 카운트다운 진행 — 일반 AI 대신 천천히 따라오며 추락 + 파지직.
 	if self_destruct_active:
 		self_destruct_t += delta
 		if self_destruct_t >= SELF_DESTRUCT_TIME:
 			_detonate()
 			return
+		_self_destruct_motion(delta)
+		_emit_sparks(delta)
+		return
 	# 페이즈 전환 정지
 	if phase_freeze_t > 0.0:
 		phase_freeze_t -= delta
@@ -125,6 +133,50 @@ func _physics_process(delta: float) -> void:
 	_move(delta)
 	_attacks(delta)
 	_check_touch_player()
+
+# 자폭 중 보스 거동 — HOVER 라인 유지 대신 천천히 추락하며 플레이어 쪽으로 느슨한 추적.
+func _self_destruct_motion(delta: float) -> void:
+	var p: Node2D = _find_player()
+	if p != null:
+		var dx: float = p.global_position.x - global_position.x
+		velocity.x = sign(dx) * SELF_DESTRUCT_CHASE_SPEED
+		dir = int(sign(dx)) if abs(dx) > 1.0 else dir
+	else:
+		velocity.x = 0.0
+	# 추락 — 가속도 누적 (지면에 닿을 때까지). 시각적으로 "통제 잃음".
+	self_destruct_fall_v += SELF_DESTRUCT_FALL_ACCEL * delta
+	velocity.y = self_destruct_fall_v
+	move_and_slide()
+	# 살짝 진동 (파지직 흔들림)
+	if visual != null:
+		visual.position = Vector2(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0))
+
+# 파지직(spark) — 0.12초 간격으로 보스 주변에 작은 노란/주황 라인 spawn.
+# 0.25초 동안 fade-out 후 자동 정리.
+func _emit_sparks(delta: float) -> void:
+	spark_t -= delta
+	if spark_t > 0.0:
+		return
+	spark_t = SPARK_INTERVAL
+	var n: int = 3
+	for i in n:
+		var spark := Line2D.new()
+		var ang: float = randf() * TAU
+		var len: float = randf_range(14.0, 26.0)
+		var jx: float = randf_range(-18.0, 18.0)
+		var jy: float = randf_range(-12.0, 12.0)
+		spark.points = PackedVector2Array([
+			Vector2(jx, jy),
+			Vector2(jx + cos(ang) * len * 0.5, jy + sin(ang) * len * 0.5),
+			Vector2(jx + cos(ang + 0.4) * len, jy + sin(ang + 0.4) * len),
+		])
+		spark.width = 1.6
+		spark.default_color = Color(1.0, 0.95, 0.45) if (i % 2 == 0) else Color(1.0, 0.55, 0.20)
+		spark.z_index = 7
+		add_child(spark)
+		var tw: Tween = spark.create_tween()
+		tw.tween_property(spark, "modulate:a", 0.0, 0.25)
+		tw.tween_callback(spark.queue_free)
 
 func _current_speed() -> float:
 	match phase:

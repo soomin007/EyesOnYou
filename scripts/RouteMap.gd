@@ -99,7 +99,8 @@ func _update_veil_comment() -> void:
 	var desc: String = str(route.get("description", ""))
 	if desc != "":
 		msg += desc + "\n\n"
-	msg += "VEIL  —  " + GameState.veil_tone_prefix() + str(route.get("veil_comment", ""))
+	# prefix 시스템 폐지 — 짧은 prefix가 뒷 문장과 부자연스러움. 신뢰도는 색으로.
+	msg += "VEIL  —  " + str(route.get("veil_comment", ""))
 	# 위험도가 보이는 루트(hidden 아님)에서만 명시 경고
 	if not route.get("hidden", false):
 		var risk: int = int(route.get("risk", 0))

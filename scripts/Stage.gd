@@ -84,7 +84,9 @@ var ward_foreshadow_triggered: bool = false
 func _setup_veil_mistakes() -> void:
 	if GameState.playground_active:
 		return
-	if GameState.current_stage == 0:
+	# rooftops는 vertical 진입 멘트가 더 구체적이라 stage 0 generic 멘트는 생략 —
+	# 두 멘트가 거의 동시에 큐 들어가서 "약간 겹침"으로 보이던 문제 회피.
+	if GameState.current_stage == 0 and GameState.current_route_id != "route_rooftops":
 		# 첫 적 구역 진입 — 미션 컨텍스트 한 줄. 적 수 카운팅 같은 친절한 안내는 의도적으로 안 함.
 		_arm_veil_mistake_at(680.0, "정문은 봉쇄됐어요. 외벽으로 우회해요.", "")
 	elif GameState.current_stage == 2:
@@ -94,10 +96,10 @@ func _setup_veil_mistakes() -> void:
 	if GameState.current_route_id == "route_ward":
 		_arm_ward_foreshadow_at(900.0)
 	# Vertical 맵 — 진입 직후 방향 안내. 사용자: "왜 올라가야 하는지 모르겠다".
-	# 정상/바닥에 출구가 있다는 사실을 첫 멘트로 명시.
+	# 정상/바닥에 출구가 있다는 사실을 첫 멘트로 명시. rooftops는 노출 위협까지 안내.
 	match GameState.current_route_id:
 		"route_rooftops":
-			_show_veil_subtitle("위로 올라가요. 옥상이 출구예요.", 3.0)
+			_show_veil_subtitle("옥상이 출구예요. 시야가 트여서 저격에 노출돼요 — 멈추지 말고.", 3.6)
 		"route_cooling":
 			_show_veil_subtitle("냉각 파이프 위쪽이 출구예요. 우측 외곽에 뭔가 따로 있는 것 같기도 해요.", 3.6)
 		"route_sewers":
@@ -617,23 +619,29 @@ func _drain_subtitles() -> void:
 	get_tree().create_timer(total).timeout.connect(_drain_subtitles)
 
 func _display_veil_subtitle(message: String, duration: float) -> void:
+	# 보스/wide 화면에서 자막이 좌측에 치우쳐 보이던 문제 — 절대 좌표 (140, 110)
+	# 대신 PRESET_TOP_WIDE 앵커로 화면 폭 전체에 걸쳐 가운데 정렬한다.
 	var msg_layer := CanvasLayer.new()
 	msg_layer.layer = 20
 	add_child(msg_layer)
+	var holder := Control.new()
+	holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	holder.offset_top = 96.0
+	holder.offset_bottom = 168.0
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	msg_layer.add_child(holder)
 	var l := Label.new()
 	l.text = "VEIL  —  " + message
 	l.add_theme_font_size_override("font_size", 18)
 	l.add_theme_color_override("font_color", Color(0.7, 0.9, 1.0))
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	l.add_theme_constant_override("outline_size", 4)
-	# anchors_preset 없이 절대 좌표 (CanvasLayer 안에서 안전)
-	l.position = Vector2(140, 110)
-	l.size = Vector2(1000, 60)
+	l.set_anchors_preset(Control.PRESET_FULL_RECT)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.modulate.a = 0.0
-	msg_layer.add_child(l)
+	holder.add_child(l)
 	var tw := l.create_tween()
 	tw.tween_property(l, "modulate:a", 1.0, 0.3)
 	tw.tween_interval(duration)
@@ -643,13 +651,14 @@ func _display_veil_subtitle(message: String, duration: float) -> void:
 # 보스전 전용 강조 자막 — 일반 _show_veil_subtitle보다 큰 폰트 + 어두운 박스 배경 +
 # 색상으로 위험도 차등화. 화면 중앙 위쪽에 배치해 폭발 효과/총알 위에서도 인지 가능.
 func _show_boss_alert(message: String, color: Color, duration: float) -> void:
+	# 절대 size 1280로 좌측 치우침 발생하던 문제 — anchor preset만으로 화면 폭 채움.
 	var msg_layer := CanvasLayer.new()
 	msg_layer.layer = 22
 	add_child(msg_layer)
 	var holder := CenterContainer.new()
 	holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	holder.position = Vector2(0, 110.0)
-	holder.size = Vector2(1280.0, 80.0)
+	holder.offset_top = 96.0
+	holder.offset_bottom = 200.0
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	msg_layer.add_child(holder)
 	var panel := PanelContainer.new()
@@ -902,50 +911,83 @@ func _build_hazards() -> void:
 
 func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1) -> void:
 	# base_y는 가시 베이스의 y. 가시는 base_y 위로 20px 솟음.
-	# 이전엔 빨간 띠 30px만 깔려 sewers 같은 mid-air 위치에서 가시가 둥둥 떠보였음.
-	# 베이스를 어두운 금속 파이프 형태로 — 끝에 볼트, 좌우 4px 확장으로 박힌 인상.
+	# 사용자 피드백 "공중에 떠있다" → 미니 플랫폼 + 천장에서 내려오는 체인으로
+	# "위에서 매달려 있는 함정"이라는 구조적 인상을 만든다.
 	# dmg: 가시 데미지(default 1, sewers 우측 등 강조 함정은 2).
 	if base_y < 0.0:
 		base_y = GROUND_Y - 6.0
 	var x_start: float = center_x - w * 0.5
 	var x_end: float = center_x + w * 0.5
-	# 파이프 본체 — 베이스 y 직전까지 8px 높이. 좌우로 4px씩 더 길게 → 벽 박힘 인상.
-	var pipe_x: float = x_start - 4.0
-	var pipe_w: float = w + 8.0
-	var pipe_y: float = base_y - 2.0
-	var pipe_h: float = 10.0
-	# dmg 2 위험 광채(파이프 뒤로 옅게)
+	# 베이스 — 다른 플랫폼과 같은 3단 패널(본체/상단/그림자) + 외곽선 + 모서리 캡.
+	# 좌우 5px씩 확장으로 외형이 단단히 박힌 듯.
+	var base_x: float = x_start - 5.0
+	var base_w: float = w + 10.0
+	var base_top: float = base_y - 3.0
+	var dmg_color: Color = Color(0.85, 0.30, 0.30) if dmg < 2 else Color(1.0, 0.45, 0.20)
+	# (0) dmg 2 위험 광채 — 베이스 뒤로 옅게
 	if dmg >= 2:
 		var glow := ColorRect.new()
-		glow.color = Color(1.0, 0.45, 0.20, 0.16)
-		glow.position = Vector2(pipe_x - 3.0, pipe_y - 5.0)
-		glow.size = Vector2(pipe_w + 6.0, pipe_h + 10.0)
+		glow.color = Color(1.0, 0.45, 0.20, 0.18)
+		glow.position = Vector2(base_x - 4.0, base_top - 6.0)
+		glow.size = Vector2(base_w + 8.0, 24.0)
 		add_child(glow)
-	var pipe_body := ColorRect.new()
-	pipe_body.color = Color(0.10, 0.11, 0.13)
-	pipe_body.position = Vector2(pipe_x, pipe_y)
-	pipe_body.size = Vector2(pipe_w, pipe_h)
-	add_child(pipe_body)
-	# 상단 하이라이트 1px
-	var pipe_top := ColorRect.new()
-	pipe_top.color = Color(0.34, 0.38, 0.46, 0.95)
-	pipe_top.position = Vector2(pipe_x, pipe_y)
-	pipe_top.size = Vector2(pipe_w, 1.0)
-	add_child(pipe_top)
-	# 하단 그림자 1px
-	var pipe_bot := ColorRect.new()
-	pipe_bot.color = Color(0.02, 0.02, 0.03, 0.9)
-	pipe_bot.position = Vector2(pipe_x, pipe_y + pipe_h - 1.0)
-	pipe_bot.size = Vector2(pipe_w, 1.0)
-	add_child(pipe_bot)
-	# 양 끝 볼트
-	for bx in [pipe_x + 1.0, pipe_x + pipe_w - 5.0]:
-		var bolt := ColorRect.new()
-		bolt.color = Color(0.30, 0.32, 0.38)
-		bolt.position = Vector2(float(bx), pipe_y + 3.0)
-		bolt.size = Vector2(4.0, 4.0)
-		add_child(bolt)
-	# 가시 — 그림자(좌측 어두운 절반) + 본체. 1px 파이프 안에 묻혀 안정감.
+	# (1) 천장 체인 — 양 끝에서 위로 길게(160px) 가는 검은 와이어. 시작 끝에 작은 매듭.
+	#     mid-air에서 "어딘가 위에 매달려 있다" 인상을 만드는 핵심 요소.
+	for cx in [base_x + 4.0, base_x + base_w - 5.0]:
+		var chain := ColorRect.new()
+		chain.color = Color(0.18, 0.20, 0.24, 0.85)
+		chain.position = Vector2(float(cx) - 0.5, base_top - 160.0)
+		chain.size = Vector2(1.0, 160.0)
+		add_child(chain)
+		# 체인 끝 매듭(베이스 윗면)
+		var knot := ColorRect.new()
+		knot.color = Color(0.32, 0.34, 0.40)
+		knot.position = Vector2(float(cx) - 2.0, base_top - 1.0)
+		knot.size = Vector2(4.0, 3.0)
+		add_child(knot)
+	# (2) 본체 — 어두운 금속, 12px
+	var body := ColorRect.new()
+	body.color = Color(0.14, 0.16, 0.20)
+	body.position = Vector2(base_x, base_top + 2.0)
+	body.size = Vector2(base_w, 10.0)
+	add_child(body)
+	# (3) 상단 위험 띠 — 2px, dmg 색
+	var top_band := ColorRect.new()
+	top_band.color = dmg_color
+	top_band.position = Vector2(base_x, base_top)
+	top_band.size = Vector2(base_w, 2.0)
+	add_child(top_band)
+	# (4) 하단 그림자 — 2px
+	var bot := ColorRect.new()
+	bot.color = Color(0.04, 0.05, 0.07, 0.95)
+	bot.position = Vector2(base_x, base_top + 12.0)
+	bot.size = Vector2(base_w, 2.0)
+	add_child(bot)
+	# (5) 외곽선 — 다른 플랫폼과 동일 톤
+	var outline := Line2D.new()
+	outline.points = PackedVector2Array([
+		Vector2(base_x, base_top),
+		Vector2(base_x + base_w, base_top),
+		Vector2(base_x + base_w, base_top + 14.0),
+		Vector2(base_x, base_top + 14.0),
+	])
+	outline.closed = true
+	outline.width = 0.8
+	outline.default_color = Color(0.02, 0.03, 0.04, 0.65)
+	outline.antialiased = true
+	add_child(outline)
+	# (6) 좌우 모서리 캡 — 위험 색으로 강조
+	var cap_l := ColorRect.new()
+	cap_l.color = dmg_color
+	cap_l.position = Vector2(base_x - 2.0, base_top + 3.0)
+	cap_l.size = Vector2(3.0, 5.0)
+	add_child(cap_l)
+	var cap_r := ColorRect.new()
+	cap_r.color = dmg_color
+	cap_r.position = Vector2(base_x + base_w - 1.0, base_top + 3.0)
+	cap_r.size = Vector2(3.0, 5.0)
+	add_child(cap_r)
+	# (7) 가시 — 그림자(좌측 어두운 절반) + 본체. 베이스 안으로 살짝 묻힘.
 	var spike_color: Color = Color(0.95, 0.30, 0.30) if dmg < 2 else Color(1.0, 0.40, 0.20)
 	var spike_dark: Color = Color(0.55, 0.16, 0.18) if dmg < 2 else Color(0.62, 0.22, 0.12)
 	for sx in range(int(x_start) + 12, int(x_end), 24):
@@ -953,17 +995,17 @@ func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1)
 		var shadow := Polygon2D.new()
 		shadow.color = spike_dark
 		shadow.polygon = PackedVector2Array([
-			Vector2(fx, base_y + 1.0),
-			Vector2(fx + 6.0, base_y + 1.0),
-			Vector2(fx + 6.0, base_y - 20.0),
+			Vector2(fx, base_top + 1.0),
+			Vector2(fx + 6.0, base_top + 1.0),
+			Vector2(fx + 6.0, base_top - 20.0),
 		])
 		add_child(shadow)
 		var spike := Polygon2D.new()
 		spike.color = spike_color
 		spike.polygon = PackedVector2Array([
-			Vector2(fx, base_y + 1.0),
-			Vector2(fx + 12.0, base_y + 1.0),
-			Vector2(fx + 6.0, base_y - 20.0),
+			Vector2(fx, base_top + 1.0),
+			Vector2(fx + 12.0, base_top + 1.0),
+			Vector2(fx + 6.0, base_top - 20.0),
 		])
 		add_child(spike)
 	var zone := Area2D.new()
@@ -1483,7 +1525,7 @@ func _build_hud() -> void:
 	cd_row.add_child(cd_barrier_slot)
 
 	var keys := Label.new()
-	keys.text = "A/D 이동   W/SPACE 점프   S 플랫폼 내려가기   J/마우스 좌클릭 사격   SHIFT 대시   Q/마우스 우클릭 스킬   ESC 일시정지"
+	keys.text = "A/D 이동   W/SPACE 점프   S 발 밑 내려가기   J/마우스 좌클릭 사격   SHIFT 대시   Q/마우스 우클릭 스킬   ESC 일시정지"
 	keys.add_theme_font_size_override("font_size", 13)
 	keys.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
 	bottom_v.add_child(keys)
@@ -2164,15 +2206,52 @@ func _trigger_stage_clear() -> void:
 		# 연습장에선 자동 진행 안 함 — 패널에서 직접 다음 stage/route 선택
 		_show_playground_clear_msg()
 		return
+	# 클리어 시 즉시 씬 전환 대신 짧은 연출 — XP orb 자동 흡수 + 페이드.
+	# 보스/도전방에선 VEIL 대사도 들을 수 있게 더 긴 딜레이.
+	_begin_clear_sequence()
+
+# 클리어 시퀀스 — 입력 락 + XP orb 흡수 + 페이드 + delay 후 다음 단계.
+# 사용자 피드백: "도전방에서 마지막 적 처치 시 XP 못 먹고 바로 맵 선택으로"
+# 보스/ARENA — 2.6s, 일반 골 — 1.0s.
+func _begin_clear_sequence() -> void:
+	GameState.restrict_combat_input = true
+	# 남은 XP orb를 player 근처로 텔레포트 → 자동 흡수 (PICKUP_RANGE 내).
+	if player != null and is_instance_valid(player):
+		for orb in get_tree().get_nodes_in_group("exp_orb"):
+			if not (orb is Node2D) or orb.is_queued_for_deletion():
+				continue
+			var o := orb as Node2D
+			# bounce 단계 스킵 + 플레이어 근처로 이동
+			o.set("spawn_anim_t", 1.0)
+			o.global_position = player.global_position + Vector2(randf_range(-60.0, 60.0), -90.0)
+	var is_arena: bool = challenge_active or _goal_type == "ENEMY_CLEAR"
+	var delay: float = 2.6 if is_arena else 1.0
+	_do_clear_fade(delay)
+	await get_tree().create_timer(delay).timeout
+	GameState.restrict_combat_input = false
 	var leveled: bool = GameState.on_stage_clear()
 	if leveled:
-		# 보너스 XP로 레벨업 발생 — 다음 scene 가기 전에 스킬 선택을 띄움
 		pending_levelup = true
 		get_tree().paused = true
 		var advice: Dictionary = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags)
 		levelup_overlay = LevelUpOverlay.show(self, advice, _on_clear_levelup_picked)
 	else:
 		_transition_after_clear()
+
+# 화면 전체 검은색 페이드 — duration의 후반 60% 시간 동안 0 → 0.85로 진행.
+# 다음 씬 전환 전에 정리되지 않으니 자연스럽게 검은 화면 → BRIEFING/STAGE 전환.
+func _do_clear_fade(duration: float) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 38
+	add_child(layer)
+	var rect := ColorRect.new()
+	rect.color = Color(0, 0, 0, 0.0)
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(rect)
+	var tw := rect.create_tween()
+	tw.tween_interval(duration * 0.4)
+	tw.tween_property(rect, "color:a", 0.85, duration * 0.6)
 
 func _on_clear_levelup_picked(_picked_id: String) -> void:
 	levelup_overlay = null

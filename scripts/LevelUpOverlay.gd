@@ -4,9 +4,10 @@ extends RefCounted
 # 레벨업 시 호출. 스킬 3장 중 1장 선택 → on_picked.call(picked_id) 실행 후 오버레이 자동 정리.
 # Stage / Tutorial 양쪽에서 동일하게 사용.
 
-static func show(host: Node, advice: Variant, on_picked: Callable) -> CanvasLayer:
+static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks: Array = []) -> CanvasLayer:
 	# advice: Dictionary {"line": String, "family": String} 권장.
 	# 호환성: String을 받으면 line만 있는 dict로 처리 (튜토리얼 등 family 없음).
+	# forced_picks: 비어있지 않으면 roll_choices 대신 이 카드 배열 사용 (튜토리얼 강제 픽).
 	var advice_line: String = ""
 	var advice_family: String = ""
 	if advice is Dictionary:
@@ -58,8 +59,10 @@ static func show(host: Node, advice: Variant, on_picked: Callable) -> CanvasLaye
 	v.add_child(gauge)
 
 	if advice_line != "":
+		# prefix 사용 폐지 — "그럼, " 같은 짧은 토막이 뒷 문장과 부자연스러움.
+		# 신뢰도는 폰트 색(veil_tone_color)으로 표현.
 		var advice_label := Label.new()
-		advice_label.text = "VEIL  —  " + GameState.veil_tone_prefix() + advice_line
+		advice_label.text = "VEIL  —  " + advice_line
 		advice_label.add_theme_font_size_override("font_size", 22)
 		advice_label.add_theme_color_override("font_color", GameState.veil_tone_color())
 		advice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -69,7 +72,11 @@ static func show(host: Node, advice: Variant, on_picked: Callable) -> CanvasLaye
 	hb.add_theme_constant_override("separation", 18)
 	v.add_child(hb)
 
-	var picks: Array = SkillSystem.roll_choices(GameState.skills, 3)
+	var picks: Array
+	if forced_picks.size() > 0:
+		picks = forced_picks
+	else:
+		picks = SkillSystem.roll_choices(GameState.skills, 3)
 	if picks.size() == 0:
 		host.add_child(layer)
 		_finish(layer, "", on_picked)
