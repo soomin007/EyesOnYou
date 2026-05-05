@@ -609,14 +609,13 @@ func _build_locked_door() -> void:
 	area.body_exited.connect(_on_locked_door_left)
 
 	# 5초 hold 진행도 게이지 — 문 위에 가는 가로 바. holding 상태에서만 가시화.
-	# 이미 방문한 적 있으면(visited_arcturus) 표시조차 하지 않음.
-	if not GameState.visited_arcturus:
-		arcturus_indicator = ColorRect.new()
-		arcturus_indicator.color = Color(0.95, 0.78, 0.45, 0.0)
-		arcturus_indicator.position = Vector2(x - 30.0, GROUND_Y - 168.0)
-		arcturus_indicator.size = Vector2(0.0, 3.0)
-		arcturus_indicator.z_index = 4
-		add_child(arcturus_indicator)
+	# 사용자 피드백: 이스터에그는 매번 다시 볼 수 있게 — visited 게이트 제거.
+	arcturus_indicator = ColorRect.new()
+	arcturus_indicator.color = Color(0.95, 0.78, 0.45, 0.0)
+	arcturus_indicator.position = Vector2(x - 30.0, GROUND_Y - 168.0)
+	arcturus_indicator.size = Vector2(0.0, 3.0)
+	arcturus_indicator.z_index = 4
+	add_child(arcturus_indicator)
 
 func _on_locked_door_approached(body: Node) -> void:
 	if not (body is CharacterBody2D and body == player):
@@ -626,10 +625,9 @@ func _on_locked_door_approached(body: Node) -> void:
 		locked_door_triggered = true
 		_show_veil_subtitle("그쪽은 임무 범위 밖이에요.", 3.0)
 		_show_veil_subtitle("그 문, 도면에는 없어요.", 3.0)
-	# 이미 시퀀스 한 번 트리거됐거나(arcturus_state != idle) 영구 방문 완료면 hold 안 됨.
+	# 이미 시퀀스 한 번 트리거됐으면(arcturus_state != idle) 같은 stage 내에선 재진입 X.
+	# visited_arcturus 영구 게이트는 제거 — 매 stage 진입마다 다시 볼 수 있게.
 	if arcturus_state != "idle":
-		return
-	if GameState.visited_arcturus:
 		return
 	arcturus_state = "holding"
 	arcturus_hold_t = 0.0

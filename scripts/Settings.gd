@@ -24,6 +24,13 @@ var dim: ColorRect
 var panel: PanelContainer
 var tabs: TabContainer
 
+# 위/아래 포커스 hold 연속 이동 (사용자 피드백: "쭉 누르고 있어도 드르륵").
+const NAV_INITIAL_DELAY: float = 0.35
+const NAV_REPEAT_INTERVAL: float = 0.06
+var nav_dir: int = 0
+var nav_hold_t: float = 0.0
+var nav_repeat_t: float = 0.0
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -72,6 +79,12 @@ func _ready() -> void:
 	divider.custom_minimum_size = Vector2(0, 1)
 	v.add_child(divider)
 
+	var tab_hint := Label.new()
+	tab_hint.text = "탭 전환: Q / E   (패드: LB / RB)"
+	tab_hint.add_theme_font_size_override("font_size", 12)
+	tab_hint.add_theme_color_override("font_color", Color(0.55, 0.65, 0.78))
+	v.add_child(tab_hint)
+
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tabs.custom_minimum_size = Vector2(0, 380)
@@ -98,6 +111,11 @@ func _ready() -> void:
 	bottom_hb.add_child(btn_close)
 
 	_refresh_all_keybind_buttons()
+	# 진입 시 첫 키바인드 버튼에 포커스 잡기 (1s 락아웃 — 메뉴 연타 사고 방지).
+	if ACTIONS.size() > 0:
+		var first_btns: Array = key_buttons.get(str(ACTIONS[0]["id"]), [])
+		if first_btns.size() > 0 and first_btns[0] is Button:
+			GameState.arm_focus_with_delay(self, first_btns[0])
 
 func _build_keybind_tab() -> Control:
 	var outer := MarginContainer.new()
@@ -147,12 +165,45 @@ func _build_keybind_tab() -> Control:
 		for i in MAX_KEYS_PER_ACTION:
 			var btn := Button.new()
 			btn.custom_minimum_size = Vector2(160, 36)
-			btn.add_theme_font_size_override("font_size", 13)
+			btn.add_theme_font_size_override("font_size", 15)
+			# 가로/세로 size_flags를 SHRINK으로 고정 → 텍스트 길이로 인한 column 폭 변화 방지
+			# (이전엔 "마우스 왼쪽" 등 긴 라벨이 있는 행에서 포커스 이동이 두 번 필요했음).
+			btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			btn.clip_text = true
 			btn.pressed.connect(_on_key_button_pressed.bind(action_id, i, btn))
 			grid.add_child(btn)
 			btns.append(btn)
 		key_buttons[action_id] = btns
+	# 명시적 focus_neighbor 설정 — 같은 column 내 위/아래 이동을 결정적으로.
+	# Godot 자동 계산은 인접 cell의 geometry가 미세하게 어긋나면(라벨 폭 차이 등)
+	# "두 번 눌러야 이동" 같은 결과를 낳을 수 있어서 직접 잡아준다.
+	_wire_keybind_focus()
 	return outer
+
+func _wire_keybind_focus() -> void:
+	for action_idx in ACTIONS.size():
+		var aid: String = str(ACTIONS[action_idx]["id"])
+		var btns: Array = key_buttons.get(aid, [])
+		if btns.size() < MAX_KEYS_PER_ACTION:
+			continue
+		var prev_btns: Array = []
+		var next_btns: Array = []
+		if action_idx > 0:
+			prev_btns = key_buttons.get(str(ACTIONS[action_idx - 1]["id"]), [])
+		if action_idx < ACTIONS.size() - 1:
+			next_btns = key_buttons.get(str(ACTIONS[action_idx + 1]["id"]), [])
+		for col in MAX_KEYS_PER_ACTION:
+			var btn: Button = btns[col] as Button
+			if btn == null:
+				continue
+			if prev_btns.size() > col and prev_btns[col] is Control:
+				btn.focus_neighbor_top = btn.get_path_to(prev_btns[col])
+			if next_btns.size() > col and next_btns[col] is Control:
+				btn.focus_neighbor_bottom = btn.get_path_to(next_btns[col])
+			if col == 0 and btns.size() > 1 and btns[1] is Control:
+				btn.focus_neighbor_right = btn.get_path_to(btns[1])
+			if col == 1 and btns[0] is Control:
+				btn.focus_neighbor_left = btn.get_path_to(btns[0])
 
 func _build_debug_tab() -> Control:
 	var outer := MarginContainer.new()
@@ -363,7 +414,62 @@ func _set_all_buttons_disabled(value: bool) -> void:
 		for b in key_buttons[action_id]:
 			(b as Button).disabled = value
 
+func _process(delta: float) -> void:
+	# 위/아래 hold 연속 이동 — Godot 기본 ui_up/down은 echo로 자동 반복되지 않음.
+	if capturing_action != "":
+		return
+	var new_dir: int = 0
+	if Input.is_action_pressed("ui_up"):
+		new_dir = -1
+	elif Input.is_action_pressed("ui_down"):
+		new_dir = 1
+	if new_dir != nav_dir:
+		nav_dir = new_dir
+		nav_hold_t = 0.0
+		nav_repeat_t = NAV_INITIAL_DELAY
+		return
+	if nav_dir == 0:
+		return
+	nav_hold_t += delta
+	nav_repeat_t -= delta
+	if nav_hold_t >= NAV_INITIAL_DELAY and nav_repeat_t <= 0.0:
+		_step_focus_vertical(nav_dir)
+		nav_repeat_t = NAV_REPEAT_INTERVAL
+
+func _step_focus_vertical(dir: int) -> void:
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused == null or not (focused is Control):
+		return
+	var ctrl: Control = focused as Control
+	var side: int = SIDE_TOP if dir < 0 else SIDE_BOTTOM
+	var nb: Control = ctrl.find_valid_focus_neighbor(side)
+	if nb != null:
+		nb.grab_focus()
+
 func _input(event: InputEvent) -> void:
+	# 캡쳐 중엔 아래 분기만. 그 외엔 Q/E or LB/RB로 탭 전환 가능.
+	if capturing_action == "":
+		var tab_dir: int = 0
+		if event is InputEventKey:
+			var ke := event as InputEventKey
+			if ke.pressed and not ke.echo:
+				if ke.keycode == KEY_Q:
+					tab_dir = -1
+				elif ke.keycode == KEY_E:
+					tab_dir = 1
+		elif event is InputEventJoypadButton:
+			var jb := event as InputEventJoypadButton
+			if jb.pressed:
+				if jb.button_index == JOY_BUTTON_LEFT_SHOULDER:
+					tab_dir = -1
+				elif jb.button_index == JOY_BUTTON_RIGHT_SHOULDER:
+					tab_dir = 1
+		if tab_dir != 0 and tabs != null:
+			var n: int = tabs.get_tab_count()
+			if n > 0:
+				tabs.current_tab = (tabs.current_tab + tab_dir + n) % n
+			get_viewport().set_input_as_handled()
+			return
 	if capturing_action == "":
 		return
 	var new_ev: InputEvent = null
