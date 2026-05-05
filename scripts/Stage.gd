@@ -2559,8 +2559,14 @@ func _on_arcturus_lines_done() -> void:
 	if arcturus_indicator != null and is_instance_valid(arcturus_indicator):
 		arcturus_indicator.queue_free()
 		arcturus_indicator = null
+	# VEIL outro — 문서가 아니라 게임 화면 자막으로 (사용자 요청). 큐가 순차 처리.
+	_show_veil_subtitle("여기까지 왔군요.", 2.4)
+	_show_veil_subtitle("...", 1.4)
+	_show_veil_subtitle("저도 이 파일들 읽은 적 있어요.", 2.8)
+	_show_veil_subtitle("...", 1.4)
+	_show_veil_subtitle("계속 가요, 요원.", 2.6)
 
-# ARCTURUS 아카이브 문서 — 3 단말기 + VEIL outro를 한 장의 문서로.
+# ARCTURUS 아카이브 문서 — 3 단말기.
 # kind: "title" (큰 헤더) / "speaker" (회색 작은 발화자) / "body" (본문) / "blank" (간격)
 func _arcturus_document_lines() -> Array:
 	var out: Array = []
@@ -2593,14 +2599,8 @@ func _arcturus_document_lines() -> Array:
 	out.append({"kind": "body", "text": "비고: 요원이 이 문서를 읽고 있다면", "delay": 0.5})
 	out.append({"kind": "body", "text": "        이미 임무 범위를 벗어난 것임.", "delay": 0.7})
 	out.append({"kind": "body", "text": "— 감시팀", "delay": 0.5})
-	out.append({"kind": "blank", "text": "", "delay": 0.4})
-	# VEIL outro — 발화자 색을 본문과 다르게 표현하기 위해 speaker kind 사용
-	out.append({"kind": "speaker", "text": "— 교신 채널 ON —", "delay": 0.4})
-	out.append({"kind": "body", "text": "VEIL: 여기까지 왔군요.", "delay": 0.8})
-	out.append({"kind": "body", "text": "VEIL: ...", "delay": 0.6})
-	out.append({"kind": "body", "text": "VEIL: 저도 이 파일들 읽은 적 있어요.", "delay": 0.9})
-	out.append({"kind": "body", "text": "VEIL: ...", "delay": 0.6})
-	out.append({"kind": "body", "text": "VEIL: 계속 가요, 요원.", "delay": 1.0})
+	# VEIL outro는 문서 안이 아니라 _on_arcturus_lines_done에서 게임 내 자막으로 표시.
+	# 문서는 ARCTURUS 내부 단편들만 — VEIL 발화는 게임 화면의 대사창이 어울림.
 	return out
 
 func _on_xp_collected(leveled_up: bool) -> void:

@@ -214,8 +214,12 @@ func _process(delta: float) -> void:
 				prefix = "VEIL  —  "
 			text_label.text = prefix + full.substr(0, revealed)
 		return
-	if line.get("choice", false) and not waiting_choice:
-		_show_choice()
+	if line.get("choice", false):
+		# choice 라인은 사용자가 선택할 때까지 진행 멈춤 — silent_timer로 자동 line_idx
+		# 진행되어 _on_sequence_done이 먼저 호출되던 버그(사용자 보고: choice 누른 뒤
+		# followup 안 나옴) 차단.
+		if not waiting_choice:
+			_show_choice()
 		return
 	silent_timer += delta
 	if silent_timer >= float(line.get("delay", 1.5)):
@@ -256,6 +260,13 @@ func _pick_choice(asked: bool) -> void:
 	typing_done = false
 	silent_timer = 0.0
 	stall_watchdog_t = 0.0
+	# 안전판 — 어떤 경로로든 sequence_complete=true가 됐으면 다시 풀어줘야
+	# _process의 typing 분기가 동작함 (이전 버그: hold_to_quit 분기로만 감).
+	sequence_complete = false
+	if hold_hint != null:
+		hold_hint.visible = false
+	if hold_progress_bar != null and hold_progress_bar.get_parent() is Control:
+		(hold_progress_bar.get_parent() as Control).visible = false
 	_start_line()
 
 func _on_sequence_done() -> void:

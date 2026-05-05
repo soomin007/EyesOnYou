@@ -47,6 +47,11 @@ var close_hint_label: Label = null
 # "[A] 인사팀 온보까지만 보이다가 지워졌다 다시 써짐") 차단. _start_typing이
 # 콜백으로 호출될 때 비로소 typing 시작.
 var started: bool = false
+# 진입 직전(이스터에그 hold 완료 직후) jump 키 잔여 입력이 _input으로 들어와
+# typing이 자동 진행되어 [A] 인사팀 온보딩 본문까지 시작부터 보이는 버그 차단.
+# _start_typing 콜백 후에도 짧게 더 무시.
+const ENTER_LOCKOUT: float = 0.4
+var enter_lockout_t: float = 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -139,6 +144,7 @@ func _line_height_for(kind: String) -> float:
 
 func _start_typing() -> void:
 	started = true
+	enter_lockout_t = ENTER_LOCKOUT
 	current_line = 0
 	revealed = 0
 	t = 0.0
@@ -154,6 +160,8 @@ func _process(delta: float) -> void:
 	# 페이드인 중엔 typing 진행 X — _start_typing 콜백이 started=true로 바꿔야 시작.
 	if not started:
 		return
+	if enter_lockout_t > 0.0:
+		enter_lockout_t -= delta
 	# 다 읽고 나면 자동 진행 멈추고 사용자 스크롤 + 확인 키 대기.
 	if reading_done:
 		if read_lockout_t > 0.0:
@@ -246,6 +254,9 @@ func _handle_user_scroll(_delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if done:
+		return
+	# 페이드인 중 + 진입 직후 마진 — 이전 화면 점프 키 잔여 입력 차단.
+	if not started or enter_lockout_t > 0.0:
 		return
 	# 다 읽힌 상태 — 위/아래는 _process polling, 확인 키는 lockout 후 닫기.
 	if reading_done:

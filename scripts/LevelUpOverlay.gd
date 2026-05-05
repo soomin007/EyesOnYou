@@ -70,6 +70,8 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 18)
+	# 카드가 1장일 때(튜토리얼 강제 픽 등) 좌측이 아니라 가운데 정렬되도록.
+	hb.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(hb)
 
 	var picks: Array

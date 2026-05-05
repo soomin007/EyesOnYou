@@ -270,7 +270,7 @@ func _build_signs() -> void:
 	# 플랫폼 아래쪽에 표시 — JUMP_PICKUP(초록 마름모, y=270)이 위에 있어서
 	# 위쪽에 두면 겹침. 발판(y=310) 아래 y=400에 배치 → 위에서 내려보면 명확.
 	sign_drop = _make_keycap_sign(["S"], ["↓"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y + 90.0))
-	sign_attack = _make_keycap_sign(["J"], ["X"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
+	sign_attack = _make_keycap_sign(["J"], ["X", "RT"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
 	sign_dash = _make_keycap_sign(["SHIFT"], ["B"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
 	sign_levelup = Label.new()
