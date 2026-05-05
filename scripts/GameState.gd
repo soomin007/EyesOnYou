@@ -34,6 +34,12 @@ var tutorial_done: bool = false
 var master_volume: float = 1.0
 var sfx_volume: float = 1.0
 
+# 스토리 모드 — 키보드/패드 조작이 어려운 사람을 위한 간략화 모드.
+# 체력 무제한 / 드론 배제 / 보스 P1만 / 스테이지·맵 수 축소.
+# Title의 "스토리 모드" 버튼으로만 켜지고, ending에서 reset() 시 꺼진다.
+var story_mode: bool = false
+const STORY_TOTAL_STAGES: int = 5
+
 # 디버그 연습장 모드 — Settings에서 진입. 영속화하지 않음.
 var playground_active: bool = false
 
@@ -69,6 +75,7 @@ func reset() -> void:
 	player_hp = 3
 	player_xp = 0
 	player_level = 1
+	story_mode = false
 
 # 튜토리얼 종료 후 본편 시작 시 호출. 진행/스킬/XP 모두 초기화 — 튜토리얼은
 # 연습용이라 본편에 영향 없음. VEIL이 "잠깐 빌려드려요" 멘트로 명시.
@@ -215,6 +222,9 @@ func add_skill(id: String) -> void:
 				player_hp = min(player_hp + 1, player_max_hp)
 
 func damage_player(amount: int) -> void:
+	# 스토리 모드는 체력 무제한 — 피격 자체를 무시. (Player.take_hit의 invuln 등은 그대로 동작)
+	if story_mode:
+		return
 	player_hp = max(0, player_hp - amount)
 
 func heal_player(amount: int) -> void:
@@ -238,8 +248,11 @@ func on_stage_clear() -> bool:
 	# regen은 획득 시점에 max_hp +1 효과만 — 매 stage HP 풀 회복이라 heal_player 불필요
 	return leveled
 
+func effective_total_stages() -> int:
+	return STORY_TOTAL_STAGES if story_mode else TOTAL_STAGES
+
 func is_final_stage_done() -> bool:
-	return current_stage >= TOTAL_STAGES
+	return current_stage >= effective_total_stages()
 
 func mark_enemy_seen(id: String) -> bool:
 	if id == "" or id in seen_enemies:
@@ -249,11 +262,12 @@ func mark_enemy_seen(id: String) -> bool:
 	return true
 
 # --- 설정 영속화 ---
-# v1 (구): input.<action> = [physical_keycode, ...]  — 키보드 전용
-# v2 (현): input.<action> = [{type, code/button}, ...]  — 키보드+마우스
-# v1 cfg 로드 시 input 섹션은 무시(스키마 호환 안 됨), 다음 저장에서 v2로 전환
+# v1: input.<action> = [physical_keycode, ...]  — 키보드 전용
+# v2: input.<action> = [{type, code/button}, ...]  — 키보드+마우스
+# v3 (현): v2 + joy_button/joy_motion 타입 — 게임패드 매핑 보존
+# 구 버전 cfg 로드 시 input 섹션은 무시 (project.godot 기본값 유지), 다음 저장에서 v3로 전환
 
-const SETTINGS_VERSION: int = 2
+const SETTINGS_VERSION: int = 3
 
 func load_settings() -> void:
 	var cf := ConfigFile.new()

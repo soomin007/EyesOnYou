@@ -1820,6 +1820,9 @@ func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
 	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4}
 	var mult: float = GameState.enemy_count_multiplier()
 	for kind_name in enemies.keys():
+		# 스토리 모드 — 드론은 위에서 떨어지는 폭격이라 패턴 인지가 어렵다. 통째로 스킵.
+		if GameState.story_mode and str(kind_name) == "drone":
+			continue
 		var positions: Array = enemies[kind_name]
 		if positions.is_empty():
 			continue

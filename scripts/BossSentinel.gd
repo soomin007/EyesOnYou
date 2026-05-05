@@ -15,6 +15,8 @@ const HP_MAX: int = 24
 const HP_PHASE2: int = 16  # 이 값 이하 들어오면 P2
 const HP_PHASE3: int = 8   # 이 값 이하 들어오면 P3
 const HP_SELF_DESTRUCT: int = 1  # 이 값 이하 시 자폭 카운트다운 시작
+# 스토리 모드 — P2/P3 스킵, 자폭 트리거까지 짧게.
+const HP_MAX_STORY: int = 8
 const PHASE_FREEZE_DURATION: float = 1.2  # 페이즈 전환 시 정지 + 무적 시간
 
 const SELF_DESTRUCT_TIME: float = 3.6
