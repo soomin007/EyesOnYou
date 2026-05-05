@@ -126,22 +126,28 @@ static func get_intro_system_text() -> String:
 static func get_intro_veil_lines() -> Array[String]:
 	return INTRO_VEIL
 
-static func get_levelup_advice(player_skills: Dictionary, route_tags: Array) -> String:
+static func get_levelup_advice(player_skills: Dictionary, route_tags: Array) -> Dictionary:
+	# 멘트와 추천 family를 함께 반환 → LevelUpOverlay가 일치하는 카드에 ★ 표시.
 	# 트리 라인 보유 여부는 player_skills.has(id)로 체크 (티어 무관).
-	# "ranged"는 v2 트리에서 사라져 fire_boost / multishot 중 하나라도 있으면 원거리 보강된 것으로 간주.
-	var has_ranged_buff: bool = player_skills.has("fire_boost") or player_skills.has("multishot")
+	var has_ranged_buff: bool = player_skills.has("fire_boost") or player_skills.has("multishot") or player_skills.has("explosive")
+	var has_mobility_buff: bool = player_skills.has("dash_boost") or player_skills.has("glide")
+	var has_survival: bool = player_skills.has("hp") or player_skills.has("shield") or player_skills.has("barrier")
 	if "근접전" in route_tags and not has_ranged_buff:
-		return "원거리가 없으면 불리해요. 선택은 요원 몫이지만."
-	if "함정" in route_tags and not player_skills.has("dash"):
-		return "대시가 있으면 함정을 건너뛸 수 있어요."
+		return {"line": "근접전이 많아요. 화력이 있으면 좋겠어요.", "family": SkillTreeData.FAMILY_COMBAT}
+	if "함정" in route_tags and not has_mobility_buff:
+		return {"line": "함정 구간이에요. 대시 강화나 글라이드가 도움돼요.", "family": SkillTreeData.FAMILY_MOBILITY}
 	if "드론" in route_tags and not has_ranged_buff:
-		return "드론은 위에서 와요. 원거리가 도움돼요."
-	if "근접전" in route_tags and not player_skills.has("dash"):
-		return "근접전이 많아요. 대시로 헛돌진 유도할 수 있어요."
-	if "드론" in route_tags and not player_skills.has("double_jump"):
-		return "위로 올라갈 수 있으면 드론한테 유리해요."
+		return {"line": "드론은 위에서 와요. 원거리가 있으면 더 안전해요.", "family": SkillTreeData.FAMILY_COMBAT}
+	if "노출" in route_tags and not has_survival:
+		return {"line": "이 구간은 숨을 데가 없어요. 생존 쪽이 안심돼요.", "family": SkillTreeData.FAMILY_SURVIVAL}
+	if "수직" in route_tags and not has_mobility_buff:
+		return {"line": "위로 가는 길이에요. 이동 능력이 있으면 편해요.", "family": SkillTreeData.FAMILY_MOBILITY}
+	if "도전" in route_tags and not has_survival:
+		return {"line": "여기 위험해요. 생존 능력 한 줄 챙겨두는 게 어때요.", "family": SkillTreeData.FAMILY_SURVIVAL}
+	if "전투" in route_tags and not has_ranged_buff:
+		return {"line": "정면 교전이에요. 화력이 부족하면 길어져요.", "family": SkillTreeData.FAMILY_COMBAT}
 	var idx: int = randi() % SKILL_GENERIC_COMMENTS.size()
-	return SKILL_GENERIC_COMMENTS[idx]
+	return {"line": SKILL_GENERIC_COMMENTS[idx], "family": ""}
 
 static func get_death_briefing(death_count: int, followed_advice: bool) -> String:
 	# stage 진행도로 ACT 판별 (current_stage는 사망 시점의 진행 stage).

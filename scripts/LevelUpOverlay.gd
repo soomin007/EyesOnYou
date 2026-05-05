@@ -4,7 +4,16 @@ extends RefCounted
 # 레벨업 시 호출. 스킬 3장 중 1장 선택 → on_picked.call(picked_id) 실행 후 오버레이 자동 정리.
 # Stage / Tutorial 양쪽에서 동일하게 사용.
 
-static func show(host: Node, advice: String, on_picked: Callable) -> CanvasLayer:
+static func show(host: Node, advice: Variant, on_picked: Callable) -> CanvasLayer:
+	# advice: Dictionary {"line": String, "family": String} 권장.
+	# 호환성: String을 받으면 line만 있는 dict로 처리 (튜토리얼 등 family 없음).
+	var advice_line: String = ""
+	var advice_family: String = ""
+	if advice is Dictionary:
+		advice_line = str((advice as Dictionary).get("line", ""))
+		advice_family = str((advice as Dictionary).get("family", ""))
+	elif advice is String:
+		advice_line = advice as String
 	var layer := CanvasLayer.new()
 	layer.layer = 40
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -48,9 +57,9 @@ static func show(host: Node, advice: String, on_picked: Callable) -> CanvasLayer
 	gauge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(gauge)
 
-	if advice != "":
+	if advice_line != "":
 		var advice_label := Label.new()
-		advice_label.text = "VEIL  —  " + GameState.veil_tone_prefix() + advice
+		advice_label.text = "VEIL  —  " + GameState.veil_tone_prefix() + advice_line
 		advice_label.add_theme_font_size_override("font_size", 22)
 		advice_label.add_theme_color_override("font_color", GameState.veil_tone_color())
 		advice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -66,12 +75,11 @@ static func show(host: Node, advice: String, on_picked: Callable) -> CanvasLayer
 		_finish(layer, "", on_picked)
 		return layer
 
-	# VEIL 추천 — trust 우세면 이동/생존, aggression 우세면 전투. 둘이 같으면 추천 없음.
+	# VEIL 추천 — 멘트가 가리키는 family를 그대로 따라 표시. 멘트와 ★가 어긋나지
+	# 않게 단일 source(advice.family)로 통일. family가 없으면(generic 멘트) 추천 없음.
 	var recommended_families: Array = []
-	if GameState.trust_score > GameState.aggression_score:
-		recommended_families = ["이동", "생존"]
-	elif GameState.aggression_score > GameState.trust_score:
-		recommended_families = ["전투"]
+	if advice_family != "":
+		recommended_families.append(advice_family)
 
 	for p in picks:
 		var skill: Dictionary = p

@@ -2,12 +2,12 @@ extends Node2D
 
 # 튜토리얼 맵 디자인 (좌→우 진행)
 #
-#   x=0   200       900    1500       2200       2800   3300  3600
-#   |  시작  |  이동  |  점프  |  공격  |  레벨업  |  대시  |  탈출 |
+#   x=0   200       900    1500       2200       2700    3200   3500  3800
+#   |  시작  |  이동  |  점프  |  공격  |  레벨업  |  스킬  |  대시  | 탈출 |
 #
-# 단계: MOVE → JUMP → ATTACK → LEVELUP → DASH → DONE
+# 단계: MOVE → JUMP → ATTACK → LEVELUP → SKILL → DASH → DONE
 
-const STAGE_LENGTH: float = 3600.0
+const STAGE_LENGTH: float = 3800.0
 const GROUND_Y: float = 600.0
 const PLAYER_START: Vector2 = Vector2(160.0, 540.0)
 
@@ -25,19 +25,24 @@ const ATTACK_DUMMY: Vector2 = Vector2(1850.0, GROUND_Y - 30.0)
 
 # 레벨업 구간: 2마리 더미 → 오브 → 자동 레벨업
 const LEVELUP_DUMMY_A: Vector2 = Vector2(2350.0, GROUND_Y - 30.0)
-const LEVELUP_DUMMY_B: Vector2 = Vector2(2550.0, GROUND_Y - 30.0)
+const LEVELUP_DUMMY_B: Vector2 = Vector2(2520.0, GROUND_Y - 30.0)
 const LEVELUP_TRIGGER_X: float = 2200.0
+
+# 스킬 구간: 레벨업에서 고른 스킬을 직접 시험. 더미 2마리 — 가까이 붙어 있어
+# AOE/관통 등 효과를 자연스럽게 체감. 패시브여도 그냥 사격으로 처리 가능.
+const SKILL_DUMMY_A: Vector2 = Vector2(2820.0, GROUND_Y - 30.0)
+const SKILL_DUMMY_B: Vector2 = Vector2(2920.0, GROUND_Y - 30.0)
 
 # 대시 구간: 가시 + 보라색 배리어
 # 가시 폭은 1회 대시 거리(720 × 0.18 ≈ 130px) 안에 들어가야 통과 가능
-const SPIKE_X_START: float = 2960.0
-const SPIKE_X_END: float = 3060.0
-const BARRIER_X: float = 3220.0
+const SPIKE_X_START: float = 3160.0
+const SPIKE_X_END: float = 3260.0
+const BARRIER_X: float = 3420.0
 
 # 골
-const GOAL_X: float = 3500.0
+const GOAL_X: float = 3700.0
 
-enum Step { MOVE, JUMP, ATTACK, LEVELUP, DASH, DONE }
+enum Step { MOVE, JUMP, ATTACK, LEVELUP, SKILL, DASH, DONE }
 
 var step: int = Step.MOVE
 var player: CharacterBody2D
@@ -49,6 +54,7 @@ var sign_move: Control
 var sign_jump: Control
 var sign_attack: Control
 var sign_levelup: Label  # 레벨업 후 스킬 이름이 표시되는 텍스트라 텍스트 라벨 유지
+var sign_skill: Control
 var sign_dash: Control
 
 var jump_pickup: Area2D
@@ -57,6 +63,9 @@ var levelup_dummies: Array = []
 var levelup_kills: int = 0
 var levelup_triggered: bool = false
 var levelup_overlay: CanvasLayer
+var skill_dummies: Array = []
+var skill_kills: int = 0
+var skill_picked_id: String = ""
 
 var spike_zone: Area2D
 var barrier: StaticBody2D
@@ -79,6 +88,7 @@ func _ready() -> void:
 	_build_jump_section()
 	_build_attack_section()
 	_build_levelup_section()
+	_build_skill_section()
 	_build_dash_section()
 	_build_walls()
 	_build_player()
@@ -186,17 +196,32 @@ func _build_attack_section() -> void:
 	add_child(arena)
 
 func _build_levelup_section() -> void:
-	# 푸른 톤의 레벨업 아레나
+	# 푸른 톤의 레벨업 아레나 — 더미 2마리만 들어가도록 폭 줄임 (스킬 구간과 분리)
 	var arena := ColorRect.new()
 	arena.color = Color(0.30, 0.55, 0.85, 0.10)
 	arena.position = Vector2(2200.0, GROUND_Y - 80.0)
-	arena.size = Vector2(560.0, 80.0)
+	arena.size = Vector2(440.0, 80.0)
 	arena.z_index = -5
 	add_child(arena)
 	# 양쪽 가드레일 (장식)
-	for gx in [2210.0, 2780.0]:
+	for gx in [2210.0, 2640.0]:
 		var rail := ColorRect.new()
 		rail.color = Color(0.55, 0.62, 0.78, 0.6)
+		rail.position = Vector2(float(gx), GROUND_Y - 60.0)
+		rail.size = Vector2(2.0, 60.0)
+		add_child(rail)
+
+func _build_skill_section() -> void:
+	# 노란-주황 톤 스킬 시험 아레나. 레벨업 직후 등장.
+	var arena := ColorRect.new()
+	arena.color = Color(0.95, 0.65, 0.30, 0.10)
+	arena.position = Vector2(2700.0, GROUND_Y - 80.0)
+	arena.size = Vector2(360.0, 80.0)
+	arena.z_index = -5
+	add_child(arena)
+	for gx in [2710.0, 3060.0]:
+		var rail := ColorRect.new()
+		rail.color = Color(0.95, 0.75, 0.45, 0.6)
 		rail.position = Vector2(float(gx), GROUND_Y - 60.0)
 		rail.size = Vector2(2.0, 60.0)
 		add_child(rail)
@@ -239,7 +264,8 @@ func _build_signs() -> void:
 	# show-don't-tell — 키캡(둥근 박스 + 큰 글자) + 한 단어. 부연 설명은 환경/연출에 맡김.
 	# 이중 점프는 PLATFORM_3가 1단 한계 위에 있어 자연 학습되므로 별도 안내 안 함.
 	sign_move = _make_keycap_sign(["A", "D"], "이동", Vector2(280.0, GROUND_Y - 200.0))
-	sign_jump = _make_keycap_sign(["W"], "점프", Vector2(950.0, GROUND_Y - 280.0))
+	# 점프는 W 와 SPACE 둘 다 가능 — 키캡에 두 개 모두 표시.
+	sign_jump = _make_keycap_sign(["W", "SPACE"], "점프", Vector2(950.0, GROUND_Y - 280.0))
 	sign_attack = _make_attack_sign(Vector2(1750.0, GROUND_Y - 200.0))
 	sign_dash = _make_keycap_sign(["SHIFT"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
@@ -248,11 +274,12 @@ func _build_signs() -> void:
 	sign_levelup.add_theme_color_override("font_color", Color(0.95, 0.92, 0.55))
 	sign_levelup.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	sign_levelup.add_theme_constant_override("outline_size", 4)
-	sign_levelup.position = Vector2(2480.0, GROUND_Y - 280.0) - Vector2(160, 32)
+	sign_levelup.position = Vector2(2420.0, GROUND_Y - 280.0) - Vector2(160, 32)
 	sign_levelup.size = Vector2(320, 64)
 	sign_levelup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign_levelup.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	add_child(sign_levelup)
+	# sign_skill은 LEVELUP 종료 후 picked 스킬에 따라 동적으로 만든다.
 	sign_levelup.visible = false
 	sign_jump.visible = false
 	sign_attack.visible = false
@@ -406,17 +433,18 @@ func _build_hud() -> void:
 	hint_label = Label.new()
 	hint_label.add_theme_font_size_override("font_size", 13)
 	hint_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
-	hint_label.text = "ESC 일시정지"
+	hint_label.text = "A/D 이동   W/SPACE 점프   J/마우스 좌클릭 사격   SHIFT 대시   Q/마우스 우클릭 스킬   ESC 일시정지"
 	bottom.add_child(hint_label)
 
 func _refresh_hud() -> void:
 	var step_name := ""
 	match step:
-		Step.MOVE:    step_name = "1/5 — 이동"
-		Step.JUMP:    step_name = "2/5 — 점프"
-		Step.ATTACK:  step_name = "3/5 — 사격"
-		Step.LEVELUP: step_name = "4/5 — 레벨업 / 스킬"
-		Step.DASH:    step_name = "5/5 — 대시"
+		Step.MOVE:    step_name = "1/6 — 이동"
+		Step.JUMP:    step_name = "2/6 — 점프"
+		Step.ATTACK:  step_name = "3/6 — 사격"
+		Step.LEVELUP: step_name = "4/6 — 레벨업"
+		Step.SKILL:   step_name = "5/6 — 스킬 사용"
+		Step.DASH:    step_name = "6/6 — 대시"
 		Step.DONE:    step_name = "튜토리얼 완료 — 골에 도달해요"
 	hud_label.text = "TUTORIAL  %s" % step_name
 
@@ -599,6 +627,9 @@ func _advance_to(next: int) -> void:
 		Step.LEVELUP:
 			sign_levelup.visible = true
 			_spawn_levelup_dummies()
+		Step.SKILL:
+			_build_skill_sign()
+			_spawn_skill_dummies()
 		Step.DASH:
 			sign_dash.visible = true
 		Step.DONE:
@@ -640,8 +671,72 @@ func _show_levelup() -> void:
 func _on_levelup_picked(picked_id: String) -> void:
 	levelup_overlay = null
 	get_tree().paused = false
+	skill_picked_id = picked_id
 	_update_levelup_sign(picked_id)
-	_advance_to(Step.DASH)
+	_advance_to(Step.SKILL)
+
+# 스킬 표지판 — 레벨업에서 고른 스킬에 따라 키캡(액티브) / 안내문(패시브)을 동적으로 만든다.
+# Active: 키캡(스킬 키 또는 마우스 우클릭) + "스킬"
+# Passive: 텍스트 라벨 — "자동 적용 — 마음껏 처리해요"
+func _build_skill_sign() -> void:
+	if sign_skill != null:
+		return  # 이미 만들었음
+	var pos: Vector2 = Vector2(2880.0, GROUND_Y - 220.0)
+	if skill_picked_id == "":
+		# 안전망 — 스킬 미선택 시 그냥 사격으로 진행
+		sign_skill = _make_text_sign("두 명 더 처리해요", pos)
+		add_child(sign_skill)
+		return
+	var skill: Dictionary = SkillSystem.find_by_id(skill_picked_id)
+	if bool(skill.get("active", false)):
+		var key_action: String = str(skill.get("key", ""))
+		# skill 액션은 Main.gd가 마우스 우클릭도 추가 — 키보드/마우스 둘 다 안내.
+		# 기타 액티브(예: dash)는 키 한 개만.
+		var keys: Array
+		if key_action == "skill":
+			keys = ["Q", "RMB"]
+		elif key_action != "":
+			keys = [_label_for_action(key_action)]
+		else:
+			keys = ["Q"]
+		sign_skill = _make_keycap_sign(keys, "스킬 사용", pos)
+	else:
+		var sname: String = str(skill.get("name", "패시브"))
+		sign_skill = _make_text_sign("[%s] 자동 적용 — 처리하면 진행" % sname, pos)
+	add_child(sign_skill)
+
+# 한 줄 안내문 표지 — 키캡 없는 짧은 문구. 패시브 스킬 안내 등에 사용.
+func _make_text_sign(text: String, pos: Vector2) -> Control:
+	var holder := Control.new()
+	holder.position = pos - Vector2(180, 22)
+	holder.size = Vector2(360, 44)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_color_override("font_color", Color(0.95, 0.85, 0.55))
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	l.add_theme_constant_override("outline_size", 4)
+	l.size = Vector2(360, 44)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	holder.add_child(l)
+	return holder
+
+func _spawn_skill_dummies() -> void:
+	for pos in [SKILL_DUMMY_A, SKILL_DUMMY_B]:
+		var d := TutorialDummy.new()
+		add_child(d)
+		d.global_position = pos
+		d.killed.connect(_on_skill_dummy_killed)
+		skill_dummies.append(d)
+
+func _on_skill_dummy_killed(_pos: Vector2) -> void:
+	if step != Step.SKILL:
+		return
+	skill_kills += 1
+	if skill_kills >= 2:
+		_advance_to(Step.DASH)
 
 func _update_levelup_sign(picked_id: String) -> void:
 	if picked_id == "":

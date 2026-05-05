@@ -99,7 +99,7 @@ func _setup_veil_mistakes() -> void:
 		"route_rooftops":
 			_show_veil_subtitle("위로 올라가요. 옥상이 출구예요.", 3.0)
 		"route_cooling":
-			_show_veil_subtitle("냉각 파이프 위쪽이 출구예요. 발판 따라 올라가요.", 3.2)
+			_show_veil_subtitle("냉각 파이프 위쪽이 출구예요. 우측 외곽에 뭔가 따로 있는 것 같기도 해요.", 3.6)
 		"route_sewers":
 			_show_veil_subtitle("아래로 내려가요. 통로 끝에 출구가 있어요.", 3.0)
 
@@ -901,25 +901,69 @@ func _build_hazards() -> void:
 		_build_spike(x, 90.0, GROUND_Y - 6.0)
 
 func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1) -> void:
-	# base_y는 가시 끝(뾰족한 부분)의 y. -1이면 GROUND_Y - 6 폴백 (지면 위 가시).
-	# 가시는 base_y 위로 18px, 즉 base_y - 18에서 시작해 base_y에서 끝남.
-	# dmg: 가시 데미지(default 1, sewers 같은 강조 함정은 2).
+	# base_y는 가시 베이스의 y. 가시는 base_y 위로 20px 솟음.
+	# 이전엔 빨간 띠 30px만 깔려 sewers 같은 mid-air 위치에서 가시가 둥둥 떠보였음.
+	# 베이스를 어두운 금속 파이프 형태로 — 끝에 볼트, 좌우 4px 확장으로 박힌 인상.
+	# dmg: 가시 데미지(default 1, sewers 우측 등 강조 함정은 2).
 	if base_y < 0.0:
 		base_y = GROUND_Y - 6.0
 	var x_start: float = center_x - w * 0.5
 	var x_end: float = center_x + w * 0.5
-	var visual := ColorRect.new()
-	visual.color = Color(0.85, 0.20, 0.25, 0.55)
-	visual.position = Vector2(x_start, base_y - 24.0)
-	visual.size = Vector2(w, 30.0)
-	add_child(visual)
+	# 파이프 본체 — 베이스 y 직전까지 8px 높이. 좌우로 4px씩 더 길게 → 벽 박힘 인상.
+	var pipe_x: float = x_start - 4.0
+	var pipe_w: float = w + 8.0
+	var pipe_y: float = base_y - 2.0
+	var pipe_h: float = 10.0
+	# dmg 2 위험 광채(파이프 뒤로 옅게)
+	if dmg >= 2:
+		var glow := ColorRect.new()
+		glow.color = Color(1.0, 0.45, 0.20, 0.16)
+		glow.position = Vector2(pipe_x - 3.0, pipe_y - 5.0)
+		glow.size = Vector2(pipe_w + 6.0, pipe_h + 10.0)
+		add_child(glow)
+	var pipe_body := ColorRect.new()
+	pipe_body.color = Color(0.10, 0.11, 0.13)
+	pipe_body.position = Vector2(pipe_x, pipe_y)
+	pipe_body.size = Vector2(pipe_w, pipe_h)
+	add_child(pipe_body)
+	# 상단 하이라이트 1px
+	var pipe_top := ColorRect.new()
+	pipe_top.color = Color(0.34, 0.38, 0.46, 0.95)
+	pipe_top.position = Vector2(pipe_x, pipe_y)
+	pipe_top.size = Vector2(pipe_w, 1.0)
+	add_child(pipe_top)
+	# 하단 그림자 1px
+	var pipe_bot := ColorRect.new()
+	pipe_bot.color = Color(0.02, 0.02, 0.03, 0.9)
+	pipe_bot.position = Vector2(pipe_x, pipe_y + pipe_h - 1.0)
+	pipe_bot.size = Vector2(pipe_w, 1.0)
+	add_child(pipe_bot)
+	# 양 끝 볼트
+	for bx in [pipe_x + 1.0, pipe_x + pipe_w - 5.0]:
+		var bolt := ColorRect.new()
+		bolt.color = Color(0.30, 0.32, 0.38)
+		bolt.position = Vector2(float(bx), pipe_y + 3.0)
+		bolt.size = Vector2(4.0, 4.0)
+		add_child(bolt)
+	# 가시 — 그림자(좌측 어두운 절반) + 본체. 1px 파이프 안에 묻혀 안정감.
+	var spike_color: Color = Color(0.95, 0.30, 0.30) if dmg < 2 else Color(1.0, 0.40, 0.20)
+	var spike_dark: Color = Color(0.55, 0.16, 0.18) if dmg < 2 else Color(0.62, 0.22, 0.12)
 	for sx in range(int(x_start) + 12, int(x_end), 24):
+		var fx: float = float(sx)
+		var shadow := Polygon2D.new()
+		shadow.color = spike_dark
+		shadow.polygon = PackedVector2Array([
+			Vector2(fx, base_y + 1.0),
+			Vector2(fx + 6.0, base_y + 1.0),
+			Vector2(fx + 6.0, base_y - 20.0),
+		])
+		add_child(shadow)
 		var spike := Polygon2D.new()
-		spike.color = Color(0.95, 0.30, 0.30) if dmg < 2 else Color(1.0, 0.40, 0.20)
+		spike.color = spike_color
 		spike.polygon = PackedVector2Array([
-			Vector2(float(sx), base_y),
-			Vector2(float(sx) + 12.0, base_y),
-			Vector2(float(sx) + 6.0, base_y - 18.0),
+			Vector2(fx, base_y + 1.0),
+			Vector2(fx + 12.0, base_y + 1.0),
+			Vector2(fx + 6.0, base_y - 20.0),
 		])
 		add_child(spike)
 	var zone := Area2D.new()
@@ -1420,7 +1464,7 @@ func _build_hud() -> void:
 	cd_attack_slot = _make_cd_slot("사격")
 	cd_dash_slot = _make_cd_slot("대시")
 	cd_skill_slot = _make_cd_slot("스킬")
-	cd_barrier_slot = _make_cd_slot("방어막")
+	cd_barrier_slot = _make_barrier_slot()
 	# 스킬 슬롯에만 충전 점 추가 — explosive T3에서 2개 보유 가능.
 	# 항상 점 2개 생성하고 색으로 활성/비활성/(미사용) 구분.
 	var charges_row := HBoxContainer.new()
@@ -1439,7 +1483,7 @@ func _build_hud() -> void:
 	cd_row.add_child(cd_barrier_slot)
 
 	var keys := Label.new()
-	keys.text = "A/D 이동   W 점프   S 플랫폼 내려가기   마우스 좌클릭 사격   SHIFT 대시   마우스 우클릭 스킬   ESC 일시정지"
+	keys.text = "A/D 이동   W/SPACE 점프   S 플랫폼 내려가기   J/마우스 좌클릭 사격   SHIFT 대시   Q/마우스 우클릭 스킬   ESC 일시정지"
 	keys.add_theme_font_size_override("font_size", 13)
 	keys.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
 	bottom_v.add_child(keys)
@@ -1543,28 +1587,78 @@ func _refresh_hud() -> void:
 			if cd_barrier_slot.visible:
 				_update_barrier_slot()
 
-# 방어막 슬롯 — 일반 cd_slot과 다르게 charge_t/charge_max로 채움.
-# 완료 상태(barrier_ready)에서는 가득 + 청록 강조.
+# 방어막 슬롯 — 일반 cd_slot과 달리 헥스 셀 8개로 표시 (에너지 방어막 패턴).
+# 충전이 진행되면 셀이 좌→우로 청록빛으로 차오름. ready 상태에서는 전체 셀 밝게 + 펄스.
+const BARRIER_HEX_COUNT: int = 8
+
+func _make_barrier_slot() -> Control:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 3)
+	var l := Label.new()
+	l.text = "방어막"
+	l.add_theme_font_size_override("font_size", 11)
+	l.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0))
+	v.add_child(l)
+	var holder := Control.new()
+	holder.name = "HexHolder"
+	holder.custom_minimum_size = Vector2(CD_BAR_WIDTH, 14)
+	holder.size = Vector2(CD_BAR_WIDTH, 14)
+	v.add_child(holder)
+	# CD_BAR_WIDTH(90) 안에 헥스 8개 + 간격 2px씩.
+	var gap: float = 2.0
+	var cell_w: float = (CD_BAR_WIDTH - gap * float(BARRIER_HEX_COUNT - 1)) / float(BARRIER_HEX_COUNT)
+	for i in BARRIER_HEX_COUNT:
+		var hex := Polygon2D.new()
+		hex.name = "Hex%d" % i
+		var cx: float = float(i) * (cell_w + gap) + cell_w * 0.5
+		var cy: float = 7.0
+		var hw: float = cell_w * 0.5
+		var hh: float = 5.0
+		# 가로 평평 헥스 (좌/우 점이 뾰족, 위/아래 평면)
+		hex.polygon = PackedVector2Array([
+			Vector2(cx - hw * 0.5, cy - hh),
+			Vector2(cx + hw * 0.5, cy - hh),
+			Vector2(cx + hw,       cy),
+			Vector2(cx + hw * 0.5, cy + hh),
+			Vector2(cx - hw * 0.5, cy + hh),
+			Vector2(cx - hw,       cy),
+		])
+		hex.color = Color(0.12, 0.18, 0.24, 0.85)
+		holder.add_child(hex)
+	return v
+
 func _update_barrier_slot() -> void:
 	if cd_barrier_slot == null or player == null or not is_instance_valid(player):
 		return
-	var bar_bg := cd_barrier_slot.get_child(1) as ColorRect
-	if bar_bg == null:
-		return
-	var bar_fill := bar_bg.get_node_or_null("Fill") as ColorRect
-	if bar_fill == null:
+	var holder := cd_barrier_slot.get_node_or_null("HexHolder") as Control
+	if holder == null:
 		return
 	var ready: bool = bool(player.get("barrier_ready"))
+	var ratio: float
 	if ready:
-		bar_fill.size.x = CD_BAR_WIDTH
-		bar_fill.color = Color(0.45, 0.95, 1.0)
+		ratio = 1.0
 	else:
 		var charge_t: float = float(player.get("barrier_charge_t"))
 		var tier: int = GameState.get_skill_tier("barrier")
 		var charge_max: float = 6.0 if tier >= 2 else 10.0  # Player.BARRIER_CHARGE_T1/T2
-		var ratio: float = clamp(charge_t / charge_max, 0.0, 1.0)
-		bar_fill.size.x = CD_BAR_WIDTH * ratio
-		bar_fill.color = Color(0.40, 0.55, 0.75, 0.90)
+		ratio = clamp(charge_t / charge_max, 0.0, 1.0)
+	var filled: int = int(round(ratio * float(BARRIER_HEX_COUNT)))
+	var ready_color: Color = Color(0.55, 0.95, 1.0, 0.95)
+	var charging_color: Color = Color(0.35, 0.70, 0.95, 0.90)
+	var empty_color: Color = Color(0.10, 0.16, 0.22, 0.85)
+	for i in BARRIER_HEX_COUNT:
+		var hex := holder.get_node_or_null("Hex%d" % i) as Polygon2D
+		if hex == null:
+			continue
+		if i < filled:
+			hex.color = ready_color if ready else charging_color
+		else:
+			hex.color = empty_color
+	if ready:
+		var pulse: float = 0.80 + sin(float(Time.get_ticks_msec()) / 200.0) * 0.20
+		holder.modulate.a = pulse
+	else:
+		holder.modulate.a = 1.0
 
 # 스킬 충전 점 갱신 — explosive T3에서 2개 보유. 색으로 활성/비활성/(미사용) 구분.
 func _update_skill_charges() -> void:
@@ -2075,7 +2169,7 @@ func _trigger_stage_clear() -> void:
 		# 보너스 XP로 레벨업 발생 — 다음 scene 가기 전에 스킬 선택을 띄움
 		pending_levelup = true
 		get_tree().paused = true
-		var advice: String = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags)
+		var advice: Dictionary = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags)
 		levelup_overlay = LevelUpOverlay.show(self, advice, _on_clear_levelup_picked)
 	else:
 		_transition_after_clear()
@@ -2358,7 +2452,7 @@ func _on_xp_collected(leveled_up: bool) -> void:
 
 func _show_levelup() -> void:
 	get_tree().paused = true
-	var advice: String = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags)
+	var advice: Dictionary = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags)
 	levelup_overlay = LevelUpOverlay.show(self, advice, _on_levelup_picked)
 
 func _on_levelup_picked(_picked_id: String) -> void:
