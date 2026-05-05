@@ -118,6 +118,15 @@ func _build_keybind_tab() -> Control:
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(hint)
 
+	# 게임패드 안내 — Xbox 컨트롤러 기본 매핑. 슬롯에는 키/마우스만 표시되지만,
+	# 패드는 별도로 항상 활성화되어 있음 (project.godot 기본값 + 리셋 시에도 복원).
+	var pad_hint := Label.new()
+	pad_hint.text = "Xbox 컨트롤러:  좌스틱/D-Pad 이동 · A 점프 · X 사격(또는 RT) · B 대시(또는 RB) · Y 스킬 · START 메뉴"
+	pad_hint.add_theme_font_size_override("font_size", 12)
+	pad_hint.add_theme_color_override("font_color", Color(0.55, 0.65, 0.78))
+	pad_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(pad_hint)
+
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 18)
@@ -310,6 +319,33 @@ func _event_label(ev: InputEvent) -> String:
 			MOUSE_BUTTON_XBUTTON1: return "마우스 X1"
 			MOUSE_BUTTON_XBUTTON2: return "마우스 X2"
 			_: return "마우스 버튼 %d" % mb.button_index
+	elif ev is InputEventJoypadButton:
+		var jb := ev as InputEventJoypadButton
+		match jb.button_index:
+			JOY_BUTTON_A: return "패드 A"
+			JOY_BUTTON_B: return "패드 B"
+			JOY_BUTTON_X: return "패드 X"
+			JOY_BUTTON_Y: return "패드 Y"
+			JOY_BUTTON_LEFT_SHOULDER: return "패드 LB"
+			JOY_BUTTON_RIGHT_SHOULDER: return "패드 RB"
+			JOY_BUTTON_BACK: return "패드 BACK"
+			JOY_BUTTON_START: return "패드 START"
+			JOY_BUTTON_DPAD_UP: return "패드 ↑"
+			JOY_BUTTON_DPAD_DOWN: return "패드 ↓"
+			JOY_BUTTON_DPAD_LEFT: return "패드 ←"
+			JOY_BUTTON_DPAD_RIGHT: return "패드 →"
+			_: return "패드 버튼 %d" % jb.button_index
+	elif ev is InputEventJoypadMotion:
+		var jm := ev as InputEventJoypadMotion
+		var sign_str: String = "+" if jm.axis_value >= 0.0 else "-"
+		match jm.axis:
+			JOY_AXIS_LEFT_X: return "좌스틱 " + ("→" if sign_str == "+" else "←")
+			JOY_AXIS_LEFT_Y: return "좌스틱 " + ("↓" if sign_str == "+" else "↑")
+			JOY_AXIS_RIGHT_X: return "우스틱 " + ("→" if sign_str == "+" else "←")
+			JOY_AXIS_RIGHT_Y: return "우스틱 " + ("↓" if sign_str == "+" else "↑")
+			JOY_AXIS_TRIGGER_LEFT: return "패드 LT"
+			JOY_AXIS_TRIGGER_RIGHT: return "패드 RT"
+			_: return "축 %d %s" % [jm.axis, sign_str]
 	return "—"
 
 func _on_key_button_pressed(action_id: String, index: int, btn: Button) -> void:
@@ -360,11 +396,17 @@ func _input(event: InputEvent) -> void:
 
 	var action_id: String = capturing_action
 	var index: int = capturing_index
-	var current_events: Array = []
+	# UI 슬롯은 키보드/마우스만 표시·편집. 조이패드 이벤트는 보존해 따로 다시 등록.
+	var kb_events: Array = []
+	var preserved_pad: Array = []
 	if InputMap.has_action(action_id):
-		current_events = InputMap.action_get_events(action_id)
+		for ev in InputMap.action_get_events(action_id):
+			if ev is InputEventKey or ev is InputEventMouseButton:
+				kb_events.append(ev)
+			else:
+				preserved_pad.append(ev)
 	var new_events: Array = []
-	for e in current_events:
+	for e in kb_events:
 		new_events.append(e)
 	while new_events.size() <= index:
 		new_events.append(null)
@@ -374,6 +416,8 @@ func _input(event: InputEvent) -> void:
 	for e in new_events:
 		if e is InputEventKey or e is InputEventMouseButton:
 			InputMap.action_add_event(action_id, e)
+	for e in preserved_pad:
+		InputMap.action_add_event(action_id, e)
 
 	capturing_action = ""
 	capturing_index = -1
@@ -395,15 +439,15 @@ func _on_reset_pressed() -> void:
 	GameState.save_settings()
 
 func _apply_default_keybindings() -> void:
-	# 각 entry는 ["key", keycode] 또는 ["mouse", button_index]
+	# 각 entry: ["key", keycode] / ["mouse", button] / ["pad", JOY_BUTTON_*] / ["axis", axis, value]
 	var defaults := {
-		"move_left":  [["key", KEY_A], ["key", KEY_LEFT]],
-		"move_right": [["key", KEY_D], ["key", KEY_RIGHT]],
-		"jump":       [["key", KEY_W], ["key", KEY_SPACE]],
-		"attack":     [["mouse", MOUSE_BUTTON_LEFT], ["key", KEY_J]],
-		"dash":       [["key", KEY_SHIFT], ["key", KEY_K]],
-		"skill":      [["mouse", MOUSE_BUTTON_RIGHT], ["key", KEY_Q]],
-		"pause":      [["key", KEY_ESCAPE]],
+		"move_left":  [["key", KEY_A], ["key", KEY_LEFT], ["pad", JOY_BUTTON_DPAD_LEFT], ["axis", JOY_AXIS_LEFT_X, -1.0]],
+		"move_right": [["key", KEY_D], ["key", KEY_RIGHT], ["pad", JOY_BUTTON_DPAD_RIGHT], ["axis", JOY_AXIS_LEFT_X, 1.0]],
+		"jump":       [["key", KEY_W], ["key", KEY_SPACE], ["pad", JOY_BUTTON_A]],
+		"attack":     [["mouse", MOUSE_BUTTON_LEFT], ["key", KEY_J], ["pad", JOY_BUTTON_X], ["axis", JOY_AXIS_TRIGGER_RIGHT, 1.0]],
+		"dash":       [["key", KEY_SHIFT], ["key", KEY_K], ["pad", JOY_BUTTON_B], ["pad", JOY_BUTTON_RIGHT_SHOULDER]],
+		"skill":      [["mouse", MOUSE_BUTTON_RIGHT], ["key", KEY_Q], ["pad", JOY_BUTTON_Y]],
+		"pause":      [["key", KEY_ESCAPE], ["pad", JOY_BUTTON_START]],
 	}
 	for action_id in defaults.keys():
 		if not InputMap.has_action(action_id):
@@ -411,15 +455,23 @@ func _apply_default_keybindings() -> void:
 		InputMap.action_erase_events(action_id)
 		for entry in defaults[action_id]:
 			var t: String = str(entry[0])
-			var code: int = int(entry[1])
 			if t == "key":
 				var ev := InputEventKey.new()
-				ev.physical_keycode = code
+				ev.physical_keycode = int(entry[1])
 				InputMap.action_add_event(action_id, ev)
 			elif t == "mouse":
 				var mev := InputEventMouseButton.new()
-				mev.button_index = code
+				mev.button_index = int(entry[1])
 				InputMap.action_add_event(action_id, mev)
+			elif t == "pad":
+				var pev := InputEventJoypadButton.new()
+				pev.button_index = int(entry[1])
+				InputMap.action_add_event(action_id, pev)
+			elif t == "axis":
+				var aev := InputEventJoypadMotion.new()
+				aev.axis = int(entry[1])
+				aev.axis_value = float(entry[2])
+				InputMap.action_add_event(action_id, aev)
 
 func _on_close_pressed() -> void:
 	emit_signal("closed")

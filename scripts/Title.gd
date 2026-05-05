@@ -15,7 +15,7 @@ func _ready() -> void:
 	GameState.seen_enemies.clear()
 	GameState.save_settings()
 	title_label.text = "EYES ON YOU"
-	hint_label.text = "[ 시작하려면 SPACE ]"
+	hint_label.text = "[ 시작 — SPACE 또는 패드 A ]"
 	tutorial_button.pressed.connect(_on_tutorial_pressed)
 	settings_button.pressed.connect(_on_settings_pressed)
 

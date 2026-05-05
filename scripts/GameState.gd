@@ -291,6 +291,15 @@ func load_settings() -> void:
 				var ev2 := InputEventMouseButton.new()
 				ev2.button_index = int(d.get("button", 0))
 				InputMap.action_add_event(action, ev2)
+			elif t == "joy_button":
+				var ev3 := InputEventJoypadButton.new()
+				ev3.button_index = int(d.get("button", 0))
+				InputMap.action_add_event(action, ev3)
+			elif t == "joy_motion":
+				var ev4 := InputEventJoypadMotion.new()
+				ev4.axis = int(d.get("axis", 0))
+				ev4.axis_value = float(d.get("value", 1.0))
+				InputMap.action_add_event(action, ev4)
 
 func save_settings() -> void:
 	var cf := ConfigFile.new()
@@ -312,5 +321,11 @@ func save_settings() -> void:
 			elif ev is InputEventMouseButton:
 				var m := ev as InputEventMouseButton
 				entries.append({"type": "mouse", "button": int(m.button_index)})
+			elif ev is InputEventJoypadButton:
+				var jb := ev as InputEventJoypadButton
+				entries.append({"type": "joy_button", "button": int(jb.button_index)})
+			elif ev is InputEventJoypadMotion:
+				var jm := ev as InputEventJoypadMotion
+				entries.append({"type": "joy_motion", "axis": int(jm.axis), "value": float(jm.axis_value)})
 		cf.set_value("input", action, entries)
 	cf.save(SETTINGS_PATH)
