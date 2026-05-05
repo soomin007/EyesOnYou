@@ -30,9 +30,10 @@ func _ready() -> void:
 	hint_label.text = "[ ←/→ : 선택 이동   SPACE/ENTER : 결정 ]"
 
 func _setup_trust_gauge() -> void:
-	# VEIL 박스 안에 5단계 점 게이지 추가. trust - aggression 기준.
-	var v_box: Node = veil_text.get_parent()
-	if v_box == null:
+	# 상단 Header에 신뢰도 게이지 추가. (이전엔 VeilBox 안에 있어서 하단 Footer
+	# 조작 안내와 시각적으로 겹쳤음 — 사용자 피드백 2026-05-05.)
+	var header: Node = stage_label.get_parent()
+	if header == null:
 		return
 	var gauge := Label.new()
 	gauge.name = "TrustGauge"
@@ -47,8 +48,7 @@ func _setup_trust_gauge() -> void:
 	gauge.text = "VEIL 신뢰   " + dots
 	gauge.add_theme_font_size_override("font_size", 14)
 	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
-	gauge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v_box.add_child(gauge)
+	header.add_child(gauge)
 
 func _build_node_buttons() -> void:
 	for child in nodes_container.get_children():

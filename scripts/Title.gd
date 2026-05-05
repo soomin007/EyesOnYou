@@ -1,60 +1,116 @@
 extends Control
 
-@onready var title_label: Label = $Center/V/Title
+# 다단계 메인 메뉴 — 키보드/마우스/패드 모두 동일한 흐름.
+#   STATE_MAIN  : 게임 시작 / 설정 / 게임 종료
+#   STATE_MODE  : 일반 모드 / 스토리 모드 / 뒤로
+#   STATE_TUTOR : 튜토리얼부터 시작? 예 / 아니오 / 뒤로
+# 각 단계는 Buttons VBox를 비우고 다시 빌드. ESC/패드 B는 한 단계 뒤로.
+
+enum { STATE_MAIN, STATE_MODE, STATE_TUTOR }
+
 @onready var hint_label: Label = $Center/V/Hint
-@onready var story_button: Button = $Center/V/Buttons/StoryButton
-@onready var tutorial_button: Button = $Center/V/Buttons/TutorialButton
-@onready var settings_button: Button = $Center/V/Buttons/SettingsButton
+@onready var buttons_box: VBoxContainer = $Center/V/Buttons
 
 var blink_t: float = 0.0
 var settings_overlay: Control = null
-# 첫 방향 입력 들어오면 버튼에 포커스를 잡는다. 그 전엔 SPACE/A가 그냥 normal-mode 시작.
-# 이렇게 분기해야 마우스/키보드 사용자 흐름(누르면 시작)과 패드 네비 흐름이 충돌하지 않는다.
-var focus_initialized: bool = false
+var state: int = STATE_MAIN
+# 모드 선택 단계에서 결정 — TUTOR 단계에서 사용.
+var picked_story: bool = false
 
 func _ready() -> void:
 	GameState.reset()
 	# 부스/QR 환경 가정 — 매 타이틀 진입은 새 플레이어 세션. 도감을 비워서 첫 조우 카드가
-	# 다시 뜨도록. (같은 사람이 연속 플레이해도 카드는 짧고 빠르게 dismissable이라 부담 작음.)
+	# 다시 뜨도록.
 	GameState.seen_enemies.clear()
 	GameState.save_settings()
-	title_label.text = "EYES ON YOU"
-	hint_label.text = "[ 시작 — SPACE 또는 패드 A ]"
-	story_button.pressed.connect(_on_story_pressed)
-	tutorial_button.pressed.connect(_on_tutorial_pressed)
-	settings_button.pressed.connect(_on_settings_pressed)
+	_set_state(STATE_MAIN)
 
 func _process(delta: float) -> void:
 	blink_t += delta
-	hint_label.modulate.a = 0.5 + 0.5 * sin(blink_t * 3.0)
+	if hint_label != null:
+		hint_label.modulate.a = 0.5 + 0.5 * sin(blink_t * 3.0)
+
+func _set_state(new_state: int) -> void:
+	state = new_state
+	for c in buttons_box.get_children():
+		c.queue_free()
+	match state:
+		STATE_MAIN:
+			hint_label.text = "[ ↑↓ 이동   A/Enter 선택 ]"
+			var b_start := _make_button("게임 시작")
+			b_start.pressed.connect(_on_start_pressed)
+			buttons_box.add_child(b_start)
+			var b_settings := _make_button("설정")
+			b_settings.pressed.connect(_on_settings_pressed)
+			buttons_box.add_child(b_settings)
+			var b_quit := _make_button("게임 종료")
+			b_quit.pressed.connect(_on_quit_pressed)
+			buttons_box.add_child(b_quit)
+			b_start.grab_focus.call_deferred()
+		STATE_MODE:
+			hint_label.text = "[ 모드 선택   ESC/B 뒤로 ]"
+			var b_normal := _make_button("일반 모드")
+			b_normal.pressed.connect(_on_mode_pressed.bind(false))
+			buttons_box.add_child(b_normal)
+			var b_story := _make_button("스토리 모드  (체력 무제한 · 단순)")
+			b_story.pressed.connect(_on_mode_pressed.bind(true))
+			buttons_box.add_child(b_story)
+			var b_back := _make_button("뒤로")
+			b_back.pressed.connect(_on_back_pressed)
+			buttons_box.add_child(b_back)
+			b_normal.grab_focus.call_deferred()
+		STATE_TUTOR:
+			hint_label.text = "[ 튜토리얼부터 진행할까요? ]"
+			var b_yes := _make_button("예 — 튜토리얼부터")
+			b_yes.pressed.connect(_on_tutor_pressed.bind(true))
+			buttons_box.add_child(b_yes)
+			var b_no := _make_button("아니오 — 바로 시작")
+			b_no.pressed.connect(_on_tutor_pressed.bind(false))
+			buttons_box.add_child(b_no)
+			var b_back := _make_button("뒤로")
+			b_back.pressed.connect(_on_back_pressed)
+			buttons_box.add_child(b_back)
+			b_yes.grab_focus.call_deferred()
+
+func _make_button(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size = Vector2(360, 44)
+	b.add_theme_font_size_override("font_size", 18)
+	return b
 
 func _unhandled_input(event: InputEvent) -> void:
 	if settings_overlay != null:
 		return
-	# 첫 방향 입력 — 버튼 포커스 시작. 이후엔 패드 D-Pad/스틱으로 버튼 사이를 이동하고
-	# A/Space로 활성화한다. 포커스 잡힌 뒤 implicit-start은 ui_accept이 버튼을 누름.
-	if not focus_initialized:
-		var is_dir: bool = event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right") \
-			or event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down") \
-			or event.is_action_pressed("move_left") or event.is_action_pressed("move_right") \
-			or event.is_action_pressed("move_down")
-		if is_dir:
-			focus_initialized = true
-			if story_button != null:
-				story_button.grab_focus()
-			return
-		if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump") or event.is_action_pressed("attack"):
-			SceneRouter.start_after_title(get_tree())
+	# 한 단계 뒤로 — ESC, 패드 B (둘 다 ui_cancel에 매핑).
+	if event.is_action_pressed("ui_cancel"):
+		if state != STATE_MAIN:
+			_on_back_pressed()
+			get_viewport().set_input_as_handled()
 
-func _on_tutorial_pressed() -> void:
-	# 튜토리얼은 언제든 다시 진입 가능
-	get_tree().change_scene_to_file(SceneRouter.TUTORIAL)
+func _on_start_pressed() -> void:
+	_set_state(STATE_MODE)
 
-func _on_story_pressed() -> void:
-	# 간략화된 스토리 — 체력 무제한, 드론 없음, 보스 단일 페이즈, 5스테이지.
-	# 튜토리얼 건너뛰고 바로 첫 브리핑으로.
-	GameState.story_mode = true
-	get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+func _on_mode_pressed(story: bool) -> void:
+	picked_story = story
+	GameState.story_mode = story
+	_set_state(STATE_TUTOR)
+
+func _on_tutor_pressed(want_tutorial: bool) -> void:
+	# 모드(story_mode)는 모드 선택에서 이미 GameState에 박혔다. 여기선 튜토리얼 분기만.
+	if want_tutorial:
+		get_tree().change_scene_to_file(SceneRouter.TUTORIAL)
+	else:
+		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+
+func _on_back_pressed() -> void:
+	match state:
+		STATE_TUTOR:
+			# 모드 선택으로 — story_mode 다시 끄고 돌아감
+			GameState.story_mode = false
+			_set_state(STATE_MODE)
+		STATE_MODE:
+			_set_state(STATE_MAIN)
 
 func _on_settings_pressed() -> void:
 	if settings_overlay != null:
@@ -71,3 +127,6 @@ func _on_settings_closed() -> void:
 	if settings_overlay != null:
 		settings_overlay.queue_free()
 		settings_overlay = null
+
+func _on_quit_pressed() -> void:
+	get_tree().quit()

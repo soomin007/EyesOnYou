@@ -40,26 +40,11 @@ theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
 custom_minimum_size = Vector2(0, 12)
 
 [node name="Hint" type="Label" parent="Center/V"]
-text = "[ 시작하려면 SPACE ]"
+text = ""
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
 
-[node name="Buttons" type="HBoxContainer" parent="Center/V"]
+[node name="Buttons" type="VBoxContainer" parent="Center/V"]
 alignment = 1
-theme_override_constants/separation = 16
-
-[node name="StoryButton" type="Button" parent="Center/V/Buttons"]
-custom_minimum_size = Vector2(160, 38)
-text = "스토리 모드"
-theme_override_font_sizes/font_size = 16
-
-[node name="TutorialButton" type="Button" parent="Center/V/Buttons"]
-custom_minimum_size = Vector2(160, 38)
-text = "튜토리얼"
-theme_override_font_sizes/font_size = 16
-
-[node name="SettingsButton" type="Button" parent="Center/V/Buttons"]
-custom_minimum_size = Vector2(160, 38)
-text = "설정"
-theme_override_font_sizes/font_size = 16
+theme_override_constants/separation = 12

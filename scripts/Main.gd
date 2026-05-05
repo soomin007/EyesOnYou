@@ -31,11 +31,26 @@ func _ensure_mouse_event(action: String, btn: int) -> void:
 		InputMap.action_add_event(action, e)
 
 # WASD를 ui_left/right/up/down에 추가 → 메뉴/스킬 선택을 WASD로 이동 가능
+# 동시에 ui_accept/cancel/방향에 패드 매핑이 빠져 있으면 보강 (Godot 빌트인이
+# 누락된 환경 또는 기존 cfg 잔재로 비어 있을 때 대비).
 func _bind_wasd_to_ui() -> void:
 	_ensure_key_event("ui_up", KEY_W)
 	_ensure_key_event("ui_down", KEY_S)
 	_ensure_key_event("ui_left", KEY_A)
 	_ensure_key_event("ui_right", KEY_D)
+	# 패드 — A=accept, B=cancel, D-Pad/좌스틱 = 방향
+	_ensure_pad_button("ui_accept", JOY_BUTTON_A)
+	_ensure_pad_button("ui_cancel", JOY_BUTTON_B)
+	_ensure_pad_button("ui_up", JOY_BUTTON_DPAD_UP)
+	_ensure_pad_button("ui_down", JOY_BUTTON_DPAD_DOWN)
+	_ensure_pad_button("ui_left", JOY_BUTTON_DPAD_LEFT)
+	_ensure_pad_button("ui_right", JOY_BUTTON_DPAD_RIGHT)
+	_ensure_pad_axis("ui_left",  JOY_AXIS_LEFT_X, -1.0)
+	_ensure_pad_axis("ui_right", JOY_AXIS_LEFT_X,  1.0)
+	_ensure_pad_axis("ui_up",    JOY_AXIS_LEFT_Y, -1.0)
+	_ensure_pad_axis("ui_down",  JOY_AXIS_LEFT_Y,  1.0)
+	_ensure_pad_axis("ui_focus_next", JOY_AXIS_TRIGGER_RIGHT, 1.0)
+	_ensure_pad_axis("ui_focus_prev", JOY_AXIS_TRIGGER_LEFT, 1.0)
 
 func _ensure_key_event(action: String, keycode: int) -> void:
 	if not InputMap.has_action(action):
@@ -45,4 +60,27 @@ func _ensure_key_event(action: String, keycode: int) -> void:
 			return
 	var ev := InputEventKey.new()
 	ev.physical_keycode = keycode
+	InputMap.action_add_event(action, ev)
+
+func _ensure_pad_button(action: String, button_index: int) -> void:
+	if not InputMap.has_action(action):
+		return
+	for e in InputMap.action_get_events(action):
+		if e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == button_index:
+			return
+	var ev := InputEventJoypadButton.new()
+	ev.button_index = button_index
+	InputMap.action_add_event(action, ev)
+
+func _ensure_pad_axis(action: String, axis: int, value: float) -> void:
+	if not InputMap.has_action(action):
+		return
+	for e in InputMap.action_get_events(action):
+		if e is InputEventJoypadMotion:
+			var jm := e as InputEventJoypadMotion
+			if jm.axis == axis and signf(jm.axis_value) == signf(value):
+				return
+	var ev := InputEventJoypadMotion.new()
+	ev.axis = axis
+	ev.axis_value = value
 	InputMap.action_add_event(action, ev)
