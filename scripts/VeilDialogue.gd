@@ -5,6 +5,38 @@ extends RefCounted
 # ACT 1 (stage 0~1): 담담하고 직업적
 # ACT 2 (stage 2~3): "저도" 등장, 균열 시작
 # ACT 3 (stage 4):   임무 외 말, 가장 개인적
+# 스토리 모드 5스테이지 전용 briefing — 일반 모드(7스테이지)의 BRIEFINGS는
+# 후반부 핵심부/드론/저격수 컨텍스트가 짙어 5스테이지 압축 흐름과 맞지 않음.
+# 스토리 모드 stage 매핑: 0=외곽, 1=시설 안, 2=격리/배수로, 3=lab(보스), 4=탈출.
+const STORY_BRIEFINGS: Array = [
+	# stage 0 — 외곽 진입
+	[
+		"외곽부터 가요. 천천히 살펴보면서.",
+		"첫 임무예요, 요원. 경계가 느슨해요.",
+	],
+	# stage 1 — 시설 안으로
+	[
+		"안으로 들어왔어요. 경비가 달라져요.",
+		"두 번째 구역이에요. 잘 따라오고 있어요.",
+	],
+	# stage 2 — 격리 / 어두운 통로
+	[
+		"이 구역은 오래됐어요. 잠긴 문도 있을 거예요.",
+		"어둡고 좁아요. 발 밑 조심해요.",
+	],
+	# stage 3 — 핵심부 (보스)
+	[
+		"핵심부예요. 거기 뭐가 있어요. 거리 잘 잡아요.",
+		"마지막 관문이에요. 거의 다 왔어요.",
+	],
+	# stage 4 — 탈출
+	[
+		"잡았어요. 이제 빠져나가요.",
+		"임무 끝났어요. 마지막 한 걸음만.",
+		"조용히 빠져요. 거의 다 왔어요.",
+	],
+]
+
 const BRIEFINGS: Array = [
 	# stage 0 — ACT 1 (담담하고 직업적)
 	[
@@ -114,8 +146,11 @@ const DEATH_ACT3_HEAVY: Array[String] = [
 # ─── API ──────────────────────────────────────────────────
 
 static func get_briefing(stage_index: int) -> String:
-	var idx: int = clamp(stage_index, 0, BRIEFINGS.size() - 1)
-	var pool: Array = BRIEFINGS[idx]
+	# 스토리 모드는 5스테이지 전용 풀에서 선택 — 일반 모드 BRIEFINGS는 7스테이지
+	# 흐름이라 후반부 컨텍스트가 다름.
+	var pool_arr: Array = STORY_BRIEFINGS if GameState.story_mode else BRIEFINGS
+	var idx: int = clamp(stage_index, 0, pool_arr.size() - 1)
+	var pool: Array = pool_arr[idx]
 	if pool.size() == 0:
 		return ""
 	return str(pool[randi() % pool.size()])

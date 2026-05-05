@@ -2083,10 +2083,14 @@ func _on_boss_killed(at_position: Vector2) -> void:
 			var tw := holder.create_tween()
 			tw.tween_property(holder, "modulate:a", 0.0, 0.6)
 			tw.tween_callback(boss_hp_bar_layer.queue_free)
-	# DESIGN §2.10 보스 처치 대사
+	# DESIGN §2.10 보스 처치 대사. 스토리 모드는 보스 다음에 escape 단계가 있어
+	# "서버실이 바로 앞" 같은 진입 멘트가 어울리지 않음 → 별도 분기.
 	_show_veil_subtitle("처리됐어요, 요원.", 2.0)
-	_show_veil_subtitle("이게 마지막 관문이었어요.", 1.0)
-	_show_veil_subtitle("서버실이 바로 앞이에요.", 2.0)
+	if GameState.story_mode:
+		_show_veil_subtitle("이제 빠져나가요. 거의 다 왔어요.", 2.5)
+	else:
+		_show_veil_subtitle("이게 마지막 관문이었어요.", 1.0)
+		_show_veil_subtitle("서버실이 바로 앞이에요.", 2.0)
 
 func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var e := CharacterBody2D.new()
