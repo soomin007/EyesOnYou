@@ -25,8 +25,9 @@ var panel: PanelContainer
 var tabs: TabContainer
 
 # 위/아래 포커스 hold 연속 이동 (사용자 피드백: "쭉 누르고 있어도 드르륵").
-const NAV_INITIAL_DELAY: float = 0.35
-const NAV_REPEAT_INTERVAL: float = 0.06
+# 사용자 후속: 속도 좀 더 늦게 — 0.06 → 0.18로.
+const NAV_INITIAL_DELAY: float = 0.4
+const NAV_REPEAT_INTERVAL: float = 0.18
 var nav_dir: int = 0
 var nav_hold_t: float = 0.0
 var nav_repeat_t: float = 0.0
@@ -88,6 +89,9 @@ func _ready() -> void:
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tabs.custom_minimum_size = Vector2(0, 380)
+	# 위쪽 탭 헤더는 포커스 받지 않게 — 사용자: "포커스가 위로 올라가지 않게".
+	# 탭 전환은 Q/E (패드 LB/RB)로만.
+	tabs.focus_mode = Control.FOCUS_NONE
 	v.add_child(tabs)
 
 	tabs.add_child(_build_keybind_tab())
@@ -198,6 +202,9 @@ func _wire_keybind_focus() -> void:
 				continue
 			if prev_btns.size() > col and prev_btns[col] is Control:
 				btn.focus_neighbor_top = btn.get_path_to(prev_btns[col])
+			else:
+				# 첫 행 — 위로 더 못 가게 (탭 헤더로 안 새도록).
+				btn.focus_neighbor_top = btn.get_path_to(btn)
 			if next_btns.size() > col and next_btns[col] is Control:
 				btn.focus_neighbor_bottom = btn.get_path_to(next_btns[col])
 			if col == 0 and btns.size() > 1 and btns[1] is Control:

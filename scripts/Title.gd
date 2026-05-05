@@ -35,15 +35,25 @@ func _refresh_hint() -> void:
 	match state:
 		STATE_MAIN:
 			hint_label.text = GameState.hint("[ ↑↓ 이동   Enter 선택 ]", "[ ↑↓ D-Pad   A 선택 ]")
+			hint_label.add_theme_font_size_override("font_size", 16)
+			hint_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 		STATE_MODE:
-			hint_label.text = GameState.hint("[ 모드 선택   ESC 뒤로 ]", "[ 모드 선택   B 뒤로 ]")
+			hint_label.text = "어느 모드로 시작할까요?"
+			hint_label.add_theme_font_size_override("font_size", 22)
+			hint_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
 		STATE_TUTOR:
-			hint_label.text = "[ 튜토리얼부터 진행할까요? ]"
+			hint_label.text = "튜토리얼부터 진행할까요?"
+			hint_label.add_theme_font_size_override("font_size", 22)
+			hint_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
 
 func _process(delta: float) -> void:
 	blink_t += delta
 	if hint_label != null:
-		hint_label.modulate.a = 0.5 + 0.5 * sin(blink_t * 3.0)
+		# 메인 메뉴에서만 가벼운 깜빡임. 질문 단계(MODE/TUTOR)는 또렷하게 고정.
+		if state == STATE_MAIN:
+			hint_label.modulate.a = 0.5 + 0.5 * sin(blink_t * 3.0)
+		else:
+			hint_label.modulate.a = 1.0
 
 func _set_state(new_state: int) -> void:
 	state = new_state
@@ -62,10 +72,10 @@ func _set_state(new_state: int) -> void:
 			buttons_box.add_child(b_quit)
 			b_start.grab_focus.call_deferred()
 		STATE_MODE:
-			var b_normal := _make_button("일반 모드")
+			var b_normal := _make_button("일반 모드\n전투 · 회피 중심  (HP 3 · 7스테이지 · 보스 3페이즈)")
 			b_normal.pressed.connect(_on_mode_pressed.bind(false))
 			buttons_box.add_child(b_normal)
-			var b_story := _make_button("스토리 모드  (체력 무제한 · 단순)")
+			var b_story := _make_button("스토리 모드\n쉬움 — 체력 무제한 · 5스테이지 · 드론 없음 · 보스 단순화")
 			b_story.pressed.connect(_on_mode_pressed.bind(true))
 			buttons_box.add_child(b_story)
 			var b_back := _make_button("뒤로")
@@ -73,10 +83,10 @@ func _set_state(new_state: int) -> void:
 			buttons_box.add_child(b_back)
 			b_normal.grab_focus.call_deferred()
 		STATE_TUTOR:
-			var b_yes := _make_button("예 — 튜토리얼부터")
+			var b_yes := _make_button("튜토리얼부터")
 			b_yes.pressed.connect(_on_tutor_pressed.bind(true))
 			buttons_box.add_child(b_yes)
-			var b_no := _make_button("아니오 — 바로 시작")
+			var b_no := _make_button("바로 시작")
 			b_no.pressed.connect(_on_tutor_pressed.bind(false))
 			buttons_box.add_child(b_no)
 			var b_back := _make_button("뒤로")

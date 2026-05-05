@@ -176,13 +176,14 @@ const ALL_ROUTES: Array = [
 ]
 
 # 스토리 모드 — 5스테이지 고정 스케줄. 드론·도전·??? 맵 모두 빼고 핵심 동선만.
-# Stage 4는 lab 보스 (final). 각 스테이지마다 1~2개의 단순한 선택지.
+# Stage 3 lab 보스 → Stage 4 escape (보스 처치 후 빠져나오는 탈출로).
+# 사용자 의도: 비상탈출로는 보스 잡고 나가는 길.
 const STORY_SCHEDULE: Dictionary = {
 	0: ["route_back_alley", "route_rooftops"],
 	1: ["route_subway", "route_watchtower"],
 	2: ["route_ward", "route_sewers"],
-	3: ["route_escape"],
-	4: ["route_lab"],
+	3: ["route_lab"],
+	4: ["route_escape"],
 }
 
 # 해당 stage에 등장 가능한 맵 풀을 만든다.

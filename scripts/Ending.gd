@@ -25,6 +25,9 @@ var hold_hint: Label
 var hold_progress_bar: ColorRect
 # 입력 락아웃 — 진입 후 1초 동안 ui_skip/jump 입력 무시. 점프 연타 사고 방지.
 var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
+# 안전판 — _process가 어떤 이유로든 typing을 시작 못 하면 2초 후 첫 줄을 강제 표시.
+# (사용자 보고: "결말 C 제목만 나오고 그 아래 비어있음" 추적용 fallback.)
+var stall_watchdog_t: float = 0.0
 
 func _ready() -> void:
 	ending_id = EndingResolver.resolve(GameState.trust_score, GameState.aggression_score)
@@ -37,6 +40,13 @@ func _ready() -> void:
 	# 라이브 lore 라인을 보여주고, 미방문 시엔 짧고 호기심 hint 라인.
 	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus
 	lines = EndingResolver.get_ending_lines(ending_id, explored_lore)
+	# 진단 — 사용자 보고 "결말 C 멘트 안 나옴" 추적용.
+	print("[Ending] ending_id=%s explored_lore=%s lines.size()=%d story_mode=%s" % [
+		ending_id, str(explored_lore), lines.size(), str(GameState.story_mode)])
+	if lines.is_empty():
+		push_warning("[Ending] lines is EMPTY for ending_id='%s' — fallback line 표시" % ending_id)
+		# 안전판 — 빈 결말이면 최소한 마무리 한 줄 보여주기.
+		lines = [{"speaker": "VEIL", "text": "임무 종료. 수고했어요, 요원.", "delay": 3.0}]
 	choice_box.visible = false
 	hint_label.text = ""
 	text_label.text = ""
@@ -147,6 +157,19 @@ func _color_for_speaker(sp: String) -> void:
 func _process(delta: float) -> void:
 	if input_lockout_t > 0.0:
 		input_lockout_t -= delta
+	# Stall watchdog — typing이 시작되지 않으면 2s 후 첫 줄 강제 표시.
+	if not sequence_complete and not waiting_choice and lines.size() > 0 and revealed == 0 and not typing_done:
+		stall_watchdog_t += delta
+		if stall_watchdog_t > 2.0:
+			push_warning("[Ending] stall watchdog 발동 — _process가 typing을 시작 못 함, 강제 표시")
+			var line: Dictionary = lines[line_idx] if line_idx < lines.size() else {}
+			var full: String = str(line.get("text", ""))
+			var prefix: String = "VEIL  —  " if str(line.get("speaker", "")) == "VEIL" else ""
+			text_label.text = prefix + full
+			revealed = full.length()
+			typing_done = true
+			silent_timer = 0.0
+			stall_watchdog_t = -999.0  # 한 번만
 	# 시퀀스 완료 후엔 SPACE 누른 시간 누적 → 3초 채우면 타이틀로.
 	if sequence_complete:
 		if Input.is_action_pressed("jump") or Input.is_action_pressed("ui_skip"):
