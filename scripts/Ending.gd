@@ -23,11 +23,8 @@ var silent_timer: float = 0.0
 var hold_progress: float = 0.0
 var hold_hint: Label
 var hold_progress_bar: ColorRect
-# 입력 무장 — 인게임에서 점프 누르고 있던 사람이 ending 들어오자마자 대사 전부
-# 스킵하던 버그 (사용자: "결말 C 멘트 안 나옴"). 진입 시 점프/A가 눌려있으면
-# 떨어질 때까지 + 최소 0.4s 동안 ui_skip/jump 입력을 무시.
-var input_armed: bool = false
-var arm_min_t: float = 0.4
+# 입력 락아웃 — 진입 후 1초 동안 ui_skip/jump 입력 무시. 점프 연타 사고 방지.
+var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
 
 func _ready() -> void:
 	ending_id = EndingResolver.resolve(GameState.trust_score, GameState.aggression_score)
@@ -148,11 +145,8 @@ func _color_for_speaker(sp: String) -> void:
 			text_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 
 func _process(delta: float) -> void:
-	# 입력 무장 카운트 — 최소 시간이 흐르고 점프/A/skip이 모두 떨어져야 입력 허용.
-	if not input_armed:
-		arm_min_t -= delta
-		if arm_min_t <= 0.0 and not (Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept") or Input.is_action_pressed("ui_skip")):
-			input_armed = true
+	if input_lockout_t > 0.0:
+		input_lockout_t -= delta
 	# 시퀀스 완료 후엔 SPACE 누른 시간 누적 → 3초 채우면 타이틀로.
 	if sequence_complete:
 		if Input.is_action_pressed("jump") or Input.is_action_pressed("ui_skip"):
@@ -215,7 +209,7 @@ func _show_choice() -> void:
 	b2.add_theme_font_size_override("font_size", 16)
 	b2.pressed.connect(_pick_choice.bind(false))
 	choice_box.add_child(b2)
-	GameState.arm_focus_after_release(self, b1, PackedStringArray(["ui_accept", "jump", "ui_skip"]))
+	GameState.arm_focus_with_delay(self, b1)
 
 func _pick_choice(asked: bool) -> void:
 	waiting_choice = false
@@ -239,8 +233,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	# 시퀀스 완료 후엔 SPACE 단발은 무시 — 길게 누르기로만 타이틀 이동 (process에서 처리).
 	if sequence_complete:
 		return
-	if not input_armed:
-		# 점프 누르고 있던 잔여 입력 — 무시. 떨어진 뒤에야 진짜 사용자 의지로 인정.
+	if input_lockout_t > 0.0:
+		# 진입 직후 1초 동안 입력 무시 — 점프 연타 사고 방지.
 		return
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
 		# 한 줄 즉시 완성

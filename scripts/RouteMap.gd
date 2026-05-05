@@ -76,8 +76,8 @@ func _build_node_buttons() -> void:
 		nodes_container.add_child(b)
 		buttons.append(b)
 	if buttons.size() > 0:
-		# 점프/A를 누르던 입력이 떨어질 때까지 포커스 보류 — 자동 활성화 방지.
-		GameState.arm_focus_after_release(self, buttons[0], PackedStringArray(["ui_accept", "jump", "ui_skip"]))
+		# 메뉴 등장 직후 1초 동안 포커스 보류 — 점프 연타로 자동 활성화되는 사고 방지.
+		GameState.arm_focus_with_delay(self, buttons[0])
 
 func _format_button_text(route: Dictionary, recommended: bool) -> String:
 	var route_name: String = route.get("name", "?")

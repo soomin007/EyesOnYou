@@ -40,7 +40,7 @@ static func build(_owner: Node, on_resume: Callable, on_settings: Callable, on_t
 	btn_title.pressed.connect(on_to_title)
 	v.add_child(btn_title)
 
-	GameState.arm_focus_after_release(layer, btn_resume, PackedStringArray(["ui_accept", "jump", "ui_skip"]))
+	GameState.arm_focus_with_delay(layer, btn_resume)
 	return layer
 
 static func _make_button(text: String) -> Button:

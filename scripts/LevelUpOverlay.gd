@@ -115,7 +115,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		btn.pressed.connect(func() -> void: _finish(layer, sid, on_picked))
 		hb.add_child(btn)
 	host.add_child(layer)
-	GameState.arm_focus_after_release(layer, hb.get_child(0) as Button, PackedStringArray(["ui_accept", "jump", "ui_skip"]))
+	GameState.arm_focus_with_delay(layer, hb.get_child(0) as Button)
 	return layer
 
 static func _finish(layer: CanvasLayer, picked_id: String, on_picked: Callable) -> void:

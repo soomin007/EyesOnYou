@@ -84,35 +84,20 @@ func _input(event: InputEvent) -> void:
 func is_pad_mode() -> bool:
 	return last_input_kind == "pad"
 
-# 입력 무장 — 인게임에서 점프/A를 누르고 있던 사람이 메뉴 등장 직후 첫 버튼을
-# 자동 활성화시키는 사고 방지. 액션이 모두 떨어진 뒤(또는 처음부터 떨어져 있으면
-# 즉시) first_btn에 grab_focus. 호스트(layer/scene)가 free되면 timer도 함께.
-func arm_focus_after_release(host: Node, first_btn: Button, actions: PackedStringArray) -> void:
+# 입력 락아웃 — 메뉴/오버레이 등장 직후 일정 시간 동안 첫 버튼 포커스를 보류.
+# 사용자 피드백: 점프 연타로 메뉴를 본의 아니게 활성화시키는 사고 방지.
+# release 대기보다 시간 기반(기본 1.0s)이 더 단순·예측 가능.
+const INPUT_LOCKOUT_DURATION: float = 1.0
+
+func arm_focus_with_delay(host: Node, first_btn: Button, delay: float = INPUT_LOCKOUT_DURATION) -> void:
 	if first_btn == null:
 		return
-	if not _any_action_pressed(actions):
-		first_btn.grab_focus.call_deferred()
-		return
-	var timer := Timer.new()
-	timer.wait_time = 0.05
-	timer.autostart = true
-	host.add_child(timer)
 	var btn_ref: WeakRef = weakref(first_btn)
-	timer.timeout.connect(func() -> void:
-		if _any_action_pressed(actions):
-			return
-		if is_instance_valid(timer):
-			timer.queue_free()
+	get_tree().create_timer(delay).timeout.connect(func() -> void:
 		var b := btn_ref.get_ref() as Button
 		if b != null and is_instance_valid(b):
 			b.grab_focus()
 	)
-
-func _any_action_pressed(actions: PackedStringArray) -> bool:
-	for a in actions:
-		if InputMap.has_action(a) and Input.is_action_pressed(a):
-			return true
-	return false
 
 # 짧은 헬퍼 — 입력 모드에 따라 둘 중 하나를 반환. UI 라벨에서 사용.
 func hint(kb_text: String, pad_text: String) -> String:
