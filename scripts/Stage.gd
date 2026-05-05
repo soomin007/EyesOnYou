@@ -28,6 +28,10 @@ var pending_levelup: bool = false
 var pause_overlay: CanvasLayer
 var settings_overlay: Control
 
+# route_escape — 카메라 진행률 따라 터널 → 도시 야경으로 cross-fade.
+var _escape_tunnel_group: Node = null
+var _escape_city_group: Node = null
+
 # 쿨다운 UI — 사격/대시/스킬/방어막 게이지
 var cd_attack_slot: Control
 var cd_dash_slot: Control
@@ -1253,34 +1257,134 @@ func _ambience_datacenter() -> void:
 		tw.tween_property(bar, "modulate:a", 0.35, 0.1)
 
 func _ambience_escape() -> void:
-	# 비상 탈출로 — 차분한 톤. 이전 초록 사각형 깜빡임은 XP orb과 헷갈려서 제거.
-	# 대신 천장 형광등 띠와 옅은 안개로 출구 가는 길의 분위기만.
+	# 비상 탈출로 — 카메라 진행률 따라 터널 → 도시 야경으로 cross-fade.
+	# 두 그룹을 만들어 _tick_escape_transition()이 modulate.a 조정.
+	# tunnel group(천장 형광등 + 안개 + 비네트) / city group(빌딩 실루엣 + 창문 빛 + 야경 톤).
+	_escape_tunnel_group = Node2D.new()
+	_escape_tunnel_group.name = "EscapeTunnel"
+	add_child(_escape_tunnel_group)
+	_escape_city_group = Node2D.new()
+	_escape_city_group.name = "EscapeCity"
+	_escape_city_group.modulate.a = 0.0
+	add_child(_escape_city_group)
+	_build_escape_tunnel(_escape_tunnel_group)
+	_build_escape_city(_escape_city_group)
+
+func _build_escape_tunnel(host: Node) -> void:
+	# 천장 형광등 + 옅은 안개 + 좌우 어두운 비네트. 터널 진입부 분위기.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 191 + 37
 	var x: float = 360.0
 	while x < STAGE_LENGTH:
-		# 천장 형광등 — 가로 막대(차가운 백색). 화살표나 점등 효과 없이 잔잔하게.
 		var lamp := ColorRect.new()
 		lamp.color = Color(0.78, 0.88, 0.95, 0.55)
 		lamp.size = Vector2(120.0, 4.0)
 		lamp.position = Vector2(x - 60.0, -180.0)
 		lamp.z_index = -6
-		add_child(lamp)
-		# 그 아래 빛이 새는 옅은 빛 띠
+		host.add_child(lamp)
 		var glow := ColorRect.new()
 		glow.color = Color(0.85, 0.92, 1.0, 0.08)
 		glow.size = Vector2(160.0, 60.0)
 		glow.position = Vector2(x - 80.0, -176.0)
 		glow.z_index = -7
-		add_child(glow)
+		host.add_child(glow)
 		x += rng.randf_range(420.0, 680.0)
 	var fog := ColorRect.new()
 	fog.color = Color(0.20, 0.30, 0.40, 0.06)
 	fog.position = Vector2(-200, GROUND_Y - 60.0)
 	fog.size = Vector2(STAGE_LENGTH + 400.0, 80.0)
 	fog.z_index = -3
-	add_child(fog)
-	# 표지 라벨은 사용자 피드백으로 제거 — 천장 형광등+안개 ambience로만 출구 분위기 표현.
+	host.add_child(fog)
+
+func _build_escape_city(host: Node) -> void:
+	# 도시 야경 — 멀리 청남색 하늘 + 빌딩 실루엣 + 창문 점광원.
+	# z_index 멀리(-20 ~ -13) 두어 lamp/fog 안쪽에 깔리고, 진행률로 modulate.a 페이드.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 211 + 43
+	# 하늘 — 짙은 청남색 그라데이션 효과(ColorRect 두 장 stack).
+	var sky_top := ColorRect.new()
+	sky_top.color = Color(0.05, 0.06, 0.12, 1.0)
+	sky_top.position = Vector2(-200, -240.0)
+	sky_top.size = Vector2(STAGE_LENGTH + 400.0, 280.0)
+	sky_top.z_index = -20
+	host.add_child(sky_top)
+	var sky_bottom := ColorRect.new()
+	sky_bottom.color = Color(0.10, 0.14, 0.22, 1.0)
+	sky_bottom.position = Vector2(-200, 40.0)
+	sky_bottom.size = Vector2(STAGE_LENGTH + 400.0, 200.0)
+	sky_bottom.z_index = -20
+	host.add_child(sky_bottom)
+	# 멀리 빌딩 실루엣 — 다양한 높이/너비 어두운 사각형.
+	var bx: float = 0.0
+	while bx < STAGE_LENGTH + 200.0:
+		var bw: float = rng.randf_range(60.0, 140.0)
+		var bh: float = rng.randf_range(180.0, 360.0)
+		var building := ColorRect.new()
+		building.color = Color(0.04, 0.05, 0.09, 1.0)
+		building.position = Vector2(bx, GROUND_Y - bh - 40.0)
+		building.size = Vector2(bw, bh + 80.0)
+		building.z_index = -16
+		host.add_child(building)
+		# 창문 빛 — 빌딩 안에 작은 점들. 일부 깜빡이도록.
+		var win_x: float = bx + 8.0
+		while win_x < bx + bw - 4.0:
+			var win_y: float = GROUND_Y - bh - 20.0
+			while win_y < GROUND_Y - 50.0:
+				if rng.randf() < 0.45:
+					var win := ColorRect.new()
+					var warm: bool = rng.randf() < 0.7
+					if warm:
+						win.color = Color(0.95, 0.85, 0.55, rng.randf_range(0.55, 0.95))
+					else:
+						win.color = Color(0.55, 0.78, 0.95, rng.randf_range(0.45, 0.85))
+					win.size = Vector2(2.0, 3.0)
+					win.position = Vector2(win_x, win_y)
+					win.z_index = -14
+					host.add_child(win)
+					if rng.randf() < 0.18:
+						var tw := win.create_tween()
+						tw.set_loops()
+						tw.tween_property(win, "modulate:a", 0.2, rng.randf_range(0.8, 2.2))
+						tw.tween_property(win, "modulate:a", 1.0, rng.randf_range(0.8, 2.2))
+				win_y += 8.0
+			win_x += 6.0
+		bx += bw + rng.randf_range(20.0, 80.0)
+	# 더 가까운 빌딩 한 줄 — 윤곽 살짝 진하게 + 깊이감.
+	var nx: float = 80.0
+	while nx < STAGE_LENGTH:
+		var nw: float = rng.randf_range(100.0, 200.0)
+		var nh: float = rng.randf_range(120.0, 240.0)
+		var near := ColorRect.new()
+		near.color = Color(0.02, 0.03, 0.06, 1.0)
+		near.position = Vector2(nx, GROUND_Y - nh - 20.0)
+		near.size = Vector2(nw, nh + 60.0)
+		near.z_index = -15
+		host.add_child(near)
+		nx += nw + rng.randf_range(140.0, 280.0)
+	# 별 — 띄엄띄엄 위쪽 영역에.
+	for i in 40:
+		var s := ColorRect.new()
+		s.color = Color(0.85, 0.92, 1.0, rng.randf_range(0.3, 0.7))
+		s.size = Vector2(2, 2)
+		s.position = Vector2(rng.randf_range(0.0, STAGE_LENGTH), rng.randf_range(-220.0, -80.0))
+		s.z_index = -19
+		host.add_child(s)
+
+func _tick_escape_transition(_delta: float) -> void:
+	# 카메라 x 진행률(0~1) 기준 두 그룹의 alpha를 cross-fade.
+	# 0.00~0.40 — 100% tunnel
+	# 0.40~0.75 — cross-fade (선형)
+	# 0.75~1.00 — 100% city
+	if _escape_tunnel_group == null or not is_instance_valid(_escape_tunnel_group):
+		return
+	if _escape_city_group == null or not is_instance_valid(_escape_city_group):
+		return
+	if camera == null:
+		return
+	var progress: float = clamp(camera.global_position.x / STAGE_LENGTH, 0.0, 1.0)
+	var t: float = clamp((progress - 0.40) / 0.35, 0.0, 1.0)
+	_escape_tunnel_group.modulate.a = 1.0 - t
+	_escape_city_group.modulate.a = t
 
 ## 환경 라벨/그래피티 — 맵에 떡밥 텍스트 한 줄 깔아 코드명을 다른 맵과 묶음.
 ## PROJECT VEIL / ARCTURUS / PALIMPSEST / SILO-7 등이 여러 맵에 반복 등장 → 호기심.
@@ -2427,6 +2531,7 @@ func _process(delta: float) -> void:
 	_tick_arcturus(delta)
 	_tick_boss(delta)
 	_tick_challenge(delta)
+	_tick_escape_transition(delta)
 
 # ─── 도전 방(블랙아웃 런) — world_layout §3.2 ───
 # 30s 타이머 + 1 hit 실패 + 좁은 시야. 실패해도 stage는 그냥 스킵 (페널티 없음).
