@@ -38,9 +38,10 @@ func _build_description_panel() -> void:
 	description_panel = PanelContainer.new()
 	description_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	description_panel.anchor_left = 0.55
-	description_panel.anchor_top = 0.36
+	# 사용자: 박스/텍스트 좀만 위로 — 0.36 → 0.20.
+	description_panel.anchor_top = 0.20
 	description_panel.anchor_right = 0.92
-	description_panel.anchor_bottom = 0.78
+	description_panel.anchor_bottom = 0.65
 	description_panel.visible = false
 	description_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sb := StyleBoxFlat.new()

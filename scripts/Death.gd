@@ -12,6 +12,8 @@ var full_text: String = ""
 var revealed: int = 0
 var t: float = 0.0
 var done: bool = false
+# 진입 직후 1초 입력 lockout — 사망 직전 점프 연타가 다음 화면을 자동 advance하는 사고 방지.
+var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
 
 func _ready() -> void:
 	title_label.text = "MISSION FAILED"
@@ -32,6 +34,8 @@ func _done_hint() -> String:
 		"[ A — 다시 시도 ]   [ B — 타이틀 ]")
 
 func _process(delta: float) -> void:
+	if input_lockout_t > 0.0:
+		input_lockout_t -= delta
 	if done:
 		return
 	t += delta
@@ -45,6 +49,8 @@ func _process(delta: float) -> void:
 		text_label.text = full_text.substr(0, revealed)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if input_lockout_t > 0.0:
+		return
 	if event.is_action_pressed("ui_cancel"):
 		GameState.reset()
 		get_tree().change_scene_to_file(SceneRouter.TITLE)

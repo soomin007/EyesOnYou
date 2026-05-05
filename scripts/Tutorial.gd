@@ -21,17 +21,17 @@ const JUMP_PLATFORM_3: Vector2 = Vector2(1500.0, 310.0)
 const JUMP_PICKUP: Vector2 = Vector2(1500.0, 270.0)
 
 # 공격 구간: 1마리 더미
-const ATTACK_DUMMY: Vector2 = Vector2(1850.0, GROUND_Y - 30.0)
+const ATTACK_DUMMY: Vector2 = Vector2(1850.0, GROUND_Y)
 
 # 레벨업 구간: 2마리 더미 → 오브 → 자동 레벨업
-const LEVELUP_DUMMY_A: Vector2 = Vector2(2350.0, GROUND_Y - 30.0)
-const LEVELUP_DUMMY_B: Vector2 = Vector2(2520.0, GROUND_Y - 30.0)
+const LEVELUP_DUMMY_A: Vector2 = Vector2(2350.0, GROUND_Y)
+const LEVELUP_DUMMY_B: Vector2 = Vector2(2520.0, GROUND_Y)
 const LEVELUP_TRIGGER_X: float = 2200.0
 
 # 스킬 구간: 레벨업에서 고른 스킬을 직접 시험. 더미 2마리 — 가까이 붙어 있어
 # AOE/관통 등 효과를 자연스럽게 체감. 패시브여도 그냥 사격으로 처리 가능.
-const SKILL_DUMMY_A: Vector2 = Vector2(2820.0, GROUND_Y - 30.0)
-const SKILL_DUMMY_B: Vector2 = Vector2(2920.0, GROUND_Y - 30.0)
+const SKILL_DUMMY_A: Vector2 = Vector2(2820.0, GROUND_Y)
+const SKILL_DUMMY_B: Vector2 = Vector2(2920.0, GROUND_Y)
 
 # 대시 구간: 가시 + 보라색 배리어
 # 가시 폭은 1회 대시 거리(720 × 0.18 ≈ 130px) 안에 들어가야 통과 가능

@@ -72,31 +72,31 @@ func _ready() -> void:
 	muzzle_flash.visible = false
 	add_child(muzzle_flash)
 	# barrier indicator — 머리 위 점, 충전 완료 시 푸른빛 펄스. 사용자
-	# 사용자: "머리 위 파란 네모"가 안 어울림 → 캐릭터 본체에 하늘색 아우라.
-	# Node2D 안에 동심원 3겹 (외곽 옅음 → 내곽 진함)으로 부드러운 발광 효과.
+	# 사용자: 동심원이 허벅지에 작게 그려짐 → 캐릭터 전체(28x56)를 감싸는
+	# 세로 긴 타원으로. 본체 가운데 y=-28 부근 + 상하 반경 32, 좌우 반경 22.
 	barrier_indicator = Node2D.new()
 	barrier_indicator.name = "BarrierAura"
-	barrier_indicator.position = Vector2(0.0, -10.0)  # 캐릭터 몸통 중심 근처
+	barrier_indicator.position = Vector2(0.0, -28.0)
 	barrier_indicator.modulate.a = 0.0
 	add_child(barrier_indicator)
 	var aura_outer := Polygon2D.new()
-	aura_outer.color = Color(0.55, 0.85, 1.0, 0.18)
-	aura_outer.polygon = _make_circle_polygon(34.0)
+	aura_outer.color = Color(0.55, 0.85, 1.0, 0.16)
+	aura_outer.polygon = _make_ellipse_polygon(28.0, 38.0)
 	barrier_indicator.add_child(aura_outer)
 	var aura_mid := Polygon2D.new()
-	aura_mid.color = Color(0.65, 0.92, 1.0, 0.28)
-	aura_mid.polygon = _make_circle_polygon(26.0)
+	aura_mid.color = Color(0.65, 0.92, 1.0, 0.24)
+	aura_mid.polygon = _make_ellipse_polygon(22.0, 32.0)
 	barrier_indicator.add_child(aura_mid)
 	var aura_inner := Polygon2D.new()
-	aura_inner.color = Color(0.85, 0.97, 1.0, 0.42)
-	aura_inner.polygon = _make_circle_polygon(18.0)
+	aura_inner.color = Color(0.85, 0.97, 1.0, 0.34)
+	aura_inner.polygon = _make_ellipse_polygon(16.0, 26.0)
 	barrier_indicator.add_child(aura_inner)
 
-func _make_circle_polygon(radius: float, n: int = 32) -> PackedVector2Array:
+func _make_ellipse_polygon(rx: float, ry: float, n: int = 36) -> PackedVector2Array:
 	var pts: PackedVector2Array = []
 	for i in n + 1:
 		var a: float = float(i) * TAU / float(n)
-		pts.append(Vector2(cos(a) * radius, sin(a) * radius))
+		pts.append(Vector2(cos(a) * rx, sin(a) * ry))
 	return pts
 
 func _physics_process(delta: float) -> void:

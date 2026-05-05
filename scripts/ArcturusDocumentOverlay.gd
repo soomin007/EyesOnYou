@@ -37,6 +37,12 @@ var t: float = 0.0
 var pause_after_line: float = 0.0
 var done: bool = false
 var paper_target_y: float = 0.0
+# 다 나온 뒤 사용자 조작 단계 — 위/아래로 스크롤 + 확인 키로 닫기.
+var reading_done: bool = false
+var read_lockout_t: float = 0.0
+const READ_LOCKOUT: float = 0.7
+const SCROLL_STEP: float = 200.0
+var close_hint_label: Label = null
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -59,6 +65,10 @@ func show_doc(input_lines: Array) -> void:
 	paper.size = Vector2(PAPER_WIDTH, _calc_paper_height())
 	paper.modulate.a = 0.0
 	layer.add_child(paper)
+	# paper_target_y 초기값을 시작 position과 동기화 — 안 그러면 0(기본값)으로
+	# lerp되어 페이드인 0.7s 동안 paper가 화면 위로 빠져나가서 제목이 안 보이고
+	# 본문(A 온보딩 등)이 먼저 등장하는 것처럼 보임 (사용자 보고).
+	paper_target_y = MARGIN_TOP
 	# 종이 본체 — 옅은 크림색
 	paper_visual = ColorRect.new()
 	paper_visual.color = Color(0.92, 0.90, 0.84, 0.96)
@@ -136,6 +146,12 @@ func _process(delta: float) -> void:
 		return
 	# 종이 부드럽게 스크롤 (현재 줄을 화면 중앙 ~40%에 위치)
 	paper.position.y = lerp(paper.position.y, paper_target_y, SCROLL_LERP)
+	# 다 읽고 나면 자동 진행 멈추고 사용자 스크롤 + 확인 키 대기.
+	if reading_done:
+		if read_lockout_t > 0.0:
+			read_lockout_t -= delta
+		_handle_user_scroll(delta)
+		return
 	if current_line >= lines_data.size():
 		return
 	if typing:
@@ -160,7 +176,7 @@ func _process(delta: float) -> void:
 	if pause_after_line <= 0.0:
 		current_line += 1
 		if current_line >= lines_data.size():
-			_start_finalize()
+			_enter_reading_done()
 		else:
 			revealed = 0
 			t = 0.0
@@ -185,8 +201,56 @@ func _update_scroll_target() -> void:
 		target = MARGIN_TOP
 	paper_target_y = target
 
+func _enter_reading_done() -> void:
+	# 자동 진행 종료. 사용자 스크롤 + 확인 키 대기.
+	if reading_done:
+		return
+	reading_done = true
+	read_lockout_t = READ_LOCKOUT
+	# 화면 하단 닫기 안내.
+	close_hint_label = Label.new()
+	close_hint_label.text = "[ ↑↓ 스크롤   확인 키로 닫기 ]"
+	close_hint_label.add_theme_font_size_override("font_size", 14)
+	close_hint_label.add_theme_color_override("font_color", Color(0.95, 0.92, 0.78))
+	close_hint_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	close_hint_label.add_theme_constant_override("outline_size", 4)
+	close_hint_label.position = Vector2(0, VIEWPORT_H - 40.0)
+	close_hint_label.size = Vector2(VIEWPORT_W, 28.0)
+	close_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	close_hint_label.modulate.a = 0.0
+	layer.add_child(close_hint_label)
+	var tw := close_hint_label.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_interval(READ_LOCKOUT)
+	tw.tween_property(close_hint_label, "modulate:a", 1.0, 0.4)
+
+func _handle_user_scroll(_delta: float) -> void:
+	# 위/아래 hold로 paper_target_y 조정 — 사용자가 다시 읽을 수 있게.
+	if Input.is_action_pressed("ui_up") or Input.is_action_pressed("move_left"):
+		paper_target_y += 12.0
+	elif Input.is_action_pressed("ui_down") or Input.is_action_pressed("move_right"):
+		paper_target_y -= 12.0
+	# 클램프 — 종이 윗단/아랫단을 적당히 보이게.
+	var min_y: float = -(paper.size.y - VIEWPORT_H + MARGIN_TOP * 2.0)
+	if min_y > MARGIN_TOP:
+		min_y = MARGIN_TOP
+	paper_target_y = clamp(paper_target_y, min_y, MARGIN_TOP)
+
 func _input(event: InputEvent) -> void:
 	if done:
+		return
+	# 다 읽힌 상태 — 위/아래는 _process polling, 확인 키는 lockout 후 닫기.
+	if reading_done:
+		if read_lockout_t > 0.0:
+			return
+		var close_pressed: bool = false
+		if event.is_action_pressed("jump") or event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack"):
+			close_pressed = true
+		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			close_pressed = true
+		if close_pressed:
+			get_viewport().set_input_as_handled()
+			_start_finalize()
 		return
 	var pressed: bool = false
 	if event.is_action_pressed("jump") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack"):
@@ -197,7 +261,7 @@ func _input(event: InputEvent) -> void:
 		return
 	get_viewport().set_input_as_handled()
 	if current_line >= lines_data.size():
-		_start_finalize()
+		_enter_reading_done()
 		return
 	if typing:
 		# 현재 줄 즉시 완성
@@ -210,7 +274,7 @@ func _input(event: InputEvent) -> void:
 		# 다음 줄로 스킵
 		current_line += 1
 		if current_line >= lines_data.size():
-			_start_finalize()
+			_enter_reading_done()
 			return
 		revealed = 0
 		t = 0.0

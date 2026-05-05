@@ -16,6 +16,9 @@ var line_idx: int = 0
 var revealed_chars: int = 0
 var type_t: float = 0.0
 var done: bool = false
+# 진입 직후 입력 lockout — 보스 클리어 후 LevelUp + Briefing이 점프 연타로 자동
+# 넘어가는 치명적 버그(사용자 보고) 차단.
+var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
 
 func _ready() -> void:
 	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.effective_total_stages()]
@@ -57,6 +60,8 @@ func _start_line() -> void:
 	text_label.text = ""
 
 func _process(delta: float) -> void:
+	if input_lockout_t > 0.0:
+		input_lockout_t -= delta
 	if done:
 		return
 	type_t += delta
@@ -71,6 +76,9 @@ func _process(delta: float) -> void:
 		text_label.text = full.substr(0, revealed_chars)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if input_lockout_t > 0.0:
+		# 보스 클리어 후 잔여 점프 연타 차단.
+		return
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
 		if not done:
 			# 한 줄 즉시 완성

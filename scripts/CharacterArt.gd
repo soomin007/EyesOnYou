@@ -366,41 +366,41 @@ static func build_shield(parent: Node2D) -> Node2D:
 	return root
 
 static func build_tutorial_dummy(parent: Node2D) -> Node2D:
-	# 사용자: "더미답게". 인간형 patrol 대신 사격 연습용 목제 더미 톤으로.
-	# 짚단 본체(연한 갈색) + 중심 빨간 과녁 + 짧은 받침대 + 흰 X자 봉합 자국.
+	# 사격 연습용 목제 더미. 좌표는 origin(0)이 ground level이라는 전제.
+	# 받침대 바닥 = y=0(지면), 본체는 받침대 위, 머리는 본체 위.
 	var root := Node2D.new()
 	parent.add_child(root)
-	# 받침대
+	# 받침대 — 받침대 윗면 y=-6, 바닥 y=0 (지면에 정확히 닿음).
 	_filled(root, Color(0.32, 0.28, 0.25), PackedVector2Array([
-		Vector2(-16, -2), Vector2(16, -2), Vector2(20, 4), Vector2(-20, 4),
+		Vector2(-18, -6), Vector2(18, -6), Vector2(20, 0), Vector2(-20, 0),
 	]))
-	# 본체 (사다리꼴, 짚단/모래주머니 톤)
+	# 본체 (사다리꼴, 짚단/모래주머니 톤). 바닥 y=-6 (받침대 윗면 위), 윗면 y=-44.
 	_filled(root, Color(0.72, 0.62, 0.45), PackedVector2Array([
-		Vector2(-12, -38), Vector2(12, -38), Vector2(15, -4), Vector2(-15, -4),
+		Vector2(-12, -44), Vector2(12, -44), Vector2(15, -6), Vector2(-15, -6),
 	]))
-	# 어깨 / 머리 영역
+	# 어깨 / 머리 영역 y=-58 ~ -44.
 	_filled(root, Color(0.65, 0.55, 0.40), PackedVector2Array([
-		Vector2(-10, -52), Vector2(10, -52), Vector2(12, -38), Vector2(-12, -38),
+		Vector2(-10, -58), Vector2(10, -58), Vector2(12, -44), Vector2(-12, -44),
 	]))
 	# 흰색 X 봉합 자국 (직물/짚단 느낌)
 	var stitch1 := Line2D.new()
-	stitch1.points = PackedVector2Array([Vector2(-8, -34), Vector2(8, -10)])
+	stitch1.points = PackedVector2Array([Vector2(-8, -38), Vector2(8, -14)])
 	stitch1.width = 1.2
 	stitch1.default_color = Color(0.92, 0.88, 0.78, 0.85)
 	root.add_child(stitch1)
 	var stitch2 := Line2D.new()
-	stitch2.points = PackedVector2Array([Vector2(8, -34), Vector2(-8, -10)])
+	stitch2.points = PackedVector2Array([Vector2(8, -38), Vector2(-8, -14)])
 	stitch2.width = 1.2
 	stitch2.default_color = Color(0.92, 0.88, 0.78, 0.85)
 	root.add_child(stitch2)
-	# 중앙 과녁 — 빨간 동심원 (가슴쪽)
+	# 중앙 과녁 — 가슴(본체 중심) y=-26 부근.
 	var bull_outer := Polygon2D.new()
 	bull_outer.color = Color(0.85, 0.30, 0.30, 0.85)
-	bull_outer.polygon = _circle_pts(7.0, 18, Vector2(0, -22))
+	bull_outer.polygon = _circle_pts(7.0, 18, Vector2(0, -26))
 	root.add_child(bull_outer)
 	var bull_inner := Polygon2D.new()
 	bull_inner.color = Color(0.95, 0.92, 0.45, 0.95)
-	bull_inner.polygon = _circle_pts(3.0, 14, Vector2(0, -22))
+	bull_inner.polygon = _circle_pts(3.0, 14, Vector2(0, -26))
 	root.add_child(bull_inner)
 	return root
 
