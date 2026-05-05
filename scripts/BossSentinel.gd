@@ -55,6 +55,8 @@ const SUMMON_PATROL_HP: int = 2
 
 var hp: int = HP_MAX
 var phase: int = 1
+# 스토리 모드 — _ready에서 GameState 보고 결정. true면 P2/P3 전환·잔당 소환 모두 생략.
+var story_simplified: bool = false
 var dir: int = 1  # 1=우, -1=좌
 var dead: bool = false
 var visual: Node2D
@@ -84,6 +86,9 @@ func _ready() -> void:
 	add_to_group("boss")
 	collision_layer = 4
 	collision_mask = 1
+	story_simplified = GameState.story_mode
+	if story_simplified:
+		hp = HP_MAX_STORY
 	# 콜리전 — 32×24 드론의 2배 (64×48). 상단 발판 위로 올라가지 않도록 mask=1만.
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
@@ -293,11 +298,12 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 		return
 	hp = max(0, hp - amount)
 	_flash_hit()
-	# 페이즈 전환 검사
-	if phase < 2 and hp <= HP_PHASE2:
-		_transition_to(2)
-	elif phase < 3 and hp <= HP_PHASE3:
-		_transition_to(3)
+	# 페이즈 전환 검사 — 스토리 모드는 P2/P3 모두 생략하고 자폭만 진입.
+	if not story_simplified:
+		if phase < 2 and hp <= HP_PHASE2:
+			_transition_to(2)
+		elif phase < 3 and hp <= HP_PHASE3:
+			_transition_to(3)
 	# 자폭 트리거 (HP 1 이하)
 	if not self_destruct_active and hp <= HP_SELF_DESTRUCT:
 		_arm_self_destruct()

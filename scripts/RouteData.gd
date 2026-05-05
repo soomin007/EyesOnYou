@@ -175,10 +175,22 @@ const ALL_ROUTES: Array = [
 	},
 ]
 
+# 스토리 모드 — 5스테이지 고정 스케줄. 드론·도전·??? 맵 모두 빼고 핵심 동선만.
+# Stage 4는 lab 보스 (final). 각 스테이지마다 1~2개의 단순한 선택지.
+const STORY_SCHEDULE: Dictionary = {
+	0: ["route_back_alley", "route_rooftops"],
+	1: ["route_subway", "route_watchtower"],
+	2: ["route_ward", "route_sewers"],
+	3: ["route_escape"],
+	4: ["route_lab"],
+}
+
 # 해당 stage에 등장 가능한 맵 풀을 만든다.
 # visited: 이미 선택한 route id 목록 (중복 방문 금지). 비워두면 필터 안 함.
 # guaranteed_in_stages가 있는 맵은 셔플 전 우선 포함된다.
 static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> Array:
+	if GameState.story_mode:
+		return _get_story_route_pool(stage_index)
 	var guaranteed: Array = []
 	var others: Array = []
 	for r in ALL_ROUTES:
@@ -205,6 +217,17 @@ static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> A
 		if pool.size() >= pick_count:
 			break
 	return pool
+
+static func _get_story_route_pool(stage_index: int) -> Array:
+	var ids: Array = STORY_SCHEDULE.get(stage_index, [])
+	var out: Array = []
+	for rid in ids:
+		for r in ALL_ROUTES:
+			var route: Dictionary = r
+			if route.get("id", "") == rid:
+				out.append(route)
+				break
+	return out
 
 static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 	# 명시적 available_stages가 있으면 우선 (디버그/특수 용도).

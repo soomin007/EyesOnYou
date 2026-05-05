@@ -13,7 +13,7 @@ var hovered_idx: int = 0
 var buttons: Array = []
 
 func _ready() -> void:
-	stage_label.text = "STAGE %d / %d  —  루트 선택" % [GameState.current_stage + 1, GameState.TOTAL_STAGES]
+	stage_label.text = "STAGE %d / %d  —  루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	subtitle_label.text = "● 위험도 / 보상   —   ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
 	recommended_id = RouteData.choose_veil_recommendation(pool)

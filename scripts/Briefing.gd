@@ -18,7 +18,7 @@ var type_t: float = 0.0
 var done: bool = false
 
 func _ready() -> void:
-	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.TOTAL_STAGES]
+	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	lines = _build_lines()
 	_start_line()
 

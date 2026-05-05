@@ -390,7 +390,7 @@ func _finish_hidden_archive() -> void:
 	GameState.save_settings()
 	# ??? 맵은 게임의 클라이맥스 — 잔여 stage 무시하고 무조건 ENDING으로 직행.
 	# (이전엔 stage 인덱스 기준으로 BRIEFING 갈 가능성 있어 엔딩에 도달하지 못함.)
-	GameState.current_stage = GameState.TOTAL_STAGES
+	GameState.current_stage = GameState.effective_total_stages()
 	get_tree().change_scene_to_file(SceneRouter.ENDING)
 
 # 첫 방문(hidden_visit_count == 0): 기존 VEIL-1 고정.
@@ -1641,7 +1641,7 @@ func _refresh_hud() -> void:
 	if GameState.is_high_reward():
 		marks.append("[고보상]")
 	var marker: String = ("  " + " ".join(marks)) if marks.size() > 0 else ""
-	stage_label.text = "STAGE %d/%d%s" % [GameState.current_stage + 1, GameState.TOTAL_STAGES, marker]
+	stage_label.text = "STAGE %d/%d%s" % [GameState.current_stage + 1, GameState.effective_total_stages(), marker]
 	# 맵 이름 — RouteData에서 lookup. 튜토리얼/플레이그라운드 등 route_id 없으면 빈 문자열.
 	var route_name: String = ""
 	for r in RouteData.ALL_ROUTES:
