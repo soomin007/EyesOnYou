@@ -32,6 +32,9 @@ const EXPLOSION_DAMAGE: int = 3
 var facing: int = 1
 var attack_cd: float = 0.0
 var jumps_used: int = 0
+# 환경 레버 — Area2D body_entered 시 LeverInteractable이 직접 세팅한다.
+# attack 입력이 사격 대신 레버 당기기로 흡수된다.
+var nearby_lever: Node = null
 var dash_timer: float = 0.0
 var dash_cd: float = 0.0
 var skill_cd: float = 0.0
@@ -179,8 +182,12 @@ func _handle_input(_delta: float) -> void:
 		_try_jump()
 	# 전투 입력 제한 (??? 맵에서) — 이동/점프만 허용
 	if not GameState.restrict_combat_input:
+		# 레버 영역 내에서는 attack 입력이 사격 대신 레버 당기기에만 쓰임 (꾹 누름 사격도 차단).
+		if nearby_lever != null and is_instance_valid(nearby_lever):
+			if Input.is_action_just_pressed("attack") and nearby_lever.has_method("try_pull"):
+				nearby_lever.try_pull()
 		# 공격 — 꾹 누르면 쿨다운마다 자동 연발. _try_attack이 cd 체크해 자체 무시.
-		if Input.is_action_pressed("attack"):
+		elif Input.is_action_pressed("attack"):
 			_try_attack()
 		if Input.is_action_just_pressed("dash"):
 			_try_dash()

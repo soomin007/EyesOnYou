@@ -58,6 +58,7 @@ func _ready() -> void:
 	_build_goal()
 	_setup_veil_mistakes()
 	_setup_challenge_mode()
+	_build_lever_puzzles()
 	if GameState.playground_active:
 		add_child(PlaygroundOverlay.new())
 
@@ -2305,6 +2306,169 @@ func _build_rewards() -> void:
 		_spawn_orb(pos, true)
 	for pos in rewards.get("hp_pickups", []):
 		_spawn_hp_orb(pos)
+
+# ─── 레버 퍼즐 — 비밀칸/이스터에그 시스템 ─────────────────────
+# 맵별로 레버를 배치하고 pulled 시그널에 효과를 연결한다.
+# 튜토리얼(back_alley·rooftops): 진행 루트와 분리된 비밀칸. 모르고 지나쳐도 클리어.
+# 레버 시각은 ARCTURUS 청색 hint glow로 발견 단서를 제공한다.
+
+func _build_lever_puzzles() -> void:
+	if GameState.playground_active:
+		return
+	match GameState.current_route_id:
+		"route_back_alley":
+			_build_back_alley_secret()
+		"route_rooftops":
+			_build_rooftops_secret()
+
+func _spawn_lever(pos: Vector2, lever_id: String) -> LeverInteractable:
+	var lever := LeverInteractable.new()
+	lever.lever_id = lever_id
+	add_child(lever)
+	lever.global_position = pos
+	return lever
+
+# 닫힌 해치 — 시각 패널. 레버 풀리면 fade out + 콜리전 disable.
+# 반환된 노드의 open()을 부르면 열림.
+func _spawn_closed_hatch(pos: Vector2, size: Vector2, hint_color: Color) -> Node2D:
+	var root := Node2D.new()
+	root.global_position = pos
+	add_child(root)
+	# 패널 본체 — 짙은 금속색
+	var panel := ColorRect.new()
+	panel.color = Color(0.18, 0.20, 0.24)
+	panel.position = -size * 0.5
+	panel.size = size
+	root.add_child(panel)
+	# 격자 라인 (잠긴 분위기)
+	var grid := ColorRect.new()
+	grid.color = Color(0.08, 0.09, 0.11, 0.85)
+	grid.position = Vector2(-size.x * 0.5, -1.5)
+	grid.size = Vector2(size.x, 3.0)
+	root.add_child(grid)
+	# 외곽선
+	var outline := Line2D.new()
+	outline.points = PackedVector2Array([
+		-size * 0.5,
+		Vector2(size.x * 0.5, -size.y * 0.5),
+		size * 0.5,
+		Vector2(-size.x * 0.5, size.y * 0.5),
+	])
+	outline.closed = true
+	outline.width = 1.2
+	outline.default_color = Color(hint_color.r, hint_color.g, hint_color.b, 0.55)
+	outline.antialiased = true
+	root.add_child(outline)
+	# 잠금 표시 — 작은 자물쇠 형태(사각형 위 호)
+	var lock := ColorRect.new()
+	lock.color = Color(hint_color.r, hint_color.g, hint_color.b, 0.75)
+	lock.position = Vector2(-3.0, -3.0)
+	lock.size = Vector2(6.0, 6.0)
+	root.add_child(lock)
+	root.set_meta("opened", false)
+	return root
+
+func _open_hatch(hatch: Node2D) -> void:
+	if hatch.get_meta("opened", false):
+		return
+	hatch.set_meta("opened", true)
+	var tw := hatch.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(hatch, "modulate:a", 0.0, 0.45)
+	tw.tween_property(hatch, "scale", Vector2(0.85, 0.20), 0.45)
+	tw.chain().tween_callback(hatch.queue_free)
+
+# 동적으로 떨어지는 발판 — 레버 풀리면 위에서 내려와 정착한다.
+# StaticBody이지만 이동시키기 위해 collision_shape를 직접 옮기는 방식 (one_way 유지).
+func _spawn_drop_platform(start_pos: Vector2, end_pos: Vector2, w: float) -> Node:
+	var body := StaticBody2D.new()
+	body.collision_layer = 1
+	body.add_to_group("platform")
+	add_child(body)
+	var col := CollisionShape2D.new()
+	col.one_way_collision = true
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(w, 16.0)
+	col.shape = shape
+	col.position = start_pos
+	body.add_child(col)
+	# 시각 — 일반 플랫폼보다 얇고 청록색 강조 (작동된 것 표시)
+	var visual := Node2D.new()
+	body.add_child(visual)
+	var px: float = -w * 0.5
+	var panel := ColorRect.new()
+	panel.color = Color(0.16, 0.20, 0.26)
+	panel.position = Vector2(px, -8.0)
+	panel.size = Vector2(w, 16.0)
+	visual.add_child(panel)
+	var top := ColorRect.new()
+	top.color = Color(0.55, 0.85, 0.95, 0.85)
+	top.position = Vector2(px + 2.0, -9.0)
+	top.size = Vector2(w - 4.0, 1.6)
+	visual.add_child(top)
+	visual.position = start_pos
+	# 시작은 invisible + 콜리전 비활성 — 풀리기 전에 플레이어가 보이지 않는 발판에 부딪히지 않게
+	body.modulate.a = 0.0
+	col.disabled = true
+	body.set_meta("col_node", col)
+	body.set_meta("visual_node", visual)
+	body.set_meta("end_pos", end_pos)
+	body.set_meta("descended", false)
+	return body
+
+func _descend_drop_platform(body: Node) -> void:
+	if body.get_meta("descended", false):
+		return
+	body.set_meta("descended", true)
+	var col: CollisionShape2D = body.get_meta("col_node")
+	var visual: Node2D = body.get_meta("visual_node")
+	var end_pos: Vector2 = body.get_meta("end_pos")
+	col.disabled = false
+	(body as CanvasItem).modulate.a = 1.0
+	var tw := body.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(col, "position", end_pos, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(visual, "position", end_pos, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+# ── back_alley 비밀칸 ─────────────────────────────────────────
+# 레버 위치: 1300, 588 (지면, 3·4번 발판 사이를 지나갈 때 보임)
+# 비밀 해치: 2300, 280 (6번 발판 위 천장 alcove)
+# 풀면 해치 fade + drop platform 강하 + XP orb 5개 spawn
+func _build_back_alley_secret() -> void:
+	var lever := _spawn_lever(Vector2(1300.0, 588.0), "back_alley_vent")
+	var hatch := _spawn_closed_hatch(Vector2(2300.0, 290.0), Vector2(80.0, 50.0), Color(0.55, 0.85, 0.95))
+	var drop_platform := _spawn_drop_platform(
+		Vector2(2150.0, 200.0), Vector2(2150.0, 380.0), 100.0
+	)
+	lever.pulled.connect(func(_id: String) -> void:
+		_open_hatch(hatch)
+		_descend_drop_platform(drop_platform)
+		# XP orb 5개 — 해치 안쪽에 흩어짐
+		var spots: Array = [
+			Vector2(2270.0, 250.0), Vector2(2310.0, 240.0), Vector2(2350.0, 250.0),
+			Vector2(2290.0, 290.0), Vector2(2330.0, 290.0),
+		]
+		for p in spots:
+			_spawn_orb(p, true)
+	)
+
+# ── rooftops 비밀칸 ───────────────────────────────────────────
+# 레버 위치: 200, 3060 (지면 시작 부근, 좌측 외벽 근처)
+# 닫힌 환기구: 200, 2820 (좌측 벽쪽 alcove)
+# 풀면 환기구 fade + 사다리 발판 2개 강하 + HP 1 + XP 2
+func _build_rooftops_secret() -> void:
+	var lever := _spawn_lever(Vector2(200.0, 3060.0), "rooftops_vent")
+	var hatch := _spawn_closed_hatch(Vector2(200.0, 2820.0), Vector2(70.0, 60.0), Color(0.55, 0.85, 0.95))
+	var step1 := _spawn_drop_platform(Vector2(180.0, 2700.0), Vector2(180.0, 2960.0), 90.0)
+	var step2 := _spawn_drop_platform(Vector2(140.0, 2620.0), Vector2(140.0, 2880.0), 90.0)
+	lever.pulled.connect(func(_id: String) -> void:
+		_open_hatch(hatch)
+		_descend_drop_platform(step1)
+		_descend_drop_platform(step2)
+		_spawn_hp_orb(Vector2(200.0, 2820.0))
+		_spawn_orb(Vector2(170.0, 2810.0), true)
+		_spawn_orb(Vector2(230.0, 2810.0), true)
+	)
 
 var _enemies_remaining: int = 0  # ARENA enemy_clear 카운트
 
