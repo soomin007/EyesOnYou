@@ -15,6 +15,7 @@
 | 텍스트 톤·"체험으로 체득" 원칙 | [`design/show_dont_tell.md`](design/show_dont_tell.md) |
 | 환경 퍼즐(레버·발판) 현황 | [`design/puzzle_ideas.md`](design/puzzle_ideas.md) |
 | 효과음 작업 목록 | [`design/sfx_list.md`](design/sfx_list.md) |
+| 효과음 ElevenLabs 프롬프트 | [`design/sfx_elevenlabs_prompts.md`](design/sfx_elevenlabs_prompts.md) |
 | 배포·Pages 셋업 | [`../DEPLOY.md`](../DEPLOY.md) |
 | 최근 작업 흐름 | [`../session_logs/`](../session_logs/) (날짜별) |
 
