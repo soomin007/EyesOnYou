@@ -102,13 +102,31 @@ func _make_ellipse_polygon(rx: float, ry: float, n: int = 36) -> PackedVector2Ar
 		pts.append(Vector2(cos(a) * rx, sin(a) * ry))
 	return pts
 
+var _was_on_floor: bool = true
+const _STEP_INTERVAL: float = 0.32
+var _step_t: float = 0.0
+
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
 	_handle_input(delta)
 	_apply_gravity(delta)
 	move_and_slide()
-	if is_on_floor():
+	var on_floor_now: bool = is_on_floor()
+	# 착지 SFX — 공중에서 지면으로 전이된 순간 한 번. 짧은 hop은 step과 비슷해서
+	# 발이 떴던 시간이 있을 때만(=jumps_used > 0 또는 _was_on_floor false) 의미.
+	if on_floor_now and not _was_on_floor:
+		SfxPlayer.play("player_land")
+	_was_on_floor = on_floor_now
+	if on_floor_now:
 		jumps_used = 0
+	# 발걸음 SFX — 지면에서 충분한 속도로 이동 중일 때만 일정 간격으로.
+	if on_floor_now and absf(velocity.x) > 30.0:
+		_step_t += delta
+		if _step_t >= _STEP_INTERVAL:
+			_step_t = 0.0
+			SfxPlayer.play("player_step")
+	else:
+		_step_t = _STEP_INTERVAL  # 다시 걷기 시작하면 즉시 첫 step 트리거되도록.
 	anim_t += delta
 	_update_visual()
 
@@ -219,9 +237,11 @@ func _try_jump() -> void:
 	if is_on_floor():
 		velocity.y = JUMP_VELOCITY
 		jumps_used = 1
+		SfxPlayer.play("player_jump")
 	elif jumps_used < max_jumps:
 		velocity.y = JUMP_VELOCITY * 0.92
 		jumps_used += 1
+		SfxPlayer.play("player_double_jump")
 
 # 현재 티어가 반영된 실제 max 쿨다운 (HUD 게이지 표시용).
 func get_attack_cd_max() -> float:
@@ -287,6 +307,7 @@ func _try_dash() -> void:
 		return
 	if dash_cd > 0.0:
 		return
+	SfxPlayer.play("player_dash")
 	# dash_boost: T1=쿨다운 -20%, T2=거리 +30%(_handle_input의 dash_timer 분기에서 적용),
 	#            T3=대시 후 0.3s 무적 추가.
 	var db_tier: int = GameState.get_skill_tier("dash_boost")
@@ -384,6 +405,7 @@ func take_hit(amount: int) -> void:
 		emit_signal("damaged")  # 화면 플래시·shake 트리거 (시각 피드백 유지)
 		return
 	GameState.damage_player(amount)
+	SfxPlayer.play("player_hurt")
 	# hp T2 = 피격 후 1s 무적 (기본 0.8보다 길게)
 	var hp_tier: int = GameState.get_skill_tier("hp")
 	invuln = 1.0 if hp_tier >= 2 else INVULN_AFTER_HIT
@@ -397,6 +419,7 @@ func take_hit(amount: int) -> void:
 		emit_signal("revived")
 		return
 	if GameState.is_dead():
+		SfxPlayer.play("player_death")
 		emit_signal("died")
 
 func _show_shield_flash() -> void:

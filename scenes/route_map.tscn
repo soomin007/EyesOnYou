@@ -43,9 +43,9 @@ alignment = 1
 
 [node name="VeilBox" type="PanelContainer" parent="."]
 anchor_left = 0.1
-anchor_top = 0.76
+anchor_top = 0.68
 anchor_right = 0.9
-anchor_bottom = 0.88
+anchor_bottom = 0.86
 
 [node name="Margin" type="MarginContainer" parent="VeilBox"]
 theme_override_constants/margin_left = 32

@@ -16,6 +16,7 @@
 | 환경 퍼즐(레버·발판) 현황 | [`design/puzzle_ideas.md`](design/puzzle_ideas.md) |
 | 효과음 작업 목록 | [`design/sfx_list.md`](design/sfx_list.md) |
 | 효과음 ElevenLabs 프롬프트 | [`design/sfx_elevenlabs_prompts.md`](design/sfx_elevenlabs_prompts.md) |
+| 효과음 trim/후처리 가이드 | [`design/sfx_trim_guide.md`](design/sfx_trim_guide.md) |
 | 배포·Pages 셋업 | [`../DEPLOY.md`](../DEPLOY.md) |
 | 최근 작업 흐름 | [`../session_logs/`](../session_logs/) (날짜별) |
 

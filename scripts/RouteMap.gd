@@ -42,9 +42,11 @@ func _build_risk_reward_panel() -> void:
 	risk_reward_panel = PanelContainer.new()
 	risk_reward_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	risk_reward_panel.anchor_left = 0.78
-	risk_reward_panel.anchor_top = 0.62
+	# VeilBox가 0.68로 위로 올라간 데 맞춰 risk 패널도 같이 이동 (사용자 보고:
+	# VeilBox와 Footer 키 안내 겹침 — VeilBox top 0.76→0.68 변경).
+	risk_reward_panel.anchor_top = 0.54
 	risk_reward_panel.anchor_right = 0.97
-	risk_reward_panel.anchor_bottom = 0.74
+	risk_reward_panel.anchor_bottom = 0.66
 	risk_reward_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.13, 0.10, 0.08, 0.88)
