@@ -55,10 +55,12 @@ func _ready() -> void:
 		sub_title_label.modulate.a = 0.3
 		_setup_ending_d_atmosphere()
 	_build_hold_hint()
+	# 보스전 BGM(Chrome Grit)에서 메인 테마(Glass Protocol)로 — 임무 종료 톤.
+	BgmPlayer.play("main_theme")
 	_start_line()
 
 func _hold_hint_text() -> String:
-	return GameState.hint("SPACE 길게 — 타이틀로 (3초)", "A 길게 — 타이틀로 (3초)")
+	return GameState.hint("SPACE 길게 — 크레딧 (3초)", "A 길게 — 크레딧 (3초)")
 
 func _on_input_kind_changed(_kind: String) -> void:
 	if hold_hint != null:
@@ -182,8 +184,8 @@ func _process(delta: float) -> void:
 			if hold_progress_bar != null:
 				hold_progress_bar.size.x = 260.0 * clamp(hold_progress / HOLD_TO_QUIT_DURATION, 0.0, 1.0)
 			if hold_progress >= HOLD_TO_QUIT_DURATION:
-				GameState.reset()
-				get_tree().change_scene_to_file(SceneRouter.TITLE)
+				# 결말 → 크레딧. 크레딧 종료 시 GameState.reset() 후 타이틀로.
+				get_tree().change_scene_to_file(SceneRouter.CREDITS)
 				return
 		else:
 			hold_progress = max(0.0, hold_progress - delta * 1.5)  # 손 떼면 빠르게 줄어듦

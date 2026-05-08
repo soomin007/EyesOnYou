@@ -10,6 +10,7 @@ const LEVELUP: String   = "res://scenes/levelup.tscn"
 const DEATH: String     = "res://scenes/death.tscn"
 const ENDING: String    = "res://scenes/ending.tscn"
 const SETTINGS: String  = "res://scenes/settings.tscn"
+const CREDITS: String   = "res://scenes/credits.tscn"
 
 static func go(tree: SceneTree, path: String) -> void:
 	tree.change_scene_to_file(path)

@@ -83,6 +83,8 @@ func _ready() -> void:
 	GameState.player_hp = GameState.player_max_hp
 	# 레벨업이 둘째 처치 직후 트리거되도록 XP 직전치까지 채워둠
 	GameState.player_xp = GameState.XP_PER_LEVEL - 2
+	# 튜토리얼은 메인 테마 그대로. (타이틀에서 이미 main_theme이면 같은 트랙이라 끊기지 않음)
+	BgmPlayer.play("main_theme")
 
 	_build_background()
 	_build_ground()
@@ -270,7 +272,8 @@ func _build_signs() -> void:
 	# 플랫폼 아래쪽에 표시 — JUMP_PICKUP(초록 마름모, y=270)이 위에 있어서
 	# 위쪽에 두면 겹침. 발판(y=310) 아래 y=400에 배치 → 위에서 내려보면 명확.
 	sign_drop = _make_keycap_sign(["S"], ["↓"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y + 90.0))
-	sign_attack = _make_keycap_sign(["J"], ["X", "RT"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
+	# 사격 표지는 키보드 모드에서 "마우스 좌클릭 + J" 두 입력이 동등함을 보여줘야 함 — 마우스 픽토그램 포함.
+	sign_attack = _make_attack_sign_dynamic(["J"], ["X", "RT"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
 	sign_dash = _make_keycap_sign(["SHIFT"], ["B"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
 	sign_levelup = Label.new()
@@ -317,12 +320,25 @@ func _make_keycap_sign(kb_keys: Array, pad_keys: Array, label_text: String, pos:
 	holder.add_child(l)
 	return holder
 
-func _populate_keycap_hbox(hbox: HBoxContainer, kb_keys: Array, pad_keys: Array) -> void:
+func _populate_keycap_hbox(hbox: HBoxContainer, kb_keys: Array, pad_keys: Array, with_mouse: bool = false) -> void:
 	for c in hbox.get_children():
 		c.queue_free()
-	var keys: Array = pad_keys if GameState.is_pad_mode() else kb_keys
+	var is_pad: bool = GameState.is_pad_mode()
+	# 사격 표지는 키보드 모드에서만 마우스 좌클릭 픽토그램 + 슬래시 + J 키캡 — 두 입력 동등함을
+	# 한 줄에 표현. 패드 모드에선 X / RT 두 패드 버튼만 표시.
+	if with_mouse and not is_pad:
+		hbox.add_child(_make_mouse_icon(true))
+		var slash := Label.new()
+		slash.text = "/"
+		slash.add_theme_font_size_override("font_size", 22)
+		slash.add_theme_color_override("font_color", Color(0.62, 0.68, 0.78))
+		slash.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hbox.add_child(slash)
+	var keys: Array = pad_keys if is_pad else kb_keys
 	for k in keys:
-		hbox.add_child(_make_keycap(str(k)))
+		# allow_pad_style=true는 패드 모드일 때만 — 키보드 "A"/"B" 같은 글자가 Xbox A/B 색으로
+		# 잘못 표시되던 버그(사용자 보고: AD 이동 표지 키보드 모드에서도 A가 초록 둥근 버튼) 차단.
+		hbox.add_child(_make_keycap(str(k), is_pad))
 
 func _refresh_keycap_signs() -> void:
 	for sign in [sign_move, sign_jump, sign_drop, sign_dash, sign_attack, sign_skill]:
@@ -333,7 +349,37 @@ func _refresh_keycap_signs() -> void:
 		var hbox: HBoxContainer = sign.get_meta("hbox") as HBoxContainer
 		if hbox == null:
 			continue
-		_populate_keycap_hbox(hbox, sign.get_meta("kb_keys", []), sign.get_meta("pad_keys", []))
+		var with_mouse: bool = bool(sign.get_meta("with_mouse", false))
+		_populate_keycap_hbox(hbox, sign.get_meta("kb_keys", []), sign.get_meta("pad_keys", []), with_mouse)
+
+# 사격 표지(input-mode 따라 동적). 키보드: 마우스 좌클릭 + / + J. 패드: X / RT 패드 버튼.
+# _populate_keycap_hbox(with_mouse=true)가 좌클릭 픽토그램을 자동으로 prepend 한다.
+func _make_attack_sign_dynamic(kb_keys: Array, pad_keys: Array, label_text: String, pos: Vector2) -> Control:
+	var holder := Control.new()
+	holder.position = pos - Vector2(160, 60)
+	holder.size = Vector2(320, 96)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(holder)
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 10)
+	hbox.position = Vector2(0, 0)
+	hbox.size = Vector2(320, 56)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	holder.add_child(hbox)
+	holder.set_meta("hbox", hbox)
+	holder.set_meta("kb_keys", kb_keys)
+	holder.set_meta("pad_keys", pad_keys)
+	holder.set_meta("with_mouse", true)
+	_populate_keycap_hbox(hbox, kb_keys, pad_keys, true)
+	var l := Label.new()
+	l.text = label_text
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", Color(0.62, 0.68, 0.78))
+	l.position = Vector2(0, 64)
+	l.size = Vector2(320, 24)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	holder.add_child(l)
+	return holder
 
 # 사격 표지 — 마우스 그림(좌버튼만 빨강) + 보조 키 J 키캡 + 한 단어.
 func _make_attack_sign(pos: Vector2) -> Control:
@@ -412,9 +458,10 @@ func _make_mouse_icon(highlight_left: bool) -> Control:
 	holder.add_child(wheel)
 	return holder
 
-func _make_keycap(text: String) -> Control:
+func _make_keycap(text: String, allow_pad_style: bool = true) -> Control:
 	# Xbox 패드 키 (A/B/X/Y/LB/RB/D-Pad/START)는 동그란 컬러 버튼으로.
-	var pad_col: Variant = _xbox_button_color(text)
+	# allow_pad_style=false면 (키보드 모드의 "A"/"B" 같은 글자) Xbox 색을 적용하지 않음.
+	var pad_col: Variant = _xbox_button_color(text) if allow_pad_style else null
 	if pad_col != null:
 		return _make_xbox_button(text, pad_col)
 	var box := PanelContainer.new()

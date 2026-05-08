@@ -96,6 +96,7 @@ func _ready() -> void:
 
 	tabs.add_child(_build_keybind_tab())
 	tabs.add_child(_build_av_tab())
+	tabs.add_child(_build_credits_tab())
 	tabs.add_child(_build_debug_tab())
 
 	var divider2 := ColorRect.new()
@@ -278,11 +279,59 @@ func _build_av_tab() -> Control:
 	section_b.add_child(_make_volume_row("마스터 볼륨", "master"))
 	section_b.add_child(_make_volume_row("효과음 볼륨", "sfx"))
 	var note := Label.new()
-	note.text = "사운드는 추후 추가 예정 — 슬라이더는 미리 노출."
+	note.text = "마스터는 BGM에 즉시 반영. 효과음 슬라이더는 미리 노출(추후 SFX 연결)."
 	note.add_theme_font_size_override("font_size", 12)
 	note.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
 	section_b.add_child(note)
 	return outer
+
+# 크레딧 탭 — 패널에서 직접 띄우는 오버레이. Settings를 닫지 않고 그 위에 겹쳐 띄움.
+func _build_credits_tab() -> Control:
+	var outer := MarginContainer.new()
+	outer.name = "크레딧"
+	outer.add_theme_constant_override("margin_left", 16)
+	outer.add_theme_constant_override("margin_right", 16)
+	outer.add_theme_constant_override("margin_top", 18)
+	outer.add_theme_constant_override("margin_bottom", 18)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 14)
+	outer.add_child(v)
+	v.add_child(_make_section_header("크레딧"))
+	var note := Label.new()
+	note.text = "제작·음악·폰트 등 이 게임에 들어간 것들. 게임 마지막에도 자동으로 한 번 흐름.\n오버레이로 띄워서 ESC로 즉시 닫을 수 있어요."
+	note.add_theme_font_size_override("font_size", 13)
+	note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(note)
+	var open_btn := Button.new()
+	open_btn.text = "크레딧 보기"
+	open_btn.custom_minimum_size = Vector2(220, 40)
+	open_btn.add_theme_font_size_override("font_size", 14)
+	open_btn.pressed.connect(_on_credits_open_pressed)
+	v.add_child(open_btn)
+	return outer
+
+var credits_overlay: Control = null
+
+func _on_credits_open_pressed() -> void:
+	if credits_overlay != null:
+		return
+	var packed := load(SceneRouter.CREDITS) as PackedScene
+	if packed == null:
+		return
+	credits_overlay = packed.instantiate()
+	credits_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	# overlay 모드 진입 — 닫혀도 scene 전환 없이 emit_signal("closed")만.
+	if credits_overlay.has_method("open_as_overlay"):
+		credits_overlay.open_as_overlay()
+	add_child(credits_overlay)
+	if credits_overlay.has_signal("closed"):
+		credits_overlay.closed.connect(_on_credits_closed)
+
+func _on_credits_closed() -> void:
+	if credits_overlay != null:
+		credits_overlay.queue_free()
+		credits_overlay = null
 
 func _make_section_header(text: String) -> Label:
 	var l := Label.new()
@@ -339,6 +388,8 @@ func _make_secondary_button(text: String) -> Button:
 func _on_volume_changed(value: float, kind: String) -> void:
 	if kind == "master":
 		GameState.master_volume = value
+		# BGM autoload — 마스터 볼륨 즉시 반영(다음 트랙 전환까지 기다리지 않게).
+		BgmPlayer.refresh_volume()
 	else:
 		GameState.sfx_volume = value
 	GameState.save_settings()

@@ -42,6 +42,9 @@ const CD_BAR_WIDTH: float = 90.0
 func _ready() -> void:
 	add_to_group("stage")
 	GameState.player_hp = GameState.player_max_hp
+	# BGM — 맵별 트랙 선택. ??? 방은 Gravity Static, 보스 맵은 Chrome Grit,
+	# 그 외에는 stage_index 기반으로 Cold Gear(초중반)/Cold Wire(중후반) 분기.
+	_apply_bgm_for_current_route()
 	# ??? 맵은 적/가시/골이 없는 정적 시퀀스 맵 (별도 로직)
 	if GameState.current_route_id == "route_hidden":
 		_build_hidden_archive()
@@ -61,6 +64,28 @@ func _ready() -> void:
 	_build_lever_puzzles()
 	if GameState.playground_active:
 		add_child(PlaygroundOverlay.new())
+
+# 맵 → BGM 트랙 매핑.
+# BPM 점진 증가 (Glass→Cold Gear→Cold Wire→Chrome Grit) 순서를 stage 진행과 매칭.
+# 외곽·외벽·지하 통로(초중반): early. 시설 내부(중후반): mid_late. 보스: boss. ???: hidden.
+const _ROUTE_TRACKS: Dictionary = {
+	"route_back_alley": "early",
+	"route_rooftops":   "early",
+	"route_subway":     "early",
+	"route_watchtower": "early",
+	"route_sewers":     "early",
+	"route_cooling":    "mid_late",
+	"route_ward":       "mid_late",
+	"route_datacenter": "mid_late",
+	"route_blackout":   "mid_late",
+	"route_escape":     "mid_late",
+	"route_lab":        "boss",
+	"route_hidden":     "hidden",
+}
+
+func _apply_bgm_for_current_route() -> void:
+	var track: String = str(_ROUTE_TRACKS.get(GameState.current_route_id, "early"))
+	BgmPlayer.play(track)
 
 func _load_world_meta() -> void:
 	# MapData를 먼저 한 번 lookup해서 세계 차원·골·카메라 모드 결정.
@@ -642,6 +667,11 @@ func _on_locked_door_left(body: Node) -> void:
 
 var _subtitle_queue: Array = []
 var _subtitle_active: bool = false
+# 현재 화면에 떠있는 자막 layer/timer 참조 — 큐 클리어 시 이 두 개도 같이 정리해야
+# paused 동안 멈춰있던 fade-out tween이 풀린 뒤 다음 자막과 겹치지 않는다.
+# (사용자 보고: 이스터에그 문서 닫고 나서 직전 자막이 outro 자막 위에 살아남음)
+var _subtitle_active_layer: CanvasLayer = null
+var _subtitle_drain_timer: SceneTreeTimer = null
 
 func _show_veil_subtitle(message: String, duration: float) -> void:
 	# 자막 큐 — 여러 줄을 빠르게 호출해도 겹치지 않고 차례로 표시.
@@ -649,9 +679,25 @@ func _show_veil_subtitle(message: String, duration: float) -> void:
 	if not _subtitle_active:
 		_drain_subtitles()
 
+# 큐 + 현재 표시 중인 자막을 모두 폐기. arcturus 문서 진입처럼 paused 시작 전
+# 화면을 깨끗이 비워야 하는 상황에서 호출. 자막 layer를 즉시 free해 paused 해제 후
+# 잔재 fade-out이 새 자막과 겹치는 것을 차단.
+func _purge_subtitles() -> void:
+	_subtitle_queue.clear()
+	_subtitle_active = false
+	if _subtitle_active_layer != null and is_instance_valid(_subtitle_active_layer):
+		_subtitle_active_layer.queue_free()
+	_subtitle_active_layer = null
+	# 진행 중이던 _drain timer가 살아 있다면 _drain_subtitles 콜백을 끊는다.
+	if _subtitle_drain_timer != null and is_instance_valid(_subtitle_drain_timer):
+		if _subtitle_drain_timer.timeout.is_connected(_drain_subtitles):
+			_subtitle_drain_timer.timeout.disconnect(_drain_subtitles)
+	_subtitle_drain_timer = null
+
 func _drain_subtitles() -> void:
 	if _subtitle_queue.is_empty():
 		_subtitle_active = false
+		_subtitle_drain_timer = null
 		return
 	_subtitle_active = true
 	var item: Dictionary = _subtitle_queue.pop_front()
@@ -659,7 +705,8 @@ func _drain_subtitles() -> void:
 	_display_veil_subtitle(str(item.get("message", "")), dur)
 	# fade in 0.3 + show + fade out 0.5 + small gap 0.2
 	var total: float = 0.3 + dur + 0.5 + 0.2
-	get_tree().create_timer(total).timeout.connect(_drain_subtitles)
+	_subtitle_drain_timer = get_tree().create_timer(total)
+	_subtitle_drain_timer.timeout.connect(_drain_subtitles)
 
 func _display_veil_subtitle(message: String, duration: float) -> void:
 	# 보스/wide 화면에서 자막이 좌측에 치우쳐 보이던 문제 — 절대 좌표 (140, 110)
@@ -667,6 +714,9 @@ func _display_veil_subtitle(message: String, duration: float) -> void:
 	var msg_layer := CanvasLayer.new()
 	msg_layer.layer = 20
 	add_child(msg_layer)
+	# _purge_subtitles가 즉시 free 시킬 수 있도록 참조 보관. 다음 자막이 시작되거나
+	# 자기 자신의 fade-out tween이 끝나면 자연스럽게 null로 돌아감.
+	_subtitle_active_layer = msg_layer
 	var holder := Control.new()
 	holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	holder.offset_top = 96.0
@@ -689,7 +739,13 @@ func _display_veil_subtitle(message: String, duration: float) -> void:
 	tw.tween_property(l, "modulate:a", 1.0, 0.3)
 	tw.tween_interval(duration)
 	tw.tween_property(l, "modulate:a", 0.0, 0.5)
-	tw.tween_callback(msg_layer.queue_free)
+	tw.tween_callback(func() -> void:
+		if is_instance_valid(msg_layer):
+			msg_layer.queue_free()
+		# 자기가 active_layer였다면 참조 정리. (_purge가 먼저 다른 layer로 바꿔놨으면 건드리지 않음)
+		if _subtitle_active_layer == msg_layer:
+			_subtitle_active_layer = null
+	)
 
 # 보스전 전용 강조 자막 — 일반 _show_veil_subtitle보다 큰 폰트 + 어두운 박스 배경 +
 # 색상으로 위험도 차등화. 화면 중앙 위쪽에 배치해 폭발 효과/총알 위에서도 인지 가능.
@@ -2803,10 +2859,10 @@ func _update_arcturus_indicator() -> void:
 # 5초 hold 완료 — ArcturusDocumentOverlay (풀스크린 문서 + 카메라 스크롤 + 시간 정지).
 func _start_arcturus_sequence() -> void:
 	GameState.restrict_combat_input = true
-	# 큐에 남아 있던 ward foreshadow 자막 정리 — paused 동안 timer가 멈췄다가
-	# 풀린 뒤 누적 자막이 한꺼번에 흐르며 outro와 겹치는 현상 차단.
-	_subtitle_queue.clear()
-	_subtitle_active = false
+	# 큐 + 현재 표시 중인 자막 layer까지 모두 폐기. 단순 _subtitle_queue.clear()는
+	# 이미 화면에 fade-in/out 진행 중이던 Label은 못 잡아서, paused가 풀린 뒤에도
+	# zombie tween이 outro 자막과 함께 떠 있던 문제(사용자 보고)가 있었다.
+	_purge_subtitles()
 	var doc := ArcturusDocumentOverlay.new()
 	doc.name = "ArcturusDoc"
 	add_child(doc)

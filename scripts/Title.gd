@@ -30,6 +30,8 @@ func _ready() -> void:
 	GameState.seen_enemies.clear()
 	GameState.save_settings()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
+	# 메인 테마(Glass Protocol) — 타이틀/모드 선택/튜토리얼까지 동일 트랙 유지.
+	BgmPlayer.play("main_theme")
 	_build_description_panel()
 	_set_state(STATE_MAIN)
 
