@@ -18,7 +18,7 @@ const VOLUME_OFFSETS: Dictionary = {
 	"player_jump":        -10.0,
 	"player_step":        6.0,
 	"player_land":        5.0,
-	"player_dash":        -4.0,
+	"player_dash":        -8.0,
 	"player_hurt":        -0.0,
 	"player_death":       0.0,
 }

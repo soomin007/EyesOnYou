@@ -494,7 +494,15 @@ goal:         (2880, 540)
 camera:       가로 follow
 
 특이사항: 의도된 단순함. 숨 고르기. 발판 간격 넓어서 빠른 이동.
-          ambience: 경광등 빠른 깜빡임, 비상 탈출 분위기.
+          ambience(2026-05-09 재설계):
+            - 콘크리트 터널 walls(z=-10)이 x = -200 ~ 1600 까지만 깔려 있음.
+              그 너머는 wall 없음 → 도시 야경 자연 노출. cross-fade 폐지.
+            - 도시 야경 3-layer parallax(scroll_factor):
+                far(0.15)  = 하늘 + 별 + 먼 빌딩 실루엣
+                mid(0.45)  = 메인 빌딩 + 창문 점광원
+                near(0.80) = 가까운 키 큰 빌딩
+            - layer.position.x = camera.get_screen_center_position().x * (1 - sf).
+              limit clamped 좌표 사용 — 맵 끝에서 카메라 멈추면 parallax도 멈춤.
 
 platform layout:
   [x=400,  y=520, w=240]

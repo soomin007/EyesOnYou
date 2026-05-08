@@ -375,7 +375,7 @@ VEIL: 응답 없음.
 
 ```
 res://
-├── project.godot              # AutoLoad: GameState · BgmPlayer, physics_interpolation 활성
+├── project.godot              # AutoLoad: GameState · BgmPlayer · SfxPlayer, physics_interpolation 활성
 ├── README.md / PRD.md / DEPLOY.md / CLAUDE.md
 ├── docs/SPEC.md / docs/STORY.md / docs/design/{growth_system, world_layout, show_dont_tell}.md
 ├── scenes/
@@ -391,7 +391,8 @@ res://
 │   └── settings.tscn          # 키바인드 / 사운드 / 크레딧 / 디버그(연습장)
 ├── scripts/
 │   ├── GameState.gd           # AutoLoad — 진행도/점수/스킬/루트/도감 영속
-│   ├── BgmPlayer.gd           # AutoLoad — 5트랙 BGM crossfade
+│   ├── BgmPlayer.gd           # AutoLoad — 9트랙 BGM crossfade + ducking
+│   ├── SfxPlayer.gd           # AutoLoad — assets/sfx/<id>(N).{mp3|ogg|wav} 자동 등록 + 풀링 재생
 │   ├── Credits.gd             # 크레딧 화면 (scene + overlay 두 모드)
 │   ├── LeverInteractable.gd   # 레버 (Area2D + attack 키 흡수 + pulled 시그널)
 │   ├── PressurePlate.gd       # 발판 (Area2D + require_armed + stepped 시그널)
