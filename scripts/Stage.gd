@@ -559,14 +559,14 @@ func _build_world() -> void:
 
 var locked_door_triggered: bool = false
 
-# ─── 이스터에그(ARCTURUS 아카이브) 5초 hold 트리거 상태 ───
+# ─── 이스터에그(ARCTURUS 아카이브) 트리거 상태 ───
 # world_layout §3.1. 격리 병동에서만 등장.
-# idle: 대기 / holding: 영역에 머무는 중 / sequencing: 시퀀스 재생 중 / done: 완료(재트리거 안 됨)
+# 트리거: 멀리 떨어진 레버를 당기고 잠긴 문 앞 발판을 밟으면 시퀀스 시작.
+# (이전: 5초 hold. 사용자 피드백으로 레버+발판 조합으로 교체 — 능동적 행동 두 단계.)
+# idle: 대기 / sequencing: 시퀀스 재생 중 / done: 완료(재트리거 안 됨)
 var arcturus_state: String = "idle"
-var arcturus_hold_t: float = 0.0
-var arcturus_hold_target: float = 5.0
-var arcturus_player_inside: bool = false
-var arcturus_indicator: ColorRect = null  # 문 위 진행 게이지
+var arcturus_lever: LeverInteractable = null
+var arcturus_plate: PressurePlate = null
 
 func _build_locked_door() -> void:
 	# 격리 병동에서만 등장 — ??? 맵(stage 5/6)에 대한 시각적 복선 + 이스터에그 트리거.
@@ -576,7 +576,6 @@ func _build_locked_door() -> void:
 	# 이스터에그 좌표는 MapData에서 (없으면 폴백 STAGE_LENGTH*0.55)
 	var egg: Dictionary = _map_data.get("easter_egg", {})
 	var x: float = float(egg.get("trigger_x", STAGE_LENGTH * 0.55))
-	arcturus_hold_target = float(egg.get("hold_seconds", 5.0))
 	# 외곽 프레임 — 더 큼
 	var frame := ColorRect.new()
 	frame.color = Color(0.18, 0.18, 0.22)
@@ -620,28 +619,38 @@ func _build_locked_door() -> void:
 	label.z_index = 3
 	add_child(label)
 
-	var area := Area2D.new()
-	area.name = "LockedDoor"
-	area.collision_layer = 0
-	area.collision_mask = 2
-	area.position = Vector2(x, GROUND_Y - 50.0)
-	add_child(area)
+	# 첫 접근 VEIL 라인 트리거 영역 — 문 앞에 한 번 다가가면 한 줄 발화.
+	var approach := Area2D.new()
+	approach.name = "LockedDoorApproach"
+	approach.collision_layer = 0
+	approach.collision_mask = 2
+	approach.position = Vector2(x, GROUND_Y - 50.0)
+	add_child(approach)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(180.0, 160.0)
 	col.shape = shape
-	area.add_child(col)
-	area.body_entered.connect(_on_locked_door_approached)
-	area.body_exited.connect(_on_locked_door_left)
+	approach.add_child(col)
+	approach.body_entered.connect(_on_locked_door_approached)
 
-	# 5초 hold 진행도 게이지 — 문 위에 가는 가로 바. holding 상태에서만 가시화.
-	# 사용자 피드백: 이스터에그는 매번 다시 볼 수 있게 — visited 게이트 제거.
-	arcturus_indicator = ColorRect.new()
-	arcturus_indicator.color = Color(0.95, 0.78, 0.45, 0.0)
-	arcturus_indicator.position = Vector2(x - 30.0, GROUND_Y - 168.0)
-	arcturus_indicator.size = Vector2(0.0, 3.0)
-	arcturus_indicator.z_index = 4
-	add_child(arcturus_indicator)
+	# 잠긴 문 앞 발판 — 처음엔 비활성(회색 hint). 멀리 떨어진 레버를 당기면 청색으로 활성.
+	# 발판을 밟으면 ARCTURUS 시퀀스 시작.
+	arcturus_plate = PressurePlate.new()
+	arcturus_plate.plate_id = "ward_arcturus"
+	arcturus_plate.require_armed = true
+	arcturus_plate.plate_width = 60.0
+	arcturus_plate.plate_thickness = 8.0
+	arcturus_plate.hint_color = Color(0.55, 0.85, 0.95)
+	add_child(arcturus_plate)
+	arcturus_plate.global_position = Vector2(x, GROUND_Y - 4.0)
+	arcturus_plate.stepped.connect(_on_arcturus_plate_stepped)
+
+	# 멀리 떨어진 상층 플랫폼 위 레버 — 맵 끝쪽 (x=2900) 위에 배치.
+	# 플레이어는 잠긴 문을 본 뒤 계속 진행, 상층 발판을 타고 끝까지 가서 레버를 발견,
+	# 당기고 다시 돌아와 발판을 밟는 두 단계 능동 행동.
+	arcturus_lever = _spawn_lever(Vector2(2900.0, 388.0), "ward_unlock")
+	arcturus_lever.hint_color = Color(0.55, 0.85, 0.95)
+	arcturus_lever.pulled.connect(_on_arcturus_lever_pulled)
 
 func _on_locked_door_approached(body: Node) -> void:
 	if not (body is CharacterBody2D and body == player):
@@ -650,23 +659,18 @@ func _on_locked_door_approached(body: Node) -> void:
 	if not locked_door_triggered:
 		locked_door_triggered = true
 		_show_veil_subtitle("그쪽은 임무 범위 밖이에요.\n그 문, 도면에는 없어요.", 3.5)
-	# 이미 시퀀스 한 번 트리거됐으면(arcturus_state != idle) 같은 stage 내에선 재진입 X.
-	# visited_arcturus 영구 게이트는 제거 — 매 stage 진입마다 다시 볼 수 있게.
+
+func _on_arcturus_lever_pulled(_id: String) -> void:
+	# 레버를 당겼다 — 발판 활성. 이미 발판 위에 서 있으면 PressurePlate.arm()이 즉시 step.
+	if arcturus_plate != null and is_instance_valid(arcturus_plate):
+		arcturus_plate.arm()
+	_show_veil_subtitle("뭔가 풀렸어요. 잠긴 문 앞 발판 위로.", 3.0)
+
+func _on_arcturus_plate_stepped(_id: String) -> void:
 	if arcturus_state != "idle":
 		return
-	arcturus_state = "holding"
-	arcturus_hold_t = 0.0
-	arcturus_player_inside = true
-
-func _on_locked_door_left(body: Node) -> void:
-	if not (body is CharacterBody2D and body == player):
-		return
-	arcturus_player_inside = false
-	if arcturus_state == "holding":
-		# 영역 벗어나면 게이지 리셋 (5초를 한 번에 채워야 함).
-		arcturus_state = "idle"
-		arcturus_hold_t = 0.0
-		_update_arcturus_indicator()
+	arcturus_state = "sequencing"
+	_start_arcturus_sequence()
 
 # 자막 — 스택형. 이미 떠 있는 자막이 있으면 한 줄 아래에 새 대사가 추가된다.
 # 각 자막은 독립적인 fade-in/hold/fade-out tween을 가지며 수명이 끝나면 슬롯 비움.
@@ -1090,6 +1094,48 @@ func _on_spike_touched(body: Node, zone: Area2D) -> void:
 		if is_instance_valid(zone):
 			d = int(zone.get_meta("damage", 1))
 		body.take_hit(d)
+
+# 토글 가능한 가시 — 시각 + 콜리전을 그룹으로 묶어 한 번에 on/off.
+# datacenter 측면 레버에서 메인 통로 가시를 끄는 데 사용.
+# 반환된 Node2D를 _set_spike_group_active(node, false)로 끄면 모든 시각이 어두워지고
+# 콜리전이 disabled 된다.
+func _spawn_toggleable_spike(center_x: float, w: float, base_y: float, dmg: int = 1) -> Node2D:
+	var group := Node2D.new()
+	group.name = "ToggleableSpike"
+	add_child(group)
+	# 마커 위치 — 시각/zone은 절대좌표로 add_child하던 _build_spike와 다르게 group 자식으로 이전.
+	var children_before: Array = get_children()
+	_build_spike(center_x, w, base_y, dmg)
+	# _build_spike가 self에 자식으로 붙인 노드들을 group으로 reparent.
+	# 마지막 N개 (children_before 이후)가 새로 추가된 것들.
+	var current: Array = get_children()
+	var added: Array = []
+	for i in range(children_before.size(), current.size()):
+		added.append(current[i])
+	for n in added:
+		remove_child(n)
+		group.add_child(n)
+	# 그룹 자식 중 Area2D를 zone meta로 보관 (toggle 시 disabled 적용).
+	for n in group.get_children():
+		if n is Area2D:
+			group.set_meta("zone", n)
+			break
+	group.set_meta("active", true)
+	return group
+
+func _set_spike_group_active(group: Node2D, active: bool) -> void:
+	if group == null or not is_instance_valid(group):
+		return
+	group.set_meta("active", active)
+	# 시각 — 활성=원래 색, 비활성=어두운 회색 페이드.
+	var tw := group.create_tween()
+	tw.tween_property(group, "modulate", Color(1, 1, 1, 1) if active else Color(0.30, 0.30, 0.32, 0.45), 0.45)
+	# 콜리전 — Area2D 자식의 CollisionShape2D를 disabled 토글.
+	var zone: Area2D = group.get_meta("zone", null)
+	if zone != null and is_instance_valid(zone):
+		for c in zone.get_children():
+			if c is CollisionShape2D:
+				(c as CollisionShape2D).set_deferred("disabled", not active)
 
 func _build_route_ambience() -> void:
 	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용.
@@ -2352,6 +2398,8 @@ func _build_lever_puzzles() -> void:
 			_build_back_alley_secret()
 		"route_rooftops":
 			_build_rooftops_secret()
+		"route_datacenter":
+			_build_datacenter_secret()
 
 func _spawn_lever(pos: Vector2, lever_id: String) -> LeverInteractable:
 	var lever := LeverInteractable.new()
@@ -2461,6 +2509,24 @@ func _descend_drop_platform(body: Node) -> void:
 	tw.set_parallel(true)
 	tw.tween_property(col, "position", end_pos, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.tween_property(visual, "position", end_pos, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+# ── datacenter 비밀 레버 (가시 비활성화) ────────────────────────
+# 메인 ARENA 지면에 가시 두 구간 → 사격하면서 위치 조심해야 함.
+# 측면 상층(top, y=340) 끝에 레버 — 당기면 가시가 어두워지며 콜리전 off.
+# 보상: 위험 통로를 안전 통로로 전환 (XP/HP 픽업 같은 토큰 보상은 없음 — 안전 자체가 보상).
+func _build_datacenter_secret() -> void:
+	# 두 개의 토글 가능 가시 그룹. 지면 y=820 기준 base_y=814.
+	var base_y: float = 814.0
+	var spike_a := _spawn_toggleable_spike(550.0, 120.0, base_y, 1)
+	var spike_b := _spawn_toggleable_spike(1500.0, 120.0, base_y, 1)
+	# 레버 — 상층 우측 평지 위. (1200, 320)으로 platform y=340 위에 적당히 얹힘.
+	var lever := _spawn_lever(Vector2(1200.0, 320.0), "datacenter_spikes_off")
+	lever.hint_color = Color(0.55, 0.85, 0.95)
+	lever.pulled.connect(func(_id: String) -> void:
+		_set_spike_group_active(spike_a, false)
+		_set_spike_group_active(spike_b, false)
+		_show_veil_subtitle("전기가 끊겼어요. 발 밑 가시 무력화.", 3.0)
+	)
 
 # ── back_alley 비밀칸 ─────────────────────────────────────────
 # 레버 위치: 1300, 588 (지면, 3·4번 발판 사이를 지나갈 때 보임)
@@ -2731,28 +2797,189 @@ func _camera_shake(magnitude: float, duration: float) -> void:
 
 func _process(delta: float) -> void:
 	_refresh_hud()
-	_tick_arcturus(delta)
 	_tick_boss(delta)
 	_tick_challenge(delta)
 	_tick_escape_transition(delta)
 
 # ─── 도전 방(블랙아웃 런) — world_layout §3.2 ───
 # 30s 타이머 + 1 hit 실패 + 좁은 시야. 실패해도 stage는 그냥 스킵 (페널티 없음).
-var challenge_active: bool = false
+var challenge_active: bool = false      # 실제 도전 진행 중(타이머·블랙아웃·1hit fail 모두 적용)
+var challenge_pending: bool = false      # 입구 발판 대기 중(맵은 깔렸으나 도전 미시작)
 var challenge_time_remaining: float = 30.0
 var challenge_failed: bool = false
 var challenge_xp_on_clear: int = 5
 var challenge_timer_label: Label = null
 var challenge_dark_layer: CanvasLayer = null
+var challenge_gate_door: StaticBody2D = null
+var challenge_gate_visual: Node2D = null
+var challenge_plate: PressurePlate = null
 
 func _setup_challenge_mode() -> void:
 	if not bool(_map_data.get("challenge", false)):
 		return
-	challenge_active = true
+	# 즉시 활성화하지 않음 — 입구 발판을 밟아야 시작. 사용자: "도전이 그런 거라는 걸
+	# 알려주기 위해 연출이 필요". 사이렌/암전/클리어 조건 안내가 시작과 함께 나오게.
+	challenge_pending = true
 	challenge_time_remaining = float(_map_data.get("challenge_time", 30.0))
 	challenge_xp_on_clear = int(_map_data.get("challenge_xp_clear", 5))
+	_build_challenge_gate()
+
+# 도전 입구 — 통제선 느낌의 어두운 문 + 경고 라벨 + 발판. 문은 fade 전까지 충돌 차단.
+# 플레이어가 발판에 발을 디디는 행동 자체가 "들어가겠다는 의사"가 됨.
+func _build_challenge_gate() -> void:
+	# 문 위치 — 첫 발판(x=320) 직전 x=240 부근. 플레이어 시작(140) 우측, 첫 가시(480) 좌측.
+	var gate_x: float = 240.0
+	var gate_w: float = 50.0
+	var gate_h: float = 720.0
+	# 시각 — Node2D wrapper에 패널 + 사선 줄무늬 + 경고 라벨.
+	challenge_gate_visual = Node2D.new()
+	add_child(challenge_gate_visual)
+	var panel := ColorRect.new()
+	panel.color = Color(0.10, 0.05, 0.06, 0.95)
+	panel.position = Vector2(gate_x - gate_w * 0.5, 0.0)
+	panel.size = Vector2(gate_w, gate_h)
+	panel.z_index = 5
+	challenge_gate_visual.add_child(panel)
+	# 사선 줄무늬 (폴리스 라인) — 빨강/노랑 사선 줄 4개
+	for i in 5:
+		var stripe := Polygon2D.new()
+		stripe.color = Color(0.95, 0.78, 0.30) if i % 2 == 0 else Color(0.85, 0.30, 0.30)
+		var y0: float = 80.0 + float(i) * 130.0
+		stripe.polygon = PackedVector2Array([
+			Vector2(gate_x - gate_w * 0.5, y0),
+			Vector2(gate_x + gate_w * 0.5, y0 + 30.0),
+			Vector2(gate_x + gate_w * 0.5, y0 + 50.0),
+			Vector2(gate_x - gate_w * 0.5, y0 + 20.0),
+		])
+		stripe.z_index = 6
+		challenge_gate_visual.add_child(stripe)
+	# 경고 라벨 — 큼지막한 빨강 한 줄
+	var warn := Label.new()
+	warn.text = "출입 통제\nDARK ZONE"
+	warn.add_theme_font_size_override("font_size", 14)
+	warn.add_theme_color_override("font_color", Color(0.95, 0.55, 0.55))
+	warn.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	warn.add_theme_constant_override("outline_size", 3)
+	warn.position = Vector2(gate_x - 120.0, 380.0)
+	warn.size = Vector2(240.0, 60.0)
+	warn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	warn.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	warn.z_index = 7
+	challenge_gate_visual.add_child(warn)
+	# 충돌 — StaticBody. 발판 step 후 disabled.
+	challenge_gate_door = StaticBody2D.new()
+	challenge_gate_door.collision_layer = 1
+	add_child(challenge_gate_door)
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(gate_w, gate_h)
+	col.shape = shape
+	col.position = Vector2(gate_x, gate_h * 0.5)
+	challenge_gate_door.add_child(col)
+	# 발판 — 문 바로 앞 지면. 밟으면 도전 시작.
+	challenge_plate = PressurePlate.new()
+	challenge_plate.plate_id = "blackout_enter"
+	challenge_plate.plate_width = 70.0
+	challenge_plate.plate_thickness = 10.0
+	challenge_plate.hint_color = Color(0.95, 0.55, 0.30)  # 도전 톤 — 주황 경고
+	add_child(challenge_plate)
+	challenge_plate.global_position = Vector2(gate_x - 70.0, GROUND_Y - 5.0)
+	challenge_plate.stepped.connect(_on_challenge_plate_stepped)
+	# VEIL 사전 경고 — 발판이 뭔지 알려주기.
+	_show_veil_subtitle("이 안은 통신이 끊겨요. 발판 밟으면 시작이에요.\n한 대만 맞아도 끝.", 4.0)
+
+func _on_challenge_plate_stepped(_id: String) -> void:
+	if not challenge_pending:
+		return
+	challenge_pending = false
+	_start_challenge_run()
+
+# 도전 실제 시작 — 문 fade + 사이렌 플래시 + 암전 + 타이머 HUD + 클리어 조건 배너.
+func _start_challenge_run() -> void:
+	challenge_active = true
+	# 1) 문 fade out + 충돌 disable.
+	if challenge_gate_visual != null and is_instance_valid(challenge_gate_visual):
+		var tw_v := challenge_gate_visual.create_tween()
+		tw_v.tween_property(challenge_gate_visual, "modulate:a", 0.0, 0.5)
+		tw_v.tween_callback(challenge_gate_visual.queue_free)
+	if challenge_gate_door != null and is_instance_valid(challenge_gate_door):
+		for c in challenge_gate_door.get_children():
+			if c is CollisionShape2D:
+				(c as CollisionShape2D).set_deferred("disabled", true)
+	# 2) 사이렌 플래시 — 화면 빨강 두 번 깜빡.
+	_play_siren_flash()
+	# 3) 암전 — 0 → 정상 강도 fade in.
 	_build_challenge_blackout()
+	if challenge_dark_layer != null:
+		challenge_dark_layer.modulate.a = 0.0
+		var tw_d := challenge_dark_layer.create_tween()
+		tw_d.tween_interval(0.4)
+		tw_d.tween_property(challenge_dark_layer, "modulate:a", 1.0, 0.7)
+	# 4) 타이머 HUD.
 	_build_challenge_timer_hud()
+	# 5) 클리어 조건 배너 — 큰 글자, 화면 중앙. 페이드 인 → 2.4s 머무름 → 페이드 아웃.
+	_show_challenge_briefing_banner()
+
+func _play_siren_flash() -> void:
+	var siren := CanvasLayer.new()
+	siren.layer = 18
+	add_child(siren)
+	var rect := ColorRect.new()
+	rect.color = Color(0.95, 0.20, 0.20, 0.0)
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	siren.add_child(rect)
+	var tw := rect.create_tween()
+	tw.tween_property(rect, "color:a", 0.55, 0.10)
+	tw.tween_property(rect, "color:a", 0.0, 0.18)
+	tw.tween_property(rect, "color:a", 0.45, 0.10)
+	tw.tween_property(rect, "color:a", 0.0, 0.20)
+	tw.tween_callback(siren.queue_free)
+
+func _show_challenge_briefing_banner() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 23
+	add_child(layer)
+	var holder := CenterContainer.new()
+	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(holder)
+	var panel := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.05, 0.05, 0.07, 0.92)
+	sb.border_color = Color(0.95, 0.55, 0.30, 0.85)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(6)
+	sb.content_margin_left = 32
+	sb.content_margin_right = 32
+	sb.content_margin_top = 20
+	sb.content_margin_bottom = 20
+	panel.add_theme_stylebox_override("panel", sb)
+	holder.add_child(panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	panel.add_child(v)
+	var title_lbl := Label.new()
+	title_lbl.text = "BLACKOUT RUN"
+	title_lbl.add_theme_font_size_override("font_size", 28)
+	title_lbl.add_theme_color_override("font_color", Color(0.95, 0.55, 0.30))
+	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(title_lbl)
+	var body_lbl := Label.new()
+	body_lbl.text = "%d초 안에 골 도달 / 한 대만 맞아도 실패" % int(challenge_time_remaining)
+	body_lbl.add_theme_font_size_override("font_size", 18)
+	body_lbl.add_theme_color_override("font_color", Color(0.95, 0.92, 0.85))
+	body_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(body_lbl)
+	panel.modulate.a = 0.0
+	panel.scale = Vector2(0.92, 0.92)
+	var tw := panel.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(panel, "modulate:a", 1.0, 0.30)
+	tw.tween_property(panel, "scale", Vector2(1.0, 1.0), 0.30).set_trans(Tween.TRANS_BACK)
+	tw.chain().tween_interval(2.4)
+	tw.chain().tween_property(panel, "modulate:a", 0.0, 0.5)
+	tw.chain().tween_callback(layer.queue_free)
 
 func _build_challenge_blackout() -> void:
 	# 화면 강 dim — 짙은 검정. 더 진하게(0.72), 가장자리 비네트도 더 두껍게.
@@ -2820,26 +3047,7 @@ func _tick_boss(delta: float) -> void:
 			var remaining: float = max(0.0, BossSentinel.SELF_DESTRUCT_TIME - boss_self_destruct_timer_t)
 			boss_self_destruct_label.text = "SENTINEL OVERLOAD — %.1f" % remaining
 
-# ─── ARCTURUS 아카이브 5초 hold 로직 ───
-func _tick_arcturus(delta: float) -> void:
-	if arcturus_state != "holding":
-		return
-	if not arcturus_player_inside:
-		return
-	arcturus_hold_t += delta
-	_update_arcturus_indicator()
-	if arcturus_hold_t >= arcturus_hold_target:
-		arcturus_state = "sequencing"
-		_start_arcturus_sequence()
-
-func _update_arcturus_indicator() -> void:
-	if arcturus_indicator == null or not is_instance_valid(arcturus_indicator):
-		return
-	var ratio: float = clamp(arcturus_hold_t / arcturus_hold_target, 0.0, 1.0)
-	arcturus_indicator.size.x = 60.0 * ratio
-	arcturus_indicator.color.a = 0.85 if ratio > 0.0 else 0.0
-
-# 5초 hold 완료 — ArcturusDocumentOverlay (풀스크린 문서 + 카메라 스크롤 + 시간 정지).
+# 레버 + 발판 트리거 — ArcturusDocumentOverlay (풀스크린 문서 + 카메라 스크롤 + 시간 정지).
 func _start_arcturus_sequence() -> void:
 	GameState.restrict_combat_input = true
 	# 큐 + 현재 표시 중인 자막 layer까지 모두 폐기. 단순 _subtitle_queue.clear()는
@@ -2861,9 +3069,6 @@ func _on_arcturus_lines_done() -> void:
 	GameState.visited_arcturus = true
 	GameState.save_settings()
 	GameState.restrict_combat_input = false
-	if arcturus_indicator != null and is_instance_valid(arcturus_indicator):
-		arcturus_indicator.queue_free()
-		arcturus_indicator = null
 	# VEIL outro — 한 호흡(같은 톤의 마무리) 한 줄로 묶음.
 	_show_veil_subtitle("저도 이 파일들 읽은 적 있어요.\n계속 가요, 요원.", 3.2)
 
