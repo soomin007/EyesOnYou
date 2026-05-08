@@ -38,7 +38,7 @@ var player_level: int = 1
 const XP_PER_LEVEL: int = 8
 
 var tutorial_done: bool = false
-var master_volume: float = 1.0
+var bgm_volume: float = 1.0
 var sfx_volume: float = 1.0
 
 # 스토리 모드 — 키보드/패드 조작이 어려운 사람을 위한 간략화 모드.
@@ -321,7 +321,8 @@ func load_settings() -> void:
 		return
 	var version: int = int(cf.get_value("meta", "version", 1))
 	tutorial_done = bool(cf.get_value("flags", "tutorial_done", false))
-	master_volume = float(cf.get_value("audio", "master", 1.0))
+	# audio.bgm로 마이그레이션. 구 audio.master 키는 fallback으로 한 번 더 읽음.
+	bgm_volume = float(cf.get_value("audio", "bgm", cf.get_value("audio", "master", 1.0)))
 	sfx_volume = float(cf.get_value("audio", "sfx", 1.0))
 	seen_enemies = []
 	for v in cf.get_value("flags", "seen_enemies", []):
@@ -368,7 +369,7 @@ func save_settings() -> void:
 	cf.set_value("flags", "seen_enemies", seen_enemies)
 	cf.set_value("flags", "hidden_visit_count", hidden_visit_count)
 	cf.set_value("flags", "visited_arcturus", visited_arcturus)
-	cf.set_value("audio", "master", master_volume)
+	cf.set_value("audio", "bgm", bgm_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
 	for action in KEYBIND_ACTIONS:
 		if not InputMap.has_action(action):

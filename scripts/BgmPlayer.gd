@@ -97,7 +97,7 @@ func refresh_volume() -> void:
 	active.volume_db = _target_db()
 
 func _target_db() -> float:
-	var v: float = clampf(GameState.master_volume, 0.0, 1.0)
+	var v: float = clampf(GameState.bgm_volume, 0.0, 1.0)
 	if v <= 0.001:
 		return SILENT_DB
 	# linear → dB. 0.5 master ≈ -6dB on top of BASE_DB.

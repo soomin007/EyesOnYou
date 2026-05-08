@@ -276,10 +276,10 @@ func _build_av_tab() -> Control:
 	section_b.add_theme_constant_override("separation", 10)
 	v.add_child(section_b)
 	section_b.add_child(_make_section_header("사운드"))
-	section_b.add_child(_make_volume_row("마스터 볼륨", "master"))
+	section_b.add_child(_make_volume_row("배경음 볼륨", "bgm"))
 	section_b.add_child(_make_volume_row("효과음 볼륨", "sfx"))
 	var note := Label.new()
-	note.text = "마스터는 BGM에 즉시 반영. 효과음 슬라이더는 미리 노출(추후 SFX 연결)."
+	note.text = "배경음은 슬라이더에 즉시 반영. 효과음 슬라이더는 미리 노출(추후 SFX 연결)."
 	note.add_theme_font_size_override("font_size", 12)
 	note.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
 	section_b.add_child(note)
@@ -366,7 +366,7 @@ func _make_volume_row(label_text: String, kind: String) -> Control:
 	slider.max_value = 1.0
 	slider.step = 0.05
 	slider.custom_minimum_size = Vector2(280, 28)
-	slider.value = GameState.master_volume if kind == "master" else GameState.sfx_volume
+	slider.value = GameState.bgm_volume if kind == "bgm" else GameState.sfx_volume
 	slider.value_changed.connect(_on_volume_changed.bind(kind))
 	hb.add_child(slider)
 	return hb
@@ -386,12 +386,13 @@ func _make_secondary_button(text: String) -> Button:
 	return b
 
 func _on_volume_changed(value: float, kind: String) -> void:
-	if kind == "master":
-		GameState.master_volume = value
-		# BGM autoload — 마스터 볼륨 즉시 반영(다음 트랙 전환까지 기다리지 않게).
+	if kind == "bgm":
+		GameState.bgm_volume = value
+		# BGM autoload — 배경음 볼륨 즉시 반영(다음 트랙 전환까지 기다리지 않게).
 		BgmPlayer.refresh_volume()
 	else:
 		GameState.sfx_volume = value
+		# 효과음은 추후 SFX 신호 연결 시 별도 bus/AudioStreamPlayer에서 GameState.sfx_volume 참조.
 	GameState.save_settings()
 
 func _refresh_all_keybind_buttons() -> void:

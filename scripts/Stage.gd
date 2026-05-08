@@ -182,13 +182,17 @@ func _on_veil_mistake_zone(body: Node, area: Area2D) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
 	veil_mistake_triggered = true
-	# before 한 줄 + (있으면) after 한 줄. after는 빈 문자열이면 표시 생략.
+	# before/after 두 줄을 한 호흡(2-line) 자막으로. after가 비면 한 줄만.
 	var before_line: String = str(area.get_meta("before", ""))
 	var after_line: String = str(area.get_meta("after", ""))
-	if before_line != "":
-		_show_veil_subtitle(before_line, 2.8)
-	if after_line != "":
+	if before_line == "" and after_line == "":
+		return
+	if after_line == "":
+		_show_veil_subtitle(before_line, 3.0)
+	elif before_line == "":
 		_show_veil_subtitle(after_line, 3.0)
+	else:
+		_show_veil_subtitle(before_line + "\n" + after_line, 3.4)
 
 func _build_hidden_archive() -> void:
 	# 격리 서버실 — 적/가시/골 없음, 단말기 2개 시퀀스 후 자동 ENDING 전환
@@ -642,11 +646,10 @@ func _build_locked_door() -> void:
 func _on_locked_door_approached(body: Node) -> void:
 	if not (body is CharacterBody2D and body == player):
 		return
-	# 첫 진입 시 VEIL 발화 (1회만) — 이전 동작 유지.
+	# 첫 진입 시 VEIL 발화 (1회만) — 한 호흡으로 두 줄 묶음.
 	if not locked_door_triggered:
 		locked_door_triggered = true
-		_show_veil_subtitle("그쪽은 임무 범위 밖이에요.", 3.0)
-		_show_veil_subtitle("그 문, 도면에는 없어요.", 3.0)
+		_show_veil_subtitle("그쪽은 임무 범위 밖이에요.\n그 문, 도면에는 없어요.", 3.5)
 	# 이미 시퀀스 한 번 트리거됐으면(arcturus_state != idle) 같은 stage 내에선 재진입 X.
 	# visited_arcturus 영구 게이트는 제거 — 매 stage 진입마다 다시 볼 수 있게.
 	if arcturus_state != "idle":
@@ -2212,14 +2215,12 @@ func _on_boss_killed(at_position: Vector2) -> void:
 			var tw := holder.create_tween()
 			tw.tween_property(holder, "modulate:a", 0.0, 0.6)
 			tw.tween_callback(boss_hp_bar_layer.queue_free)
-	# DESIGN §2.10 보스 처치 대사. 스토리 모드는 보스 다음에 escape 단계가 있어
-	# "서버실이 바로 앞" 같은 진입 멘트가 어울리지 않음 → 별도 분기.
-	_show_veil_subtitle("처리됐어요, 요원.", 2.0)
+	# DESIGN §2.10 보스 처치 대사. 한 호흡(처치 직후 몰아쉬는 한 마디)으로 보이게 multi-line으로.
+	# 스토리 모드는 escape 단계가 있어 "서버실 앞" 멘트가 어울리지 않음 → 별도 분기.
 	if GameState.story_mode:
-		_show_veil_subtitle("이제 빠져나가요. 거의 다 왔어요.", 2.5)
+		_show_veil_subtitle("처리됐어요, 요원.\n이제 빠져나가요. 거의 다 왔어요.", 3.0)
 	else:
-		_show_veil_subtitle("이게 마지막 관문이었어요.", 1.0)
-		_show_veil_subtitle("서버실이 바로 앞이에요.", 2.0)
+		_show_veil_subtitle("처리됐어요, 요원.\n이게 마지막 관문이었어요. 서버실이 바로 앞이에요.", 3.0)
 
 func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var e := CharacterBody2D.new()
@@ -2863,9 +2864,8 @@ func _on_arcturus_lines_done() -> void:
 	if arcturus_indicator != null and is_instance_valid(arcturus_indicator):
 		arcturus_indicator.queue_free()
 		arcturus_indicator = null
-	# VEIL outro — 짧게 두 줄. 이전 5줄(... 포함)이 길게 늘어져 겹침 인상 줬음.
-	_show_veil_subtitle("저도 이 파일들 읽은 적 있어요.", 3.0)
-	_show_veil_subtitle("계속 가요, 요원.", 2.6)
+	# VEIL outro — 한 호흡(같은 톤의 마무리) 한 줄로 묶음.
+	_show_veil_subtitle("저도 이 파일들 읽은 적 있어요.\n계속 가요, 요원.", 3.2)
 
 # ARCTURUS 아카이브 문서 — 3 단말기.
 # kind: "title" (큰 헤더) / "speaker" (회색 작은 발화자) / "body" (본문) / "blank" (간격)
