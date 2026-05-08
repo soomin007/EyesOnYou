@@ -50,6 +50,10 @@ const STORY_TOTAL_STAGES: int = 5
 # 디버그 연습장 모드 — Settings에서 진입. 영속화하지 않음.
 var playground_active: bool = false
 
+# 디버그 메뉴 잠금. 타이틀에서 비밀 키 시퀀스("snu")를 입력해야 활성. 영속화하지 않음.
+# 부스/공유 환경에서 일반 플레이어가 디버그 기능에 접근하지 못하도록.
+var debug_unlocked: bool = false
+
 # ??? 맵 진행 중 Player 입력 제한 (이동/점프만 허용, 공격/대시/스킬 비활성)
 var restrict_combat_input: bool = false
 

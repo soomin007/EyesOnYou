@@ -22,6 +22,9 @@ func _ready() -> void:
 	stats_label.text = "사망 횟수  %d  /  도달 스테이지  %d" % [GameState.death_count, GameState.current_stage + 1]
 	text_label.text = ""
 	hint_label.text = ""
+	# BGM 그대로 두되 살짝 먹먹하게 — 트랙 전환 없이 -12dB ducking.
+	# 재시도 시 stage._ready에서 set_ducked(false)로 복원.
+	BgmPlayer.set_ducked(true)
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
 
 func _on_input_kind_changed(_kind: String) -> void:

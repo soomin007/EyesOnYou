@@ -44,6 +44,8 @@ func _ready() -> void:
 	GameState.player_hp = GameState.player_max_hp
 	# BGM — 맵별 트랙 선택. ??? 방은 Gravity Static, 보스 맵은 Chrome Grit,
 	# 그 외에는 stage_index 기반으로 Cold Gear(초중반)/Cold Wire(중후반) 분기.
+	# Death 화면에서 set_ducked(true)였다면 stage 재진입에서 원복.
+	BgmPlayer.set_ducked(false)
 	_apply_bgm_for_current_route()
 	# ??? 맵은 적/가시/골이 없는 정적 시퀀스 맵 (별도 로직)
 	if GameState.current_route_id == "route_hidden":

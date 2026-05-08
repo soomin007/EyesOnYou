@@ -13,6 +13,8 @@
 | 스킬 트리·성장 시스템 | [`design/growth_system.md`](design/growth_system.md) |
 | 맵 형태·보스·이스터에그 메커닉 | [`design/world_layout.md`](design/world_layout.md) |
 | 텍스트 톤·"체험으로 체득" 원칙 | [`design/show_dont_tell.md`](design/show_dont_tell.md) |
+| 환경 퍼즐(레버·발판) 현황 | [`design/puzzle_ideas.md`](design/puzzle_ideas.md) |
+| 효과음 작업 목록 | [`design/sfx_list.md`](design/sfx_list.md) |
 | 배포·Pages 셋업 | [`../DEPLOY.md`](../DEPLOY.md) |
 | 최근 작업 흐름 | [`../session_logs/`](../session_logs/) (날짜별) |
 

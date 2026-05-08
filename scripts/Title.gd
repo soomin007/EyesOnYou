@@ -177,6 +177,47 @@ func _unhandled_input(event: InputEvent) -> void:
 		if state != STATE_MAIN:
 			_on_back_pressed()
 			get_viewport().set_input_as_handled()
+	# 디버그 잠금 해제 — 키 시퀀스 "snu" (소문자/대문자 무시) 입력.
+	# 영속화 X — 다음 실행에선 다시 잠김. 부스 환경에서 일반 플레이어 차단.
+	if event is InputEventKey and event.pressed and not event.echo:
+		_track_debug_unlock_sequence(event as InputEventKey)
+
+const _DEBUG_CODE: String = "snu"
+var _debug_input_buffer: String = ""
+
+func _track_debug_unlock_sequence(ev: InputEventKey) -> void:
+	if GameState.debug_unlocked:
+		return
+	# 키 라벨 가져오기 — 알파벳만 인정. unicode가 0이면 keycode로 폴백.
+	var ch_int: int = ev.unicode
+	if ch_int == 0:
+		ch_int = ev.keycode
+	if ch_int < 0x20 or ch_int > 0x7E:
+		return
+	var ch: String = String.chr(ch_int).to_lower()
+	if ch.length() != 1:
+		return
+	_debug_input_buffer += ch
+	if _debug_input_buffer.length() > _DEBUG_CODE.length():
+		_debug_input_buffer = _debug_input_buffer.substr(_debug_input_buffer.length() - _DEBUG_CODE.length())
+	if _debug_input_buffer == _DEBUG_CODE:
+		GameState.debug_unlocked = true
+		_show_debug_unlock_toast()
+
+func _show_debug_unlock_toast() -> void:
+	var toast := Label.new()
+	toast.text = "디버그 모드 잠금 해제 — 설정 → 디버그 탭"
+	toast.add_theme_font_size_override("font_size", 14)
+	toast.add_theme_color_override("font_color", Color(0.95, 0.85, 0.30))
+	toast.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	toast.add_theme_constant_override("outline_size", 3)
+	toast.position = Vector2(20, 680)
+	toast.size = Vector2(600, 24)
+	add_child(toast)
+	var tw := toast.create_tween()
+	tw.tween_interval(2.4)
+	tw.tween_property(toast, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(toast.queue_free)
 
 func _on_start_pressed() -> void:
 	_set_state(STATE_MODE)

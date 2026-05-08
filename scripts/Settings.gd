@@ -97,7 +97,10 @@ func _ready() -> void:
 	tabs.add_child(_build_keybind_tab())
 	tabs.add_child(_build_av_tab())
 	tabs.add_child(_build_credits_tab())
-	tabs.add_child(_build_debug_tab())
+	# 디버그 탭은 잠금 해제(GameState.debug_unlocked) 시에만 노출.
+	# 잠금 해제는 Title 화면에서 비밀 키 시퀀스 "snu" 입력으로.
+	if GameState.debug_unlocked:
+		tabs.add_child(_build_debug_tab())
 
 	var divider2 := ColorRect.new()
 	divider2.color = Color(0.55, 0.62, 0.78, 0.30)
@@ -241,7 +244,59 @@ func _build_debug_tab() -> Control:
 	enter_btn.pressed.connect(_on_playground_pressed)
 	v.add_child(enter_btn)
 
+	# 엔딩 미리보기 — 4종 직접 진입. trust/aggression 점수를 임시 세팅해 EndingResolver
+	# 분기를 강제하고, lore도 explored 상태로 설정해 풀 멘트를 보여준다.
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 12)
+	v.add_child(spacer)
+	v.add_child(_make_section_header("엔딩 미리보기"))
+	var endings_note := Label.new()
+	endings_note.text = "각 엔딩을 즉시 진입해 텍스트·BGM·연출을 확인. 진행 데이터는 갱신되지 않아요."
+	endings_note.add_theme_font_size_override("font_size", 13)
+	endings_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	endings_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(endings_note)
+	var ending_row := HBoxContainer.new()
+	ending_row.add_theme_constant_override("separation", 10)
+	v.add_child(ending_row)
+	for entry in [
+		{"id": "A", "label": "엔딩 A — 완벽한 도구"},
+		{"id": "B", "label": "엔딩 B — 혼자였던 사람"},
+		{"id": "C", "label": "엔딩 C — 공생"},
+		{"id": "D", "label": "엔딩 D — 유령 임무"},
+	]:
+		var d: Dictionary = entry
+		var btn := Button.new()
+		btn.text = str(d["label"])
+		btn.custom_minimum_size = Vector2(160, 36)
+		btn.add_theme_font_size_override("font_size", 12)
+		btn.pressed.connect(_on_ending_preview_pressed.bind(str(d["id"])))
+		ending_row.add_child(btn)
+
 	return outer
+
+# 엔딩 미리보기 진입 — trust/aggression을 EndingResolver 임계값에 맞춰 강제 세팅.
+# explored_lore는 hidden_visit_count + visited_arcturus 둘 중 하나만 있어도 true.
+# 기존 진행도는 백업 안 함 — 디버그 용도라 진행 데이터 손실은 무시 (사용자가 알고 누름).
+func _on_ending_preview_pressed(ending_id: String) -> void:
+	var t: int = GameState.SCORE_THRESHOLD
+	match ending_id:
+		"A":
+			GameState.trust_score = t
+			GameState.aggression_score = t
+		"B":
+			GameState.trust_score = 0
+			GameState.aggression_score = t
+		"C":
+			GameState.trust_score = t
+			GameState.aggression_score = 0
+		"D":
+			GameState.trust_score = 0
+			GameState.aggression_score = 0
+	# explored_lore=true 풀 멘트 보기. (false 버전 보고 싶으면 둘 다 false 후 진입)
+	GameState.visited_arcturus = true
+	get_tree().paused = false
+	get_tree().change_scene_to_file(SceneRouter.ENDING)
 
 func _on_playground_pressed() -> void:
 	GameState.playground_active = true

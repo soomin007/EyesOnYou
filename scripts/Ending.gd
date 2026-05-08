@@ -55,8 +55,8 @@ func _ready() -> void:
 		sub_title_label.modulate.a = 0.3
 		_setup_ending_d_atmosphere()
 	_build_hold_hint()
-	# 보스전 BGM(Chrome Grit)에서 메인 테마(Glass Protocol)로 — 임무 종료 톤.
-	BgmPlayer.play("main_theme")
+	# 엔딩별 전용 BGM. ending_id에 맞춰 ending_a/b/c/d 트랙으로 cross-fade.
+	BgmPlayer.play("ending_" + ending_id.to_lower())
 	_start_line()
 
 func _hold_hint_text() -> String:

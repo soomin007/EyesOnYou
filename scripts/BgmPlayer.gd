@@ -17,18 +17,27 @@ const TRACKS: Dictionary = {
 	"mid_late":      "res://assets/bgm/Cold Wire.mp3",
 	"boss":          "res://assets/bgm/Chrome Grit.mp3",
 	"hidden":        "res://assets/bgm/Gravity Static.mp3",
+	"ending_a":      "res://assets/bgm/Ending A.mp3",
+	"ending_b":      "res://assets/bgm/Ending B.mp3",
+	"ending_c":      "res://assets/bgm/Ending C.mp3",
+	"ending_d":      "res://assets/bgm/Ending D.mp3",
 }
 
 const FADE_IN: float = 1.2
 const FADE_OUT: float = 0.9
 const BASE_DB: float = -8.0     # 1.0 master에서 적당히 들리도록
 const SILENT_DB: float = -80.0
+# 사망 화면 등에서 BGM을 살짝 죽여 먹먹한 느낌. 실제 SFX는 추후, 일단 dB 감쇠만.
+const DUCKED_OFFSET_DB: float = -12.0
+const DUCK_FADE: float = 0.4
 
 var _players: Array[AudioStreamPlayer] = []
 var _active_idx: int = 0
 var _current_track: String = ""
 var _tween_in: Tween = null
 var _tween_out: Tween = null
+var _ducked: bool = false
+var _tween_duck: Tween = null
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -100,5 +109,24 @@ func _target_db() -> float:
 	var v: float = clampf(GameState.bgm_volume, 0.0, 1.0)
 	if v <= 0.001:
 		return SILENT_DB
-	# linear → dB. 0.5 master ≈ -6dB on top of BASE_DB.
-	return BASE_DB + linear_to_db(v)
+	# linear → dB. 0.5 master ≈ -6dB on top of BASE_DB. ducked일 때 추가 감쇠.
+	var base: float = BASE_DB + linear_to_db(v)
+	if _ducked:
+		base += DUCKED_OFFSET_DB
+	return base
+
+# 사망 같은 임시 상황에서 BGM을 살짝 죽임. 트랙 전환은 안 하고 dB만 천천히 깎음.
+# 다시 stage로 복귀할 때 set_ducked(false)로 원복.
+func set_ducked(value: bool) -> void:
+	if _ducked == value:
+		return
+	_ducked = value
+	if _current_track == "":
+		return
+	if _active_idx >= _players.size():
+		return
+	var active: AudioStreamPlayer = _players[_active_idx]
+	if _tween_duck != null and _tween_duck.is_valid():
+		_tween_duck.kill()
+	_tween_duck = create_tween()
+	_tween_duck.tween_property(active, "volume_db", _target_db(), DUCK_FADE)
