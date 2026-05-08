@@ -253,7 +253,8 @@ func _try_jump() -> void:
 	elif jumps_used < max_jumps:
 		velocity.y = JUMP_VELOCITY * 0.92
 		jumps_used += 1
-		SfxPlayer.play("player_double_jump")
+		# 사용자: 더블점프 전용 사운드는 어색해서 일반 점프 사운드 재사용.
+		SfxPlayer.play("player_jump")
 
 # 현재 티어가 반영된 실제 max 쿨다운 (HUD 게이지 표시용).
 func get_attack_cd_max() -> float:

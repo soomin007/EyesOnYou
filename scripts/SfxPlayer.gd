@@ -16,11 +16,10 @@ const SILENT_DB: float = -80.0
 # 양수 = 더 크게, 음수 = 더 작게.
 const VOLUME_OFFSETS: Dictionary = {
 	"player_jump":        -10.0,
-	"player_double_jump": -10.0,
 	"player_step":        6.0,
 	"player_land":        5.0,
-	"player_dash":        -3.0,
-	"player_hurt":        -2.0,
+	"player_dash":        -4.0,
+	"player_hurt":        -0.0,
 	"player_death":       0.0,
 }
 
@@ -30,8 +29,8 @@ const VOLUME_OFFSETS: Dictionary = {
 const _SFX_EXTENSIONS: Array[String] = [".mp3", ".ogg", ".wav"]
 
 const KNOWN_SFX: Array[String] = [
-	# Player
-	"player_jump", "player_double_jump", "player_land", "player_dash",
+	# Player (더블점프는 player_jump 재사용 — 별도 ID 없음)
+	"player_jump", "player_land", "player_dash",
 	"player_hurt", "player_death", "player_step",
 	# Combat
 	"bullet_fire", "bullet_impact_wall", "bullet_impact_enemy", "bullet_deflect_shield",
