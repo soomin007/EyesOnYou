@@ -177,8 +177,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		if state != STATE_MAIN:
 			_on_back_pressed()
 			get_viewport().set_input_as_handled()
-	# 디버그 잠금 해제 — 키 시퀀스 "snu" (소문자/대문자 무시) 입력.
-	# 영속화 X — 다음 실행에선 다시 잠김. 부스 환경에서 일반 플레이어 차단.
+
+# 디버그 잠금 해제 키 시퀀스("snu") 추적은 _input에서 — _unhandled_input은 포커스/
+# 내비게이션 시스템이 키를 소비한 뒤 호출되므로 's'(move_down 매핑)가 안 잡힘.
+# (사용자 보고: snu 입력해도 잠금 해제 안 됨.)
+# _input은 raw 이벤트 — 여기서는 추적만 하고 set_input_as_handled 호출 안 함 → 기존
+# 이동/포커스 동작은 그대로 유지.
+func _input(event: InputEvent) -> void:
+	if settings_overlay != null:
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		_track_debug_unlock_sequence(event as InputEventKey)
 

@@ -177,21 +177,29 @@ func _process(delta: float) -> void:
 		speed *= SCROLL_FAST_MULT
 	_scroll_y += speed * delta
 	_scroll.position.y = TOP_GAP - _scroll_y
-	# 끝까지 다 올라갔으면 자동 종료.
+	# 끝까지 다 올라갔으면 자동 페이드 아웃 후 종료. (사용자: 다 올라가면 알아서 끝나게)
 	if _content_height > 0.0 and _scroll_y >= _content_height + BOTTOM_GAP:
-		_finish()
+		_finish(true)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _input_lockout_t > 0.0:
 		return
 	if event.is_action_pressed("ui_cancel"):
-		_finish()
+		# 수동 종료 — 짧게 페이드. ESC 누른 사용자는 빠르게 빠지길 원함.
+		_finish(false)
 		get_viewport().set_input_as_handled()
 
-func _finish() -> void:
+# fade_long=true — 자동 종료(긴 1.5s 페이드, 여운). false — 수동 ESC(짧은 0.3s).
+func _finish(fade_long: bool) -> void:
 	if _finished:
 		return
 	_finished = true
+	var fade_dur: float = 1.5 if fade_long else 0.3
+	var tw := create_tween()
+	tw.tween_property(self, "modulate:a", 0.0, fade_dur)
+	tw.tween_callback(_actually_finish)
+
+func _actually_finish() -> void:
 	if _is_overlay:
 		emit_signal("closed")
 		return
