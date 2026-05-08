@@ -375,7 +375,7 @@ VEIL: 응답 없음.
 
 ```
 res://
-├── project.godot              # AutoLoad: GameState, physics_interpolation 활성
+├── project.godot              # AutoLoad: GameState · BgmPlayer, physics_interpolation 활성
 ├── README.md / PRD.md / DEPLOY.md / CLAUDE.md
 ├── docs/SPEC.md / docs/STORY.md / docs/design/{growth_system, world_layout, show_dont_tell}.md
 ├── scenes/
@@ -387,9 +387,14 @@ res://
 │   ├── stage.tscn             # 횡스크롤 (모든 stage가 단일 씬, 절차적 빌드)
 │   ├── death.tscn
 │   ├── ending.tscn
-│   └── settings.tscn          # 키바인드 / 사운드 / 디버그(연습장)
+│   ├── credits.tscn           # 자동 스크롤 크레딧 (엔딩 후 자동 / 설정 탭에서 보기)
+│   └── settings.tscn          # 키바인드 / 사운드 / 크레딧 / 디버그(연습장)
 ├── scripts/
 │   ├── GameState.gd           # AutoLoad — 진행도/점수/스킬/루트/도감 영속
+│   ├── BgmPlayer.gd           # AutoLoad — 5트랙 BGM crossfade
+│   ├── Credits.gd             # 크레딧 화면 (scene + overlay 두 모드)
+│   ├── LeverInteractable.gd   # 레버 (Area2D + attack 키 흡수 + pulled 시그널)
+│   ├── PressurePlate.gd       # 발판 (Area2D + require_armed + stepped 시그널)
 │   ├── SceneRouter.gd
 │   ├── RouteData.gd           # 루트 풀 + available_stages 필터링
 │   ├── VeilDialogue.gd
@@ -455,7 +460,7 @@ const XP_PER_LEVEL: int = 5
 # 영속 플래그 (settings.cfg)
 var tutorial_done: bool = false
 var seen_enemies: Array = []     # 도감 영속 — 한 번 본 적은 다음 런에도 안 뜸
-var master_volume: float = 1.0
+var bgm_volume: float = 1.0  # (구 master_volume — 2026-05-08 rename, audio.bgm 키)
 var sfx_volume: float = 1.0
 
 # 디버그 연습장 (영속화 X, 메모리만)
@@ -471,10 +476,11 @@ var playground_active: bool = false
 - `add_xp(amount) -> bool` — leveled_up 반환
 
 ### 영속화
-`user://settings.cfg` (ConfigFile, version 2):
+`user://settings.cfg` (ConfigFile, version 3):
 - `flags/tutorial_done`, `flags/seen_enemies`
-- `audio/master`, `audio/sfx`
-- `input/<action>` — 키바인드 (key/mouse 통합 스키마)
+- `flags/hidden_visit_count`, `flags/visited_arcturus`
+- `audio/bgm`, `audio/sfx` (구 `audio/master`는 fallback으로 1회 더 읽힘)
+- `input/<action>` — 키바인드 (key/mouse/joypad 통합 스키마, version 3)
 
 ---
 

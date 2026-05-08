@@ -1,90 +1,84 @@
-# 환경·퍼즐 디자인 아이디어 (작업 대기 — 세션 2026-05-06)
+# 환경 퍼즐 — 현재 상태
 
-탈출로 배경 전환은 이번 세션에 끝남. 아래는 다음 세션에서 진행할 환경
-인터랙션·퍼즐 기믹 정리.
+레버·발판 시스템과 비밀칸/이스터에그 진입 메커니즘 정리. 코드의 단일 진실은
+`scripts/LeverInteractable.gd` / `scripts/PressurePlate.gd` / `scripts/Stage.gd`.
+이 문서는 어떤 맵에 무엇이 깔려 있는지 빠르게 훑기 위한 인덱스.
 
-## 1. 텍스트 없는 환경 lore (선택)
+## 1. 공통 메커니즘
 
-표지 라벨(`_add_lore_label`) 다 제거 완료. 대안 — 환경 오브젝트로 lore 깔기.
+### LeverInteractable (`scripts/LeverInteractable.gd`)
+- Area2D 기반. 플레이어 overlap 시 `Player.nearby_lever`에 자기 자신 세팅.
+- `attack` 키 입력을 가로채 사격 대신 `try_pull()` 호출. 한 번 당기면 `locked=true`.
+- `pulled(lever_id)` 시그널 emit → Stage가 받아 효과 trigger.
+- 시각: 회색 받침 + 손잡이(idle 위, active 아래로 회전) + 점멸 hint glow(청색).
 
-### 후보 props
-- **부서진 단말기** — 이미 lab/datacenter 배경 격자에 작은 ColorRect 박스 한두 개,
-  스크린 깨진 효과(검정 + 균열 라인)
-- **뒤집힌 의자/책상** — back_alley·subway에 회색 사각형 회전(rotation) 사용
-- **떨어진 출입증** — ARCTURUS 로고 색(0.55, 0.85, 0.95)의 작은 카드. 같은 모티프가
-  다른 맵에 반복되면 호기심 자극
-- **혈흔/그을음 자국** — ward 진입부에 어두운 빨강 점들 (이미 비상등 톤과 어울림)
-- **경고 테이프 X자** — escape 전반부 터널 천장에 노랑/검정 줄무늬 ColorRect
+### PressurePlate (`scripts/PressurePlate.gd`)
+- Area2D. 플레이어 body_entered 시 `stepped(plate_id)` emit.
+- `require_armed=true`면 `arm()` 호출 전까지는 step 무시 — 레버를 먼저 당겨야
+  활성되는 두 단계 흐름에 사용.
+- `one_shot=true`(기본)면 한 번 step 후 잠김.
+- 시각: 짙은 금속판 + hint 띠. armed 전엔 회색, armed 후엔 청색 점멸.
 
-### 구현 방식
-- `_ambience_*()` 함수 안에 직접 추가 (현재 lamp/fog 코드 옆)
-- 위치는 RNG seed 고정 — 같은 맵 같은 자리에 동일하게 배치돼야 디자인 의도가 살음
-- ARCTURUS 로고 색·SILO-7 회색·VEIL 청색 같은 **반복 모티프**가 핵심
-- z_index −10~−5 사이 (배경 파티클 위, 플랫폼 아래)
+### 토글 가시 (`Stage._spawn_toggleable_spike` / `_set_spike_group_active`)
+- 일반 `_build_spike`가 self에 add_child하는 시각/Area2D를 wrapper Node2D로 reparent.
+- `_set_spike_group_active(group, false)`로 modulate dim + collision disabled 일괄 처리.
 
-## 2. 레버 퍼즐 시스템 (메인)
+## 2. 맵별 배치 현황
 
-### 2.1 공통 메커니즘
-- 새 노드 클래스 `LeverInteractable.gd` (Area2D 기반)
-- 플레이어 overlap 중 `attack` 또는 별도 interact 키(추가 필요? 일단 attack 재사용
-  검토)로 활성화
-- `signal pulled(lever_id: String)` 시그널 emit
-- Stage가 lever_id를 듣고 해당 효과 trigger
-- 시각: 회색 막대(idle) → 당기면 빨강 또는 황색(active). 짧은 tween + 효과음(있으면)
+### route_back_alley — 비밀칸 (튜토리얼)
+- 레버: (1300, 588) — 지면 중반.
+- 효과: 천장 해치 (2300, 290) fade out + 강하 발판 (2150, 380) 이동.
+- 보상: XP orb 5개 (해치 안쪽).
 
-### 2.2 튜토리얼 — 초반 맵 1~2개에 비밀칸
-**목적**: 레버 작동법을 페널티 없이 자연스럽게 학습
+### route_rooftops — 비밀칸 (튜토리얼 강화)
+- 레버: (200, 3060) — 시작 좌측 외벽.
+- 효과: 환기구 (200, 2820) fade + 사다리 발판 2개 강하.
+- 보상: HP 회복 1 + XP 2.
 
-- **route_back_alley** (stage 0~1 후보) — 맵 후반 천장에 보이는 닫힌 칸. 레버는
-  맵 중간 바닥 근처에 배치 → 당기면 천장 발판 하나가 내려와 점프로 진입 가능. 안에
-  XP orb 5~7개(약 +20 XP) 무더기.
-- **route_rooftops** — 옥상 끝부분 잠긴 환기구. 레버는 굴뚝 뒤. 당기면 환기구 열림
-  → 안에 HP pickup + XP orb.
+### route_ward — ARCTURUS 아카이브 진입
+- 레버: (2900, 388) — 맵 끝 상층 플랫폼.
+- 발판: (2000, 596) `require_armed=true` — 잠긴 문 앞.
+- 흐름: 잠긴 문 본 후 진행 → 끝까지 가서 레버 발견 → 당김 → 발판 청색 활성
+  → 되돌아와서 발판 step → ARCTURUS 시퀀스 (`ArcturusDocumentOverlay`).
+- VEIL: "그쪽은 임무 범위 밖이에요. / 그 문, 도면에는 없어요." (첫 접근 1회만).
+- VEIL after 레버: "뭔가 풀렸어요. 잠긴 문 앞 발판 위로."
 
-두 맵 중 stage 0~1에 해당 맵이 안 뜰 수도 있으니 **route_subway**도 후보 예비.
+### route_datacenter — 가시 비활성화
+- 레버: (1200, 320) — 상층 우측 플랫폼.
+- 토글 가시: 지면 (550, 814) w=120, (1500, 814) w=120 — 두 구간.
+- 효과: 양 구간 동시 dim + 콜리전 off.
+- VEIL after: "전기가 끊겼어요. 발 밑 가시 무력화."
 
-**핵심 디자인**:
-- 비밀칸은 진행 루트와 분리(메인 동선 안 막음). 레버 모르고 지나쳐도 클리어 가능
-- 보상이 명확해야 다음 맵에서도 레버를 찾게 됨 (XP orb 무더기가 시각적으로 강함)
+### route_blackout — 도전방 입구 연출 + 도전 본체
+- 입구 발판: (170, 595) `one_shot=true`.
+- 게이트: x=240 StaticBody (50×720). 폴리스 라인 + "출입 통제" 라벨.
+- 차폐막: x=265~stage_end world-space 큰 dark 패널 (z=9, "DARK ZONE / 분류 미상" 라벨).
+  발판 step 전에는 도전방 내부(플랫폼/적/가시)가 시각적으로 완전히 가려짐.
+- 활성화 흐름 (`_start_challenge_run`):
+  1. 게이트 visual fade + 차폐막 fade (0.5s + 0.9s).
+  2. 사이렌 빨강 플래시 2회.
+  3. challenge_dark_layer fade-in (CanvasLayer 안 Control wrapper로 트윈).
+  4. 타이머 HUD + "BLACKOUT RUN / N초 안에 골 도달 / 한 대만 맞아도 실패" 배너.
+- 도전 가시: y=594 (지면 윗면). x=480/950/1500/2050 발판 갭에 정렬.
 
-### 2.3 격리병동 — 레버 + 발판 = 이스터에그 진입
-현재: 잠긴 문 앞 5초 hold → ARCTURUS 문서
+## 3. 입력 모델
 
-**변경안**:
-- 잠긴 문 앞 발판(pressure plate) 추가
-- 맵 다른 위치에 레버 배치 (예: 맵 시작부 근처 천장)
-- 레버 당김 + 발판 위에 서있기 두 조건 동시 충족 시 이스터에그 진입
-- "단순한 hold"보다 **공간 인지**가 들어가서 발견 자체가 보상이 됨
-- 5초 hold 보다 짧은 cooldown(1~2초) 정도로 체감 부담은 낮춤
-- 레버 위치 hint: ARCTURUS 색(청색) 작은 점멸 빛 한 줄
+- 레버: `attack` 키 재사용. Area2D 안에서는 `Player._try_attack`이 사격을 흡수,
+  대신 `nearby_lever.try_pull()` 호출. 따로 interact 키 추가 안 함.
+- 발판: 입력 없음. body_entered 자동 step.
 
-**주의**: 레버가 다른 맵 비밀칸과 시각이 같아야 학습 효과. 맵별 색만 살짝 다르게.
+## 4. 시각 톤 — 색 규약
 
-### 2.4 route_datacenter — 가시 비활성화
-- 메인 통로 일부에 전기 가시(현재 spike와 별도 시각: 전기 아크 효과로 표현)
-- 맵 측면 비밀 통로에 레버 — 당기면 일정 구간 가시가 비활성(투명도 다운 + 콜리전 off)
-- 활성/비활성 시각 차이 명확하게: 활성=청백색 깜빡, 비활성=어두운 회색
-- 동선: 위험 통로 그대로 진행 vs 우회해서 레버 찾기 → 전기 차단하고 안전 통과
-- 보상: 차단된 통로가 더 짧고 XP orb 몇 개 깔려 있음
+- 비밀칸 hint glow: ARCTURUS 청색 `Color(0.55, 0.85, 0.95)` (back_alley/rooftops/
+  ward/datacenter 공통).
+- 도전방 hint: 주황 경고 톤 `Color(0.95, 0.55, 0.30)` (blackout 입구 발판) — 안전한
+  비밀칸과 시각적 차별화.
 
-## 3. 구현 순서 권장
+## 5. 미해결 / 다음 검토 후보
 
-1. `LeverInteractable.gd` 스크립트 (Area2D + visual + interact 입력 + signal)
-2. 튜토리얼 비밀칸(back_alley) — 가장 단순. 발판 1개 + 레버 1개 + XP 무더기
-3. rooftops 비밀칸 — 같은 패턴 반복으로 학습 강화
-4. ward 이스터에그 변경 — 기존 hold 로직 제거 + 레버 + 발판 조합
-5. datacenter 가시 비활성 — 가장 복잡 (콜리전 toggle + 시각 변화)
-
-## 4. 입력 검토 사항
-- 현재 attack 키 재사용 vs 새 interact 키
-  - 재사용: 추가 입력 학습 부담 없음. 단, 적 옆 레버에서 의도치 않은 사격 가능
-  - 새 키: E 키 / 패드 X 추가. 더 깔끔하지만 InputMap·튜토리얼·설정창 추가 필요
-- 권장: **재사용**. 레버 Area2D 안에 들어왔을 때만 attack 입력이 레버로 해석되고,
-  같은 프레임에 사격은 캔슬. 상시 키 추가는 게임 단순함을 해칠 수 있음
-
-## 5. 미해결 질문
-- 레버 시각이 너무 작으면 발견 어렵고, 너무 크면 lore_label처럼 "정신 사나움"
-  → 한 번 배치해보고 사용자 피드백
-- ward 발판+레버 변경 시 기존 hold 트리거 사용자가 익숙해진 거 아닐까?
-  → 필요하면 hint 자막으로 "레버를 먼저 당겨봐요" 한 줄
-- 비밀칸 보상이 XP만이면 단조로움 → 가끔 HP pickup 또는 future 스킬 카드
+- 도전방 입구 발판 hint glow가 폴리스 라인·차폐막 색에 묻혀 안 보일 수 있음 →
+  사용자 테스트 후 hint 강도 조정.
+- ARCTURUS 진입 후 발판/레버 잠금 상태 — 현재 PressurePlate는 one_shot이라 한 번
+  밟히면 잠김. 같은 stage 내 재진입은 의도적으로 막힘.
+- back_alley/rooftops 비밀칸은 stage 0~1 한정 — 외곽 맵 풀에서 그 맵이 안 뜨면
+  플레이어가 레버 시스템을 학습하지 못한 채 후반 맵에 도착. 풀 가중치 조정 검토 가능.

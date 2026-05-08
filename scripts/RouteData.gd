@@ -19,7 +19,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 0, "max_stage": 1,
 		"tags": ["우회", "어두운_환경"],
-		"veil_comment": "조용한 루트예요. 경비가 적어요.",
+		"veil_comment": "여기로 가요. 경비도 약하고, 길도 단순해요.",
+		"entry_comment": "외곽으로 들어왔어요. 차분히 살펴봐요.",
 		"stage_color": Color(0.12, 0.12, 0.14),
 	},
 	{
@@ -32,7 +33,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 0, "max_stage": 1,
 		"tags": ["원거리", "노출", "이동"],
-		"veil_comment": "저격 노출이 있어요. 엄폐 포인트 챙겨요.",
+		"veil_comment": "옥상으로 갈래요? 시야는 트이지만 그만큼 노출돼요.",
+		"entry_comment": "옥상이 출구예요. 멈추면 저격에 잡혀요 — 계속 움직여요.",
 		"stage_color": Color(0.10, 0.13, 0.20),
 	},
 	{
@@ -46,7 +48,8 @@ const ALL_ROUTES: Array = [
 		# 지상(rooftops) 직후 깊은 지하로 가는 게 어색해 stage 2 이후로 한정.
 		"min_stage": 2, "max_stage": 3,
 		"tags": ["근접전", "어두운_환경", "함정", "전투"],
-		"veil_comment": "함정이 깔려 있어요. 발 밑 봐요.",
+		"veil_comment": "지하로 빠지는 길이에요. 함정만 조심하면 빠르고 보상도 커요.",
+		"entry_comment": "아래로 내려가요. 통로 끝에 출구가 있어요. 발 밑 봐요.",
 		"stage_color": Color(0.18, 0.22, 0.20),
 	},
 	{
@@ -60,7 +63,8 @@ const ALL_ROUTES: Array = [
 		# 외부→시설 진입 brigde — stage 1~3에 등장해 외벽 단계와 내부 단계를 잇는다.
 		"min_stage": 1, "max_stage": 3,
 		"tags": ["근접전", "함정", "전투"],
-		"veil_comment": "좁아요. 대시 써서 함정 넘어가요.",
+		"veil_comment": "옛 지하철이에요. 좁고 어두워요. 대시 써서 함정 넘어가세요.",
+		"entry_comment": "지하철 통로예요. 좁아요 — 한 번에 멀리 가요.",
 		"stage_color": Color(0.08, 0.10, 0.14),
 	},
 	{
@@ -74,7 +78,8 @@ const ALL_ROUTES: Array = [
 		# 드론 첫 등장 맵 — 사용자 피드백상 후반에 등장하는 게 더 자연스러워 stage 3~4로 이동.
 		"min_stage": 3, "max_stage": 4,
 		"tags": ["전투", "드론", "수직"],
-		"veil_comment": "수직 구조예요. 위에서 와요.",
+		"veil_comment": "냉각 파이프 위로 올라가는 길이에요. 드론이 위에서 떨어져요.",
+		"entry_comment": "냉각 파이프 위쪽이 출구예요. 우측 외곽에 뭔가 따로 있는 것 같기도 해요.",
 		"stage_color": Color(0.10, 0.16, 0.20),
 	},
 	{
@@ -88,7 +93,8 @@ const ALL_ROUTES: Array = [
 		# stage 1부터 등장 가능 — 외벽 옥상 직후 감시탑(둘 다 노출+높이)이 자연스럽게 이어짐.
 		"min_stage": 1, "max_stage": 4,
 		"tags": ["원거리", "전투", "노출"],
-		"veil_comment": "저격이 많아요. 엄폐 짧게 쓰고 빠르게.",
+		"veil_comment": "감시탑은 위험해요. 저격이 많아요 — 엄폐 짧게, 이동은 빠르게.",
+		"entry_comment": "관제 구역이에요. 시야 안에 들어가는 순간 쏴와요.",
 		"stage_color": Color(0.18, 0.16, 0.22),
 	},
 	{
@@ -103,7 +109,8 @@ const ALL_ROUTES: Array = [
 		# 격리 병동은 ??? 맵 복선 트리거가 있어 Stage 3~4 풀에 항상 포함되어야 함.
 		"guaranteed_in_stages": [3, 4],
 		"tags": ["우회", "어두운_환경", "은폐"],
-		"veil_comment": "이 구역은 오래됐어요. 조심해요.",
+		"veil_comment": "격리 병동이에요. 도면이랑 다르게 생겼을 거예요.",
+		"entry_comment": "이 구역은 오래됐어요. 누가 봉인했는지 저도 몰라요.",
 		"stage_color": Color(0.12, 0.10, 0.14),
 	},
 	{
@@ -116,7 +123,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 4, "max_stage": 5,
 		"tags": ["전투", "드론", "원거리"],
-		"veil_comment": "드론과 저격이 동시에 와요. 어렵겠어요.",
+		"veil_comment": "데이터 센터예요. 드론·저격 동시에 와요. 한 번에 정리해야 빠져요.",
+		"entry_comment": "서버 랙이에요. 위에서 드론, 같은 층에서 저격.",
 		"stage_color": Color(0.14, 0.18, 0.24),
 	},
 	{
@@ -129,7 +137,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 5, "max_stage": 6,
 		"tags": ["우회", "은폐"],
-		"veil_comment": "조용한 길이에요. 빠르게 빠져요.",
+		"veil_comment": "비상 탈출로예요. 빨리 빠지면 그만큼 안전해요.",
+		"entry_comment": "조용한 길이에요. 멈추지 말고 빠지면 돼요.",
 		"stage_color": Color(0.10, 0.12, 0.14),
 	},
 	{
@@ -142,7 +151,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 5, "max_stage": 6,
 		"tags": ["전투", "드론", "밝은_환경"],
-		"veil_comment": "드론이 위에서 와요. 보상은 그만큼 커요.",
+		"veil_comment": "핵심부예요. 정면 돌파 — 드론 상시 순찰. 보상은 큽니다.",
+		"entry_comment": "핵심부에 들어왔어요. 거리 잘 잡아요.",
 		"stage_color": Color(0.22, 0.18, 0.18),
 	},
 	{
@@ -157,7 +167,8 @@ const ALL_ROUTES: Array = [
 		"available_stages": [4],
 		"guaranteed_in_stages": [4],
 		"tags": ["도전", "어두운_환경"],
-		"veil_comment": "[도전] 교신이 차단된 구역이에요. 혼자 가야 해요.",
+		"veil_comment": "[도전] 교신이 끊겨요. 안에선 저도 못 도와드려요. 한 번에 빠져나오셔야 해요.",
+		"entry_comment": "여기서부터 교신 끊겨요. 30초 안에 빠져나오세요.",
 		"stage_color": Color(0.02, 0.02, 0.04),
 	},
 	{
@@ -170,7 +181,8 @@ const ALL_ROUTES: Array = [
 		"unique": true,
 		"min_stage": 5, "max_stage": 6,
 		"tags": ["우회", "정보"],
-		"veil_comment": "저도 모르겠어요. 미안해요.",
+		"veil_comment": "...저도 모르겠어요. 들어가실래요?",
+		"entry_comment": "...뭐가 있는 거지.",
 		"stage_color": Color(0.06, 0.06, 0.08),
 	},
 ]
@@ -262,21 +274,58 @@ static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 	# 둘 다 없으면 모든 stage 등장 (안전 폴백).
 	return true
 
+# VEIL 추천. 컨텍스트(HP/레벨)에 반응해 직관적인 결정을 내림:
+#   - HP가 절반 이하 → 안전 우선 (가장 낮은 risk).
+#   - 레벨 3 이상 → 보상 우선 (가장 높은 reward).
+#   - 그 외 → 균형 (reward * 2 - risk 가장 큰 것).
+# 동점이면 risk 낮은 쪽이 우선. hidden / challenge 루트는 항상 제외.
+# 호출자가 reasoning 라벨을 표시할 수 있도록 choose_veil_recommendation_with_reason도 제공.
 static func choose_veil_recommendation(pool: Array) -> String:
-	var best_id: String = ""
-	var best_score: float = -INF
+	var pair: Dictionary = choose_veil_recommendation_with_reason(pool)
+	return str(pair.get("id", ""))
+
+static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
+	var candidates: Array = []
 	for r in pool:
 		var route: Dictionary = r
 		if route.get("hidden", false):
 			continue
-		# 도전 루트는 의도적 선택 — VEIL 추천에서 제외 (교신 차단 컨셉)
 		if route.get("challenge", false):
 			continue
-		var s: float = float(route.get("reward", 0)) - 0.4 * float(route.get("risk", 0))
-		if s > best_score:
-			best_score = s
-			best_id = route.get("id", "")
-	if best_id == "" and pool.size() > 0:
-		var fallback: Dictionary = pool[0]
-		best_id = fallback.get("id", "")
-	return best_id
+		candidates.append(route)
+	if candidates.is_empty():
+		if pool.size() > 0:
+			return {"id": pool[0].get("id", ""), "reason": ""}
+		return {"id": "", "reason": ""}
+	var hp: int = GameState.player_hp
+	var max_hp: int = GameState.player_max_hp
+	var level: int = GameState.player_level
+	var hurt: bool = (max_hp > 0 and float(hp) / float(max_hp) <= 0.5)
+	var strong: bool = (level >= 3)
+	var best: Dictionary = candidates[0]
+	var best_score: float = -INF
+	var reason: String = ""
+	if hurt:
+		reason = "지금은 안전이 우선"
+		for c in candidates:
+			# 낮은 risk 우선, 동점이면 reward 큰 쪽.
+			var s: float = -float(c.get("risk", 0)) * 2.0 + float(c.get("reward", 0)) * 0.5
+			if s > best_score:
+				best_score = s
+				best = c
+	elif strong:
+		reason = "지금은 보상 챙길 만해요"
+		for c in candidates:
+			# 높은 reward 우선, 동점이면 risk 낮은 쪽.
+			var s: float = float(c.get("reward", 0)) * 2.0 - float(c.get("risk", 0)) * 0.5
+			if s > best_score:
+				best_score = s
+				best = c
+	else:
+		reason = "위험 대비 보상 균형"
+		for c in candidates:
+			var s: float = float(c.get("reward", 0)) * 2.0 - float(c.get("risk", 0))
+			if s > best_score:
+				best_score = s
+				best = c
+	return {"id": best.get("id", ""), "reason": reason}

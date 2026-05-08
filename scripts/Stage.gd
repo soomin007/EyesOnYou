@@ -114,24 +114,19 @@ var ward_foreshadow_triggered: bool = false
 func _setup_veil_mistakes() -> void:
 	if GameState.playground_active:
 		return
-	# rooftops는 vertical 진입 멘트가 더 구체적이라 stage 0 generic 멘트는 생략 —
-	# 두 멘트가 거의 동시에 큐 들어가서 "약간 겹침"으로 보이던 문제 회피.
-	if GameState.current_stage == 0 and GameState.current_route_id != "route_rooftops":
-		# 첫 적 구역 진입 — 미션 컨텍스트 한 줄. 적 수 카운팅 같은 친절한 안내는 의도적으로 안 함.
-		_arm_veil_mistake_at(680.0, "정문은 봉쇄됐어요. 외벽으로 우회해요.", "")
 	# 격리 병동 통과 시 ??? 맵 복선 (stage 3 또는 4).
 	# x=900 — 진입 직후 분기 결정 전에 분위기 깔리도록 일찍 트리거.
 	if GameState.current_route_id == "route_ward":
 		_arm_ward_foreshadow_at(900.0)
-	# Vertical 맵 — 진입 직후 방향 안내. 사용자: "왜 올라가야 하는지 모르겠다".
-	# 정상/바닥에 출구가 있다는 사실을 첫 멘트로 명시. rooftops는 노출 위협까지 안내.
-	match GameState.current_route_id:
-		"route_rooftops":
-			_show_veil_subtitle("옥상이 출구예요. 시야가 트여서 저격에 노출돼요 — 멈추지 말고.", 3.6)
-		"route_cooling":
-			_show_veil_subtitle("냉각 파이프 위쪽이 출구예요. 우측 외곽에 뭔가 따로 있는 것 같기도 해요.", 3.6)
-		"route_sewers":
-			_show_veil_subtitle("아래로 내려가요. 통로 끝에 출구가 있어요.", 3.0)
+	# 진입 직후 한 줄 안내 — 모든 루트가 RouteData.entry_comment를 가짐.
+	# "어디로 가야 하나" "이 맵의 위협이 뭔가"를 단숨에 통보. 사용자: 맵 진입 멘트 리뉴얼.
+	var entry: String = ""
+	for r in RouteData.ALL_ROUTES:
+		if r.get("id", "") == GameState.current_route_id:
+			entry = str(r.get("entry_comment", ""))
+			break
+	if entry != "":
+		_show_veil_subtitle(entry, 3.6)
 
 func _arm_ward_foreshadow_at(trigger_x: float) -> void:
 	var area := Area2D.new()
@@ -2813,6 +2808,7 @@ var challenge_dark_layer: CanvasLayer = null
 var challenge_gate_door: StaticBody2D = null
 var challenge_gate_visual: Node2D = null
 var challenge_plate: PressurePlate = null
+var challenge_curtain: Node2D = null   # 입구 너머 전체를 가리는 차폐막 (world-space)
 
 func _setup_challenge_mode() -> void:
 	if not bool(_map_data.get("challenge", false)):
@@ -2831,14 +2827,54 @@ func _build_challenge_gate() -> void:
 	var gate_x: float = 240.0
 	var gate_w: float = 50.0
 	var gate_h: float = 720.0
+	# 차폐막 — 도전방 내부 전체를 world-space로 가린다. 플랫폼/적/가시 모두 시각적으로
+	# 묻혀서 입장 전에는 무엇이 있는지 알 수 없다. 발판 step 시 fade 후 free.
+	# (사용자 요구: "들어가기 전에는 안이 어떻게 생겼는지, 뭐가 나올지 전혀 몰라야 해")
+	challenge_curtain = Node2D.new()
+	challenge_curtain.z_index = 9
+	add_child(challenge_curtain)
+	var curtain_x: float = gate_x + gate_w * 0.5  # 문 우측 경계부터 시작
+	var curtain_w: float = STAGE_LENGTH - curtain_x + 200.0  # 끝 벽 너머까지 여유
+	# 본체 — 짙은 보라-검정. 위협적 톤.
+	var c_body := ColorRect.new()
+	c_body.color = Color(0.04, 0.03, 0.06, 1.0)
+	c_body.position = Vector2(curtain_x, -200.0)
+	c_body.size = Vector2(curtain_w, 1200.0)
+	challenge_curtain.add_child(c_body)
+	# 수직 grain — 가는 선 패턴(입자 같은 정적). 50px 간격.
+	var grain_count: int = int(curtain_w / 50.0)
+	for i in grain_count:
+		var line := ColorRect.new()
+		line.color = Color(0.10, 0.08, 0.12, 0.55)
+		line.position = Vector2(curtain_x + 5.0 + float(i) * 50.0, -200.0)
+		line.size = Vector2(1.0, 1200.0)
+		challenge_curtain.add_child(line)
+	# 좌측 진한 비네트 — 문 쪽으로 더 어둡게.
+	var fade_l := ColorRect.new()
+	fade_l.color = Color(0, 0, 0, 0.65)
+	fade_l.position = Vector2(curtain_x, -200.0)
+	fade_l.size = Vector2(80.0, 1200.0)
+	challenge_curtain.add_child(fade_l)
+	# 분류 미상 라벨 — 차폐막 위 큰 글자. 화면 가운데쯤(스크롤되어 보임)에 위치.
+	var unknown := Label.new()
+	unknown.text = "[ DARK ZONE ]\n\n분류 미상"
+	unknown.add_theme_font_size_override("font_size", 24)
+	unknown.add_theme_color_override("font_color", Color(0.65, 0.30, 0.32, 0.85))
+	unknown.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	unknown.add_theme_constant_override("outline_size", 3)
+	unknown.position = Vector2(curtain_x + 220.0, 280.0)
+	unknown.size = Vector2(380.0, 140.0)
+	unknown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	challenge_curtain.add_child(unknown)
 	# 시각 — Node2D wrapper에 패널 + 사선 줄무늬 + 경고 라벨.
 	challenge_gate_visual = Node2D.new()
+	# 게이트는 차폐막 위에 그려져야 함 (커튼 z=9, 게이트 z>=10).
 	add_child(challenge_gate_visual)
 	var panel := ColorRect.new()
 	panel.color = Color(0.10, 0.05, 0.06, 0.95)
 	panel.position = Vector2(gate_x - gate_w * 0.5, 0.0)
 	panel.size = Vector2(gate_w, gate_h)
-	panel.z_index = 5
+	panel.z_index = 10
 	challenge_gate_visual.add_child(panel)
 	# 사선 줄무늬 (폴리스 라인) — 빨강/노랑 사선 줄 4개
 	for i in 5:
@@ -2851,7 +2887,7 @@ func _build_challenge_gate() -> void:
 			Vector2(gate_x + gate_w * 0.5, y0 + 50.0),
 			Vector2(gate_x - gate_w * 0.5, y0 + 20.0),
 		])
-		stripe.z_index = 6
+		stripe.z_index = 11
 		challenge_gate_visual.add_child(stripe)
 	# 경고 라벨 — 큼지막한 빨강 한 줄
 	var warn := Label.new()
@@ -2864,7 +2900,7 @@ func _build_challenge_gate() -> void:
 	warn.size = Vector2(240.0, 60.0)
 	warn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	warn.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	warn.z_index = 7
+	warn.z_index = 12
 	challenge_gate_visual.add_child(warn)
 	# 충돌 — StaticBody. 발판 step 후 disabled.
 	challenge_gate_door = StaticBody2D.new()
@@ -2897,24 +2933,30 @@ func _on_challenge_plate_stepped(_id: String) -> void:
 # 도전 실제 시작 — 문 fade + 사이렌 플래시 + 암전 + 타이머 HUD + 클리어 조건 배너.
 func _start_challenge_run() -> void:
 	challenge_active = true
-	# 1) 문 fade out + 충돌 disable.
+	# 1) 문 + 차폐막 fade out + 충돌 disable.
 	if challenge_gate_visual != null and is_instance_valid(challenge_gate_visual):
 		var tw_v := challenge_gate_visual.create_tween()
 		tw_v.tween_property(challenge_gate_visual, "modulate:a", 0.0, 0.5)
 		tw_v.tween_callback(challenge_gate_visual.queue_free)
+	if challenge_curtain != null and is_instance_valid(challenge_curtain):
+		# 차폐막은 살짝 더 천천히 — 안이 점차 드러나는 톤. 사이렌 플래시 끝나갈 때 즈음 모두 보임.
+		var tw_c := challenge_curtain.create_tween()
+		tw_c.tween_interval(0.2)
+		tw_c.tween_property(challenge_curtain, "modulate:a", 0.0, 0.9)
+		tw_c.tween_callback(challenge_curtain.queue_free)
 	if challenge_gate_door != null and is_instance_valid(challenge_gate_door):
 		for c in challenge_gate_door.get_children():
 			if c is CollisionShape2D:
 				(c as CollisionShape2D).set_deferred("disabled", true)
 	# 2) 사이렌 플래시 — 화면 빨강 두 번 깜빡.
 	_play_siren_flash()
-	# 3) 암전 — 0 → 정상 강도 fade in.
+	# 3) 암전 — 0 → 정상 강도 fade in. CanvasLayer 안의 Control 노드를 트윈.
 	_build_challenge_blackout()
-	if challenge_dark_layer != null:
-		challenge_dark_layer.modulate.a = 0.0
-		var tw_d := challenge_dark_layer.create_tween()
+	if challenge_dark_root != null:
+		challenge_dark_root.modulate.a = 0.0
+		var tw_d := challenge_dark_root.create_tween()
 		tw_d.tween_interval(0.4)
-		tw_d.tween_property(challenge_dark_layer, "modulate:a", 1.0, 0.7)
+		tw_d.tween_property(challenge_dark_root, "modulate:a", 1.0, 0.7)
 	# 4) 타이머 HUD.
 	_build_challenge_timer_hud()
 	# 5) 클리어 조건 배너 — 큰 글자, 화면 중앙. 페이드 인 → 2.4s 머무름 → 페이드 아웃.
@@ -2981,18 +3023,26 @@ func _show_challenge_briefing_banner() -> void:
 	tw.chain().tween_property(panel, "modulate:a", 0.0, 0.5)
 	tw.chain().tween_callback(layer.queue_free)
 
+var challenge_dark_root: Control = null
+
 func _build_challenge_blackout() -> void:
 	# 화면 강 dim — 짙은 검정. 더 진하게(0.72), 가장자리 비네트도 더 두껍게.
 	# 시야 압박: 가시 함정 / drone 폭탄 그림자 / bomber 점멸이 잘 안 보임.
+	# CanvasLayer 자체는 modulate가 없어 fade in을 위해 자식 Control 하나 두고
+	# 거기에 시각 children 모두 넣음. (사용자 보고 버그: line 2914 modulate 접근 에러)
 	challenge_dark_layer = CanvasLayer.new()
 	challenge_dark_layer.layer = 17
 	add_child(challenge_dark_layer)
+	challenge_dark_root = Control.new()
+	challenge_dark_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	challenge_dark_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	challenge_dark_layer.add_child(challenge_dark_root)
 	# 풀스크린 dim
 	var full_dim := ColorRect.new()
 	full_dim.color = Color(0, 0, 0, 0.72)
 	full_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	full_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	challenge_dark_layer.add_child(full_dim)
+	challenge_dark_root.add_child(full_dim)
 	# 가장자리 비네트 (좌/우/상/하 각각 짙은 띠 — 두껍게)
 	for side_data in [
 		{"pos": Vector2(0, 0), "size": Vector2(1280, 140)},               # 상
@@ -3006,7 +3056,7 @@ func _build_challenge_blackout() -> void:
 		v.position = d["pos"]
 		v.size = d["size"]
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		challenge_dark_layer.add_child(v)
+		challenge_dark_root.add_child(v)
 
 func _build_challenge_timer_hud() -> void:
 	var layer := CanvasLayer.new()

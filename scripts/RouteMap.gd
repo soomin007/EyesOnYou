@@ -9,6 +9,7 @@ extends Control
 
 var pool: Array = []
 var recommended_id: String = ""
+var recommended_reason: String = ""
 var hovered_idx: int = 0
 var buttons: Array = []
 # 고위험/고보상 별도 패널 (사용자 피드백: 본 멘트에 겹치면 너무 많아짐).
@@ -19,7 +20,9 @@ func _ready() -> void:
 	stage_label.text = "STAGE %d / %d  —  루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	subtitle_label.text = "● 위험도 / 보상   —   ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
-	recommended_id = RouteData.choose_veil_recommendation(pool)
+	var rec: Dictionary = RouteData.choose_veil_recommendation_with_reason(pool)
+	recommended_id = str(rec.get("id", ""))
+	recommended_reason = str(rec.get("reason", ""))
 	# VEIL 멘트 — 신뢰도 톤(색)을 _ready에서 한 번만 적용. 폰트는 22로 키워
 	# 선택 화면에서 분명히 눈에 들어오게 (이전 15는 카드에 묻혀 안 보였음).
 	veil_text.add_theme_font_size_override("font_size", 22)
@@ -143,6 +146,10 @@ func _update_veil_comment() -> void:
 	var desc: String = str(route.get("description", ""))
 	if desc != "":
 		msg += desc + "\n\n"
+	# 이 루트가 추천된 거면 추천 사유를 한 줄로 — VEIL 코멘트 위에 살짝 다른 톤.
+	var is_recommended: bool = (route.get("id", "") == recommended_id and recommended_reason != "")
+	if is_recommended:
+		msg += "★ " + recommended_reason + "\n"
 	# prefix 시스템 폐지 — 짧은 prefix가 뒷 문장과 부자연스러움. 신뢰도는 색으로.
 	msg += "VEIL  —  " + str(route.get("veil_comment", ""))
 	veil_text.text = msg

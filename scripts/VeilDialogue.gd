@@ -82,13 +82,14 @@ const BRIEFINGS: Array = [
 ]
 
 # 첫 임무 시작 화면 — Briefing.gd가 stage 0 진입 시 한 번만 표시.
-# VEIL 발화가 아닌 시스템 텍스트. 짧고 차갑게 — 자세한 컨텍스트는 게임 안에서 체감.
-const INTRO_SYSTEM: String = "OPERATION PALIMPSEST\nSILO-7 — 데이터 회수.\n\n[교신 연결 중...]"
+# 한 화면에 임무명·목표·VEIL 동행을 같이 통보 — 이전엔 라인이 4개로 쪼개져
+# 사용자가 무슨 내용인지 못 읽고 그냥 ENTER로 넘기던 문제(사용자 보고).
+const INTRO_SYSTEM: String = "OPERATION PALIMPSEST\nSILO-7 — 분류 미상의 데이터 회수.\n사전 정보 없음. AI 동반자 VEIL과 동행."
 
-# 시스템 텍스트 직후 VEIL 첫 마디 (한 번만, stage 0 진입 시) — 짧고 자연스럽게.
+# 시스템 텍스트 직후 VEIL 첫 마디 — 한 화면(여러 줄)으로 묶음.
+# 한 줄씩 나누면 ENTER 연타로 의미가 다 새서 한 호흡으로 통보.
 const INTRO_VEIL: Array[String] = [
-	"...연결됐어요.",
-	"외곽부터 가요, 요원.",
+	"...연결됐어요. 들리세요?\n저는 VEIL, 이번 임무 동안 같이 갑니다.\n외곽부터 가요. 차분히 살펴보면서.",
 ]
 
 # 레벨업 fallback (랜덤 6개)
