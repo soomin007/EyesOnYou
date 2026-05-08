@@ -1354,6 +1354,7 @@ func _ambience_escape() -> void:
 	_build_escape_city(_escape_city_group)
 
 const _TUNNEL_END_X: float = 1600.0   # 터널이 물리적으로 끝나는 x. 그 너머는 city 노출.
+const _BGM_FADE_START: float = 0.78   # 맵 진행률 — BGM 페이드아웃 시작 지점.
 
 func _build_escape_tunnel(host: Node) -> void:
 	# 솔리드 회색 콘크리트 벽 — x = -200 ~ _TUNNEL_END_X 까지만. 그 이후엔 벽 없음.
@@ -1437,8 +1438,8 @@ func _build_escape_exit_sign(host: Node, x: float, y: float) -> void:
 	holder.add_child(body)
 	# EXIT 텍스트
 	var label := Label.new()
-	label.text = "출구  →"
-	label.add_theme_font_size_override("font_size", 16)
+	label.text = "EXIT →"
+	label.add_theme_font_size_override("font_size", 18)
 	label.add_theme_color_override("font_color", Color(0.05, 0.08, 0.06))
 	label.position = Vector2(-42.0, -18.0)
 	label.size = Vector2(84.0, 36.0)
@@ -1595,6 +1596,15 @@ func _tick_escape_transition(_delta: float) -> void:
 			continue
 		var sf: float = float(layer.get_meta("scroll_factor", 1.0))
 		layer.position.x = cam_x * (1.0 - sf)
+	# 맵 끝 가까워질수록 BGM 페이드아웃 — progress 0.78부터 감쇠 시작, 1.0에서 -60dB.
+	# 사용자: "맵 끝에 가까워질수록 배경 음악 페이드아웃". 임무 종료 톤 강조.
+	if player != null and is_instance_valid(player):
+		var progress: float = clamp(player.global_position.x / STAGE_LENGTH, 0.0, 1.0)
+		if progress >= _BGM_FADE_START:
+			var t: float = (progress - _BGM_FADE_START) / (1.0 - _BGM_FADE_START)
+			BgmPlayer.set_extra_attenuation_db(lerp(0.0, -60.0, clamp(t, 0.0, 1.0)))
+		else:
+			BgmPlayer.set_extra_attenuation_db(0.0)
 
 ## 환경 라벨/그래피티 — 맵에 떡밥 텍스트 한 줄 깔아 코드명을 다른 맵과 묶음.
 ## PROJECT VEIL / ARCTURUS / PALIMPSEST / SILO-7 등이 여러 맵에 반복 등장 → 호기심.

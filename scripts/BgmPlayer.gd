@@ -38,6 +38,9 @@ var _tween_in: Tween = null
 var _tween_out: Tween = null
 var _ducked: bool = false
 var _tween_duck: Tween = null
+# 현재 트랙에 누적되는 추가 감쇠 dB (양수 = 감쇠 안 함, 음수 = 더 작게).
+# 맵 진행률 따라 BGM 페이드아웃 같은 점진 효과에 사용. 트랙이 바뀌면 0으로 리셋.
+var _extra_db: float = 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -55,6 +58,8 @@ func play(track_id: String) -> void:
 	if not TRACKS.has(track_id):
 		stop()
 		return
+	# 트랙이 바뀌면 누적 감쇠 리셋 — 다음 트랙(엔딩 등)이 silent에서 시작하지 않도록.
+	_extra_db = 0.0
 	var path: String = TRACKS[track_id]
 	var stream: AudioStream = load(path) as AudioStream
 	if stream == null:
@@ -113,7 +118,22 @@ func _target_db() -> float:
 	var base: float = BASE_DB + linear_to_db(v)
 	if _ducked:
 		base += DUCKED_OFFSET_DB
+	base += _extra_db
 	return base
+
+# 점진 감쇠 — 매 프레임 호출 가능. 맵 끝 가까워질수록 BGM 페이드아웃 같은 효과에.
+# db_offset = 0 이면 감쇠 없음. -60 정도면 거의 무음.
+# 즉시 active player의 volume_db 반영 — 트윈 없이 매끄러운 슬라이드는 호출자가 매 프레임 누적.
+func set_extra_attenuation_db(db_offset: float) -> void:
+	if is_equal_approx(_extra_db, db_offset):
+		return
+	_extra_db = db_offset
+	if _current_track == "" or _active_idx >= _players.size():
+		return
+	# 진행 중인 fade-in 트윈은 죽이고 즉시 새 dB로. (지속 호출 시 자연스럽게 슬라이드됨)
+	if _tween_in != null and _tween_in.is_valid():
+		_tween_in.kill()
+	_players[_active_idx].volume_db = _target_db()
 
 # 사망 같은 임시 상황에서 BGM을 살짝 죽임. 트랙 전환은 안 하고 dB만 천천히 깎음.
 # 다시 stage로 복귀할 때 set_ducked(false)로 원복.

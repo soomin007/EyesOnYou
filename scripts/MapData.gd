@@ -548,18 +548,24 @@ static func _datacenter() -> Dictionary:
 static func _escape() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3000.0, 720.0),
+		# 사용자: 터널 바깥(=_TUNNEL_END_X 1600 이후) 구간 좀 더 길게. 3000 → 3800.
+		"world_size":   Vector2(3800.0, 720.0),
 		"player_start": Vector2(140.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(2880.0, 540.0),
+		"goal_pos":     Vector2(3680.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
+			# 터널 안
 			{"pos": Vector2(400, 520),  "w": 240.0},
 			{"pos": Vector2(800, 480),  "w": 240.0},
 			{"pos": Vector2(1200, 520), "w": 240.0},
+			# 터널 출구 ~ 야경 구간
 			{"pos": Vector2(1600, 480), "w": 240.0},
 			{"pos": Vector2(2000, 520), "w": 240.0},
-			{"pos": Vector2(2400, 480), "w": 200.0},
+			{"pos": Vector2(2400, 480), "w": 240.0},
+			{"pos": Vector2(2800, 520), "w": 240.0},
+			{"pos": Vector2(3200, 480), "w": 240.0},
+			{"pos": Vector2(3500, 520), "w": 200.0},
 		],
 		"enemies": {
 			# 사용자: 패트롤 2마리만, 모두 터널 안(_TUNNEL_END_X = 1600 이내)에서.
