@@ -1354,7 +1354,9 @@ func _ambience_escape() -> void:
 	_build_escape_city(_escape_city_group)
 
 const _TUNNEL_END_X: float = 1600.0   # 터널이 물리적으로 끝나는 x. 그 너머는 city 노출.
-const _BGM_FADE_START: float = 0.78   # 맵 진행률 — BGM 페이드아웃 시작 지점.
+# BGM 페이드아웃 — player가 터널 출구를 통과한 순간(_TUNNEL_END_X 도달)부터 점진 감쇠 시작.
+# 골(STAGE_LENGTH)에 닿을 즈음 -60dB(거의 무음). 사용자: "터널 나오는 순간부터".
+const _BGM_FADE_FLOOR_DB: float = -60.0
 
 func _build_escape_tunnel(host: Node) -> void:
 	# 솔리드 회색 콘크리트 벽 — x = -200 ~ _TUNNEL_END_X 까지만. 그 이후엔 벽 없음.
@@ -1596,13 +1598,14 @@ func _tick_escape_transition(_delta: float) -> void:
 			continue
 		var sf: float = float(layer.get_meta("scroll_factor", 1.0))
 		layer.position.x = cam_x * (1.0 - sf)
-	# 맵 끝 가까워질수록 BGM 페이드아웃 — progress 0.78부터 감쇠 시작, 1.0에서 -60dB.
-	# 사용자: "맵 끝에 가까워질수록 배경 음악 페이드아웃". 임무 종료 톤 강조.
+	# BGM 페이드아웃 — 터널 출구 통과 순간부터 점진 감쇠, 골 도달 시 거의 무음.
+	# 사용자: "탈출로에서 터널을 나오는 순간부터 점진적으로 줄어들게".
 	if player != null and is_instance_valid(player):
-		var progress: float = clamp(player.global_position.x / STAGE_LENGTH, 0.0, 1.0)
-		if progress >= _BGM_FADE_START:
-			var t: float = (progress - _BGM_FADE_START) / (1.0 - _BGM_FADE_START)
-			BgmPlayer.set_extra_attenuation_db(lerp(0.0, -60.0, clamp(t, 0.0, 1.0)))
+		var px: float = player.global_position.x
+		if px >= _TUNNEL_END_X:
+			var fade_range: float = STAGE_LENGTH - _TUNNEL_END_X
+			var t: float = clamp((px - _TUNNEL_END_X) / fade_range, 0.0, 1.0)
+			BgmPlayer.set_extra_attenuation_db(lerp(0.0, _BGM_FADE_FLOOR_DB, t))
 		else:
 			BgmPlayer.set_extra_attenuation_db(0.0)
 
