@@ -562,9 +562,11 @@ static func _escape() -> Dictionary:
 			{"pos": Vector2(2400, 480), "w": 200.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(600, 600.0), Vector2(1400, 600.0), Vector2(2200, 600.0)],
+			# 사용자: 패트롤 2마리만, 모두 터널 안(_TUNNEL_END_X = 1600 이내)에서.
+			# 터널 빠져나오면 적 없는 야경 — "숨 고르기" 톤 강화.
+			"patrol": [Vector2(600, 600.0), Vector2(1100, 600.0)],
 			"sniper": [],
-			"drone":  [Vector2(1600, 100.0)],
+			"drone":  [],
 			"bomber": [], "shield": [],
 		},
 		"rewards": {"xp_orbs": [], "hp_pickups": []},

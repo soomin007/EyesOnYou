@@ -1415,6 +1415,55 @@ func _build_escape_tunnel(host: Node) -> void:
 	fog.size = Vector2(tunnel_w, 80.0)
 	fog.z_index = -3
 	host.add_child(fog)
+	# 출구 표지판 — 터널 끝 직전에 녹색 EXIT 패널. 천장 아래쪽, 플레이어 시야 안.
+	_build_escape_exit_sign(host, _TUNNEL_END_X - 120.0, GROUND_Y - 220.0)
+
+func _build_escape_exit_sign(host: Node, x: float, y: float) -> void:
+	var holder := Node2D.new()
+	holder.position = Vector2(x, y)
+	holder.z_index = -5  # walls(-10)보다 앞, lamp(-6/-7)와 비슷한 깊이
+	host.add_child(holder)
+	# 베젤 — 어두운 금속 프레임
+	var bezel := ColorRect.new()
+	bezel.color = Color(0.10, 0.11, 0.13, 1.0)
+	bezel.position = Vector2(-46.0, -22.0)
+	bezel.size = Vector2(92.0, 44.0)
+	holder.add_child(bezel)
+	# 본체 — 비상 녹색
+	var body := ColorRect.new()
+	body.color = Color(0.20, 0.85, 0.35, 1.0)
+	body.position = Vector2(-42.0, -18.0)
+	body.size = Vector2(84.0, 36.0)
+	holder.add_child(body)
+	# EXIT 텍스트
+	var label := Label.new()
+	label.text = "출구  →"
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", Color(0.05, 0.08, 0.06))
+	label.position = Vector2(-42.0, -18.0)
+	label.size = Vector2(84.0, 36.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	holder.add_child(label)
+	# 매다는 끈 — 천장에서 살짝 늘어진 회색 라인 두 줄
+	for sx in [-30.0, 30.0]:
+		var rope := ColorRect.new()
+		rope.color = Color(0.20, 0.21, 0.24, 1.0)
+		rope.position = Vector2(sx - 1.0, -42.0)
+		rope.size = Vector2(2.0, 22.0)
+		holder.add_child(rope)
+	# 옅은 글로우 — 비상 녹색 후광
+	var halo := ColorRect.new()
+	halo.color = Color(0.30, 0.95, 0.45, 0.18)
+	halo.position = Vector2(-72.0, -42.0)
+	halo.size = Vector2(144.0, 84.0)
+	halo.z_index = -6
+	holder.add_child(halo)
+	# 살짝 깜빡 — 비상등 톤
+	var tw := body.create_tween()
+	tw.set_loops()
+	tw.tween_property(body, "modulate:a", 0.85, 0.9)
+	tw.tween_property(body, "modulate:a", 1.0, 0.9)
 
 # scroll_factor: 1.0=foreground(world와 같이 스크롤), 0.0=화면 고정(UI 같음).
 # 0과 1 사이 값 = parallax. 작을수록 멀어 보임.
