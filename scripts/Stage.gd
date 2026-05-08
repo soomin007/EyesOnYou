@@ -665,87 +665,62 @@ func _on_locked_door_left(body: Node) -> void:
 		arcturus_hold_t = 0.0
 		_update_arcturus_indicator()
 
-var _subtitle_queue: Array = []
-var _subtitle_active: bool = false
-# 현재 화면에 떠있는 자막 layer/timer 참조 — 큐 클리어 시 이 두 개도 같이 정리해야
-# paused 동안 멈춰있던 fade-out tween이 풀린 뒤 다음 자막과 겹치지 않는다.
-# (사용자 보고: 이스터에그 문서 닫고 나서 직전 자막이 outro 자막 위에 살아남음)
-var _subtitle_active_layer: CanvasLayer = null
-var _subtitle_drain_timer: SceneTreeTimer = null
+# 자막 — 스택형. 이미 떠 있는 자막이 있으면 한 줄 아래에 새 대사가 추가된다.
+# 각 자막은 독립적인 fade-in/hold/fade-out tween을 가지며 수명이 끝나면 슬롯 비움.
+# (이전 모델은 큐로 차례대로만 표시했지만, 사용자 의도: 동시 발화도 겹치지 않고
+#  세로로 쌓이게 보이도록.)
+var _subtitle_stack_layer: CanvasLayer = null
+var _subtitle_stack_box: VBoxContainer = null
 
-func _show_veil_subtitle(message: String, duration: float) -> void:
-	# 자막 큐 — 여러 줄을 빠르게 호출해도 겹치지 않고 차례로 표시.
-	_subtitle_queue.append({"message": message, "duration": duration})
-	if not _subtitle_active:
-		_drain_subtitles()
-
-# 큐 + 현재 표시 중인 자막을 모두 폐기. arcturus 문서 진입처럼 paused 시작 전
-# 화면을 깨끗이 비워야 하는 상황에서 호출. 자막 layer를 즉시 free해 paused 해제 후
-# 잔재 fade-out이 새 자막과 겹치는 것을 차단.
-func _purge_subtitles() -> void:
-	_subtitle_queue.clear()
-	_subtitle_active = false
-	if _subtitle_active_layer != null and is_instance_valid(_subtitle_active_layer):
-		_subtitle_active_layer.queue_free()
-	_subtitle_active_layer = null
-	# 진행 중이던 _drain timer가 살아 있다면 _drain_subtitles 콜백을 끊는다.
-	if _subtitle_drain_timer != null and is_instance_valid(_subtitle_drain_timer):
-		if _subtitle_drain_timer.timeout.is_connected(_drain_subtitles):
-			_subtitle_drain_timer.timeout.disconnect(_drain_subtitles)
-	_subtitle_drain_timer = null
-
-func _drain_subtitles() -> void:
-	if _subtitle_queue.is_empty():
-		_subtitle_active = false
-		_subtitle_drain_timer = null
+func _ensure_subtitle_stack() -> void:
+	if _subtitle_stack_layer != null and is_instance_valid(_subtitle_stack_layer):
 		return
-	_subtitle_active = true
-	var item: Dictionary = _subtitle_queue.pop_front()
-	var dur: float = float(item.get("duration", 2.5))
-	_display_veil_subtitle(str(item.get("message", "")), dur)
-	# fade in 0.3 + show + fade out 0.5 + small gap 0.2
-	var total: float = 0.3 + dur + 0.5 + 0.2
-	_subtitle_drain_timer = get_tree().create_timer(total)
-	_subtitle_drain_timer.timeout.connect(_drain_subtitles)
-
-func _display_veil_subtitle(message: String, duration: float) -> void:
-	# 보스/wide 화면에서 자막이 좌측에 치우쳐 보이던 문제 — 절대 좌표 (140, 110)
-	# 대신 PRESET_TOP_WIDE 앵커로 화면 폭 전체에 걸쳐 가운데 정렬한다.
-	var msg_layer := CanvasLayer.new()
-	msg_layer.layer = 20
-	add_child(msg_layer)
-	# _purge_subtitles가 즉시 free 시킬 수 있도록 참조 보관. 다음 자막이 시작되거나
-	# 자기 자신의 fade-out tween이 끝나면 자연스럽게 null로 돌아감.
-	_subtitle_active_layer = msg_layer
+	_subtitle_stack_layer = CanvasLayer.new()
+	_subtitle_stack_layer.layer = 20
+	add_child(_subtitle_stack_layer)
+	# 화면 폭 전체에 걸쳐 가운데 정렬 — 보스/wide 화면에서 좌측 치우침 방지.
 	var holder := Control.new()
 	holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	holder.offset_top = 96.0
-	holder.offset_bottom = 168.0
+	holder.offset_bottom = 360.0
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	msg_layer.add_child(holder)
+	_subtitle_stack_layer.add_child(holder)
+	_subtitle_stack_box = VBoxContainer.new()
+	_subtitle_stack_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_subtitle_stack_box.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_subtitle_stack_box.add_theme_constant_override("separation", 6)
+	holder.add_child(_subtitle_stack_box)
+
+func _show_veil_subtitle(message: String, duration: float) -> void:
+	_ensure_subtitle_stack()
 	var l := Label.new()
 	l.text = "VEIL  —  " + message
 	l.add_theme_font_size_override("font_size", 18)
 	l.add_theme_color_override("font_color", Color(0.7, 0.9, 1.0))
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	l.add_theme_constant_override("outline_size", 4)
-	l.set_anchors_preset(Control.PRESET_FULL_RECT)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.modulate.a = 0.0
-	holder.add_child(l)
+	_subtitle_stack_box.add_child(l)
 	var tw := l.create_tween()
 	tw.tween_property(l, "modulate:a", 1.0, 0.3)
 	tw.tween_interval(duration)
 	tw.tween_property(l, "modulate:a", 0.0, 0.5)
 	tw.tween_callback(func() -> void:
-		if is_instance_valid(msg_layer):
-			msg_layer.queue_free()
-		# 자기가 active_layer였다면 참조 정리. (_purge가 먼저 다른 layer로 바꿔놨으면 건드리지 않음)
-		if _subtitle_active_layer == msg_layer:
-			_subtitle_active_layer = null
+		if is_instance_valid(l):
+			l.queue_free()
 	)
+
+# 화면에 떠있는 모든 자막 일괄 폐기. ARCTURUS 문서 진입처럼 화면을 깨끗이 비워야
+# 하는 상황에서 호출. paused 동안 멈춘 fade-out이 outro 자막 위에 잔재로 남는 문제
+# 차단(사용자 보고).
+func _purge_subtitles() -> void:
+	if _subtitle_stack_layer != null and is_instance_valid(_subtitle_stack_layer):
+		_subtitle_stack_layer.queue_free()
+	_subtitle_stack_layer = null
+	_subtitle_stack_box = null
 
 # 보스전 전용 강조 자막 — 일반 _show_veil_subtitle보다 큰 폰트 + 어두운 박스 배경 +
 # 색상으로 위험도 차등화. 화면 중앙 위쪽에 배치해 폭발 효과/총알 위에서도 인지 가능.
@@ -2624,6 +2599,13 @@ func _begin_clear_sequence() -> void:
 	var delay: float = 2.6 if is_arena else 1.0
 	_do_clear_fade(delay)
 	await get_tree().create_timer(delay).timeout
+	# 보스 처치 직후 보스가 떨군 orb로 mid-stage 레벨업이 떠있을 수 있다. 그 사이에
+	# _on_arena_cleared(deferred)가 진행되어 transition이 먼저 일어나면 LevelUpOverlay
+	# 가 사라진 채 paused만 남아 다음 씬(Briefing)이 freeze된다(사용자 보고: 스토리
+	# 모드 보스 후 stage 5/5만 뜨는 빈 화면). 따라서 mid-stage 레벨업이 정리될 때까지
+	# 여기서 대기.
+	while pending_levelup:
+		await get_tree().process_frame
 	GameState.restrict_combat_input = false
 	var leveled: bool = GameState.on_stage_clear()
 	if leveled:
