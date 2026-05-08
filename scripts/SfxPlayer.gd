@@ -11,6 +11,19 @@ const POOL_SIZE: int = 8
 const BASE_DB: float = -6.0
 const SILENT_DB: float = -80.0
 
+# SFX별 dB 보정 — 어떤 효과음은 너무 크고 어떤 건 너무 작아서 mixing 균형용.
+# 사용자 피드백 기반(2026-05-09): jump/double_jump 너무 큼, step/land 거의 안 들림.
+# 양수 = 더 크게, 음수 = 더 작게.
+const VOLUME_OFFSETS: Dictionary = {
+	"player_jump":        -10.0,
+	"player_double_jump": -10.0,
+	"player_step":        6.0,
+	"player_land":        5.0,
+	"player_dash":        -3.0,
+	"player_hurt":        -2.0,
+	"player_death":       0.0,
+}
+
 # 알려진 SFX ID 목록. 새 파일 추가하면 여기 등록 (또는 _register_sfx 직접 호출).
 # sfx_list.md의 ID와 1:1.
 # 파일 확장자: .mp3 / .ogg / .wav 모두 시도 — ElevenLabs는 MP3 출력이라 보통 mp3.
@@ -89,7 +102,7 @@ func _try_load_with_ext(name: String) -> AudioStream:
 	return null
 
 # 효과음 재생. id 미등록(파일 없음) 또는 sfx 볼륨 0 시 no-op.
-# volume_offset_db: 개별 SFX dB 보정 (기본 0).
+# volume_offset_db: 호출 사이트에서 추가 보정. VOLUME_OFFSETS의 기본 보정에 더해짐.
 func play(id: String, volume_offset_db: float = 0.0) -> void:
 	if not _streams.has(id):
 		return
@@ -102,7 +115,8 @@ func play(id: String, volume_offset_db: float = 0.0) -> void:
 	var player: AudioStreamPlayer = _players[_next_idx]
 	_next_idx = (_next_idx + 1) % _players.size()
 	player.stream = stream
-	player.volume_db = _target_db() + volume_offset_db
+	var preset_offset: float = float(VOLUME_OFFSETS.get(id, 0.0))
+	player.volume_db = _target_db() + preset_offset + volume_offset_db
 	player.play()
 
 func _target_db() -> float:

@@ -31,6 +31,14 @@ const EXPLOSION_DAMAGE: int = 3
 
 var facing: int = 1
 var attack_cd: float = 0.0
+# fire_boost T2 "사격 시 잠깐 가속" — 사격 직후 _SPRINT_DURATION 동안 이동 속도 ×_SPRINT_MULT.
+const _SPRINT_DURATION: float = 0.5
+const _SPRINT_MULT: float = 1.4
+var sprint_t: float = 0.0
+# hp T3 "피격 슬로모" — 피격 시 짧게 Engine.time_scale 감소.
+const _HIT_SLOWMO_DURATION: float = 0.35
+const _HIT_SLOWMO_SCALE: float = 0.4
+var slowmo_active: bool = false
 var jumps_used: int = 0
 # 환경 레버 — Area2D body_entered 시 LeverInteractable이 직접 세팅한다.
 # attack 입력이 사격 대신 레버 당기기로 흡수된다.
@@ -133,6 +141,8 @@ func _physics_process(delta: float) -> void:
 func _tick_timers(delta: float) -> void:
 	if attack_cd > 0.0:
 		attack_cd -= delta
+	if sprint_t > 0.0:
+		sprint_t -= delta
 	if dash_timer > 0.0:
 		dash_timer -= delta
 	if dash_cd > 0.0:
@@ -194,7 +204,9 @@ func _handle_input(_delta: float) -> void:
 		var dash_speed_mult: float = 1.3 if GameState.get_skill_tier("dash_boost") >= 2 else 1.0
 		velocity.x = float(facing) * DASH_SPEED * dash_speed_mult
 	else:
-		velocity.x = dir * SPEED
+		# fire_boost T2 — 사격 직후 0.5s 동안 이동 속도 ×1.4 ("사격 시 잠깐 가속" desc 구현).
+		var move_mult: float = _SPRINT_MULT if sprint_t > 0.0 else 1.0
+		velocity.x = dir * SPEED * move_mult
 
 	if Input.is_action_just_pressed("jump"):
 		_try_jump()
@@ -259,10 +271,12 @@ func get_skill_cd_max() -> float:
 func _try_attack() -> void:
 	if attack_cd > 0.0:
 		return
-	# fire_boost T2 "사격 시 잠깐 가속" → 사격 쿨다운 -25%.
+	# fire_boost T2: 사격 쿨다운 -25% + 사격 후 0.5s 이동 가속(_handle_input에서 적용).
 	var fb_tier: int = GameState.get_skill_tier("fire_boost")
 	var cd_mult: float = 0.75 if fb_tier >= 2 else 1.0
 	attack_cd = ATTACK_COOLDOWN * cd_mult
+	if fb_tier >= 2:
+		sprint_t = _SPRINT_DURATION
 	_show_muzzle_flash()
 	# multishot T1=3발, T2/T3=5발.
 	var ms_tier: int = GameState.get_skill_tier("multishot")
@@ -406,9 +420,12 @@ func take_hit(amount: int) -> void:
 		return
 	GameState.damage_player(amount)
 	SfxPlayer.play("player_hurt")
-	# hp T2 = 피격 후 1s 무적 (기본 0.8보다 길게)
+	# hp T2 = 피격 후 1s 무적 (기본 0.8보다 길게).
+	# hp T3 = 추가로 짧은 슬로모션 (Engine.time_scale 감속).
 	var hp_tier: int = GameState.get_skill_tier("hp")
 	invuln = 1.0 if hp_tier >= 2 else INVULN_AFTER_HIT
+	if hp_tier >= 3:
+		_trigger_hit_slowmo()
 	emit_signal("damaged")
 	# 비상 방어막 — T1: HP 1로 부활, T2: HP 2로 부활. 발동 시 라인 erase (T3 재충전은 미구현).
 	var sh_tier: int = GameState.get_skill_tier("shield")
@@ -421,6 +438,28 @@ func take_hit(amount: int) -> void:
 	if GameState.is_dead():
 		SfxPlayer.play("player_death")
 		emit_signal("died")
+
+# hp T3 — 피격 시 짧은 슬로모. Engine.time_scale 0.4로 감속, 0.35s 후 1.0 복원.
+# 실시간 타이머(ignore_time_scale=true)로 슬로모 안에서도 정확히 0.35s 후 해제.
+# 이미 슬로모 중에 또 피격되면 무시 (중첩 방지).
+func _trigger_hit_slowmo() -> void:
+	if slowmo_active:
+		return
+	slowmo_active = true
+	Engine.time_scale = _HIT_SLOWMO_SCALE
+	var timer: SceneTreeTimer = get_tree().create_timer(_HIT_SLOWMO_DURATION, true, false, true)
+	timer.timeout.connect(_end_hit_slowmo)
+
+func _end_hit_slowmo() -> void:
+	slowmo_active = false
+	Engine.time_scale = 1.0
+
+func _exit_tree() -> void:
+	# scene 전환 도중 슬로모가 활성된 채 player가 free되면 다음 씬도 0.4 배속이 됨.
+	# 안전판 — player가 트리에서 빠질 때 무조건 1.0 복원.
+	if slowmo_active or not is_equal_approx(Engine.time_scale, 1.0):
+		Engine.time_scale = 1.0
+		slowmo_active = false
 
 func _show_shield_flash() -> void:
 	# 방어막 발동 — 강한 흰 플래시 + 확장하는 후광 (한 번에 인지되도록 강화).

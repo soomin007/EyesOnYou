@@ -29,8 +29,12 @@ var pause_overlay: CanvasLayer
 var settings_overlay: Control
 
 # route_escape — 카메라 진행률 따라 터널 → 도시 야경으로 cross-fade.
+# 도시 야경은 3개 parallax sub-layer(far/mid/near)로 나뉨 — 거리감 표현용.
 var _escape_tunnel_group: Node = null
 var _escape_city_group: Node = null
+var _escape_city_far: Node2D = null
+var _escape_city_mid: Node2D = null
+var _escape_city_near: Node2D = null
 
 # 쿨다운 UI — 사격/대시/스킬/방어막 게이지
 var cd_attack_slot: Control
@@ -1349,52 +1353,123 @@ func _ambience_escape() -> void:
 	_build_escape_city(_escape_city_group)
 
 func _build_escape_tunnel(host: Node) -> void:
-	# 천장 형광등 + 옅은 안개 + 좌우 어두운 비네트. 터널 진입부 분위기.
+	# 솔리드 회색 콘크리트 벽 + 천장 형광등 + 비네트.
+	# 사용자 요구: 진입 직후엔 도시 배경이 전혀 안 보이고 완전 터널처럼.
+	# 콘크리트 벽 한 장이 z_index −10에서 city group(z=−13~−20)을 모두 가린다.
+	# (city group은 modulate.a=0이지만 fade 중간 단계에서 비치는 걸 방지하기 위해 벽 자체로 덮음)
+	var wall := ColorRect.new()
+	wall.color = Color(0.18, 0.19, 0.22, 1.0)
+	wall.position = Vector2(-200.0, -300.0)
+	wall.size = Vector2(STAGE_LENGTH + 400.0, 1100.0)
+	wall.z_index = -10
+	host.add_child(wall)
+	# 수직 grain 라인 — 콘크리트 panel 분리 효과. 80px 간격.
+	var grain_count: int = int((STAGE_LENGTH + 400.0) / 80.0)
+	for i in grain_count:
+		var line := ColorRect.new()
+		line.color = Color(0.10, 0.11, 0.13, 0.7)
+		line.position = Vector2(-200.0 + float(i) * 80.0, -300.0)
+		line.size = Vector2(1.0, 1100.0)
+		line.z_index = -9
+		host.add_child(line)
+	# 상단 진하게(천장 그림자) — 어두운 띠.
+	var top_dark := ColorRect.new()
+	top_dark.color = Color(0.05, 0.06, 0.08, 0.85)
+	top_dark.position = Vector2(-200.0, -300.0)
+	top_dark.size = Vector2(STAGE_LENGTH + 400.0, 220.0)
+	top_dark.z_index = -8
+	host.add_child(top_dark)
+	# 천장 형광등 + 글로우.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 191 + 37
 	var x: float = 360.0
 	while x < STAGE_LENGTH:
 		var lamp := ColorRect.new()
-		lamp.color = Color(0.78, 0.88, 0.95, 0.55)
+		lamp.color = Color(0.78, 0.88, 0.95, 0.85)
 		lamp.size = Vector2(120.0, 4.0)
 		lamp.position = Vector2(x - 60.0, -180.0)
 		lamp.z_index = -6
 		host.add_child(lamp)
 		var glow := ColorRect.new()
-		glow.color = Color(0.85, 0.92, 1.0, 0.08)
+		glow.color = Color(0.85, 0.92, 1.0, 0.15)
 		glow.size = Vector2(160.0, 60.0)
 		glow.position = Vector2(x - 80.0, -176.0)
 		glow.z_index = -7
 		host.add_child(glow)
 		x += rng.randf_range(420.0, 680.0)
 	var fog := ColorRect.new()
-	fog.color = Color(0.20, 0.30, 0.40, 0.06)
+	fog.color = Color(0.30, 0.32, 0.36, 0.10)
 	fog.position = Vector2(-200, GROUND_Y - 60.0)
 	fog.size = Vector2(STAGE_LENGTH + 400.0, 80.0)
 	fog.z_index = -3
 	host.add_child(fog)
 
+# scroll_factor: 1.0=foreground(world와 같이 스크롤), 0.0=화면 고정(UI 같음).
+# 0과 1 사이 값 = parallax. 작을수록 멀어 보임.
+# _tick_escape_transition이 매 프레임 layer.position.x = camera.x * (1 - scroll_factor)로 갱신.
 func _build_escape_city(host: Node) -> void:
-	# 도시 야경 — 멀리 청남색 하늘 + 빌딩 실루엣 + 창문 점광원.
-	# z_index 멀리(-20 ~ -13) 두어 lamp/fog 안쪽에 깔리고, 진행률로 modulate.a 페이드.
+	# 도시 야경 — 3개 parallax sub-layer로 거리감 표현.
+	#   far(0.15):  하늘 + 별 + 가장 먼 빌딩 실루엣 (거의 안 움직임)
+	#   mid(0.45):  중간 빌딩 + 창문 (절반 속도)
+	#   near(0.80): 가까운 빌딩 (거의 카메라 따라감)
+	# 모두 host(_escape_city_group) 자식 — modulate.a로 fade-in 조절은 그대로 group에서.
+	_escape_city_far = Node2D.new()
+	_escape_city_far.name = "CityFar"
+	_escape_city_far.set_meta("scroll_factor", 0.15)
+	host.add_child(_escape_city_far)
+	_escape_city_mid = Node2D.new()
+	_escape_city_mid.name = "CityMid"
+	_escape_city_mid.set_meta("scroll_factor", 0.45)
+	host.add_child(_escape_city_mid)
+	_escape_city_near = Node2D.new()
+	_escape_city_near.name = "CityNear"
+	_escape_city_near.set_meta("scroll_factor", 0.80)
+	host.add_child(_escape_city_near)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 211 + 43
-	# 하늘 — 짙은 청남색 그라데이션 효과(ColorRect 두 장 stack).
+	# ── FAR (0.15) — 하늘 / 별 / 작은 먼 빌딩 ─────────────────────
+	# 하늘 — 화면 한 번에 안 끊기게 매우 넓게 (parallax 적용 후에도 항상 가시 영역 덮음).
+	# 카메라 가능 범위(0~stage_length) × (1-scroll) ≈ 0.85*stage_length 만큼 layer가 이동하므로
+	# 하늘 너비가 stage + 그 만큼 + 여유 필요.
+	var sky_w: float = STAGE_LENGTH * 1.9 + 400.0
+	var sky_x: float = -STAGE_LENGTH * 0.5
 	var sky_top := ColorRect.new()
 	sky_top.color = Color(0.05, 0.06, 0.12, 1.0)
-	sky_top.position = Vector2(-200, -240.0)
-	sky_top.size = Vector2(STAGE_LENGTH + 400.0, 280.0)
+	sky_top.position = Vector2(sky_x, -240.0)
+	sky_top.size = Vector2(sky_w, 280.0)
 	sky_top.z_index = -20
-	host.add_child(sky_top)
+	_escape_city_far.add_child(sky_top)
 	var sky_bottom := ColorRect.new()
 	sky_bottom.color = Color(0.10, 0.14, 0.22, 1.0)
-	sky_bottom.position = Vector2(-200, 40.0)
-	sky_bottom.size = Vector2(STAGE_LENGTH + 400.0, 200.0)
+	sky_bottom.position = Vector2(sky_x, 40.0)
+	sky_bottom.size = Vector2(sky_w, 200.0)
 	sky_bottom.z_index = -20
-	host.add_child(sky_bottom)
-	# 멀리 빌딩 실루엣 — 다양한 높이/너비 어두운 사각형.
-	var bx: float = 0.0
-	while bx < STAGE_LENGTH + 200.0:
+	_escape_city_far.add_child(sky_bottom)
+	# 별 — 하늘 layer와 같이 천천히 이동.
+	for i in 60:
+		var s := ColorRect.new()
+		s.color = Color(0.85, 0.92, 1.0, rng.randf_range(0.3, 0.7))
+		s.size = Vector2(2, 2)
+		s.position = Vector2(rng.randf_range(sky_x, sky_x + sky_w), rng.randf_range(-220.0, -80.0))
+		s.z_index = -19
+		_escape_city_far.add_child(s)
+	# 가장 먼 빌딩 — 작고 옅음. layer 너비에 맞춰 폭넓게 spawn.
+	var fbx: float = sky_x
+	while fbx < sky_x + sky_w:
+		var fbw: float = rng.randf_range(40.0, 90.0)
+		var fbh: float = rng.randf_range(120.0, 220.0)
+		var fb := ColorRect.new()
+		fb.color = Color(0.06, 0.08, 0.13, 1.0)
+		fb.position = Vector2(fbx, GROUND_Y - fbh - 40.0)
+		fb.size = Vector2(fbw, fbh + 80.0)
+		fb.z_index = -18
+		_escape_city_far.add_child(fb)
+		fbx += fbw + rng.randf_range(40.0, 100.0)
+	# ── MID (0.45) — 메인 빌딩 + 창문 ───────────────────────────
+	var mid_w: float = STAGE_LENGTH * 1.55 + 400.0
+	var mid_x: float = -STAGE_LENGTH * 0.3
+	var bx: float = mid_x
+	while bx < mid_x + mid_w:
 		var bw: float = rng.randf_range(60.0, 140.0)
 		var bh: float = rng.randf_range(180.0, 360.0)
 		var building := ColorRect.new()
@@ -1402,7 +1477,7 @@ func _build_escape_city(host: Node) -> void:
 		building.position = Vector2(bx, GROUND_Y - bh - 40.0)
 		building.size = Vector2(bw, bh + 80.0)
 		building.z_index = -16
-		host.add_child(building)
+		_escape_city_mid.add_child(building)
 		# 창문 빛 — 빌딩 안에 작은 점들. 일부 깜빡이도록.
 		var win_x: float = bx + 8.0
 		while win_x < bx + bw - 4.0:
@@ -1418,7 +1493,7 @@ func _build_escape_city(host: Node) -> void:
 					win.size = Vector2(2.0, 3.0)
 					win.position = Vector2(win_x, win_y)
 					win.z_index = -14
-					host.add_child(win)
+					_escape_city_mid.add_child(win)
 					if rng.randf() < 0.18:
 						var tw := win.create_tween()
 						tw.set_loops()
@@ -1427,32 +1502,27 @@ func _build_escape_city(host: Node) -> void:
 				win_y += 8.0
 			win_x += 6.0
 		bx += bw + rng.randf_range(20.0, 80.0)
-	# 더 가까운 빌딩 한 줄 — 윤곽 살짝 진하게 + 깊이감.
-	var nx: float = 80.0
-	while nx < STAGE_LENGTH:
+	# ── NEAR (0.80) — 가까운 키 큰 빌딩 한 줄 ───────────────────
+	var near_w: float = STAGE_LENGTH * 1.2 + 400.0
+	var near_x: float = -STAGE_LENGTH * 0.1
+	var nx: float = near_x
+	while nx < near_x + near_w:
 		var nw: float = rng.randf_range(100.0, 200.0)
-		var nh: float = rng.randf_range(120.0, 240.0)
-		var near := ColorRect.new()
-		near.color = Color(0.02, 0.03, 0.06, 1.0)
-		near.position = Vector2(nx, GROUND_Y - nh - 20.0)
-		near.size = Vector2(nw, nh + 60.0)
-		near.z_index = -15
-		host.add_child(near)
+		var nh: float = rng.randf_range(140.0, 280.0)
+		var near_b := ColorRect.new()
+		near_b.color = Color(0.02, 0.03, 0.06, 1.0)
+		near_b.position = Vector2(nx, GROUND_Y - nh - 20.0)
+		near_b.size = Vector2(nw, nh + 60.0)
+		near_b.z_index = -15
+		_escape_city_near.add_child(near_b)
 		nx += nw + rng.randf_range(140.0, 280.0)
-	# 별 — 띄엄띄엄 위쪽 영역에.
-	for i in 40:
-		var s := ColorRect.new()
-		s.color = Color(0.85, 0.92, 1.0, rng.randf_range(0.3, 0.7))
-		s.size = Vector2(2, 2)
-		s.position = Vector2(rng.randf_range(0.0, STAGE_LENGTH), rng.randf_range(-220.0, -80.0))
-		s.z_index = -19
-		host.add_child(s)
 
 func _tick_escape_transition(_delta: float) -> void:
 	# 카메라 x 진행률(0~1) 기준 두 그룹의 alpha를 cross-fade.
 	# 0.00~0.40 — 100% tunnel
 	# 0.40~0.75 — cross-fade (선형)
 	# 0.75~1.00 — 100% city
+	# 추가로 city sub-layer 3개에 parallax offset 적용.
 	if _escape_tunnel_group == null or not is_instance_valid(_escape_tunnel_group):
 		return
 	if _escape_city_group == null or not is_instance_valid(_escape_city_group):
@@ -1463,6 +1533,14 @@ func _tick_escape_transition(_delta: float) -> void:
 	var t: float = clamp((progress - 0.40) / 0.35, 0.0, 1.0)
 	_escape_tunnel_group.modulate.a = 1.0 - t
 	_escape_city_group.modulate.a = t
+	# Parallax — layer.position.x = camera.x * (1 - scroll_factor).
+	# scroll_factor 작을수록 layer가 카메라와 더 같이 이동 → 화면에선 천천히 보임 (멀리).
+	var cam_x: float = camera.global_position.x
+	for layer in [_escape_city_far, _escape_city_mid, _escape_city_near]:
+		if layer == null or not is_instance_valid(layer):
+			continue
+		var sf: float = float(layer.get_meta("scroll_factor", 1.0))
+		layer.position.x = cam_x * (1.0 - sf)
 
 ## 환경 라벨/그래피티 — 맵에 떡밥 텍스트 한 줄 깔아 코드명을 다른 맵과 묶음.
 ## PROJECT VEIL / ARCTURUS / PALIMPSEST / SILO-7 등이 여러 맵에 반복 등장 → 호기심.
