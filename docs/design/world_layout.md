@@ -488,33 +488,45 @@ platform layout:
 ### 2.9 비상 탈출로 (escape) — HORIZONTAL
 
 ```
-world_size:   (3000, 720)   [짧은 맵]
+world_size:   (3800, 720)   [터널 + 야경 두 구간]
 start:        (140, 540)
-goal:         (2880, 540)
+goal:         (3680, 540)
 camera:       가로 follow
 
 특이사항: 의도된 단순함. 숨 고르기. 발판 간격 넓어서 빠른 이동.
           ambience(2026-05-09 재설계):
-            - 콘크리트 터널 walls(z=-10)이 x = -200 ~ 1600 까지만 깔려 있음.
+            - 콘크리트 터널 walls(z=-10)이 x = -200 ~ _TUNNEL_END_X(1600)까지만.
               그 너머는 wall 없음 → 도시 야경 자연 노출. cross-fade 폐지.
+            - 터널 끝 직전(_TUNNEL_END_X - 120)에 EXIT 표지판 — 비상 녹색 본체,
+              "EXIT →" 라벨, 깜빡 비상등 톤.
             - 도시 야경 3-layer parallax(scroll_factor):
                 far(0.15)  = 하늘 + 별 + 먼 빌딩 실루엣
                 mid(0.45)  = 메인 빌딩 + 창문 점광원
                 near(0.80) = 가까운 키 큰 빌딩
             - layer.position.x = camera.get_screen_center_position().x * (1 - sf).
               limit clamped 좌표 사용 — 맵 끝에서 카메라 멈추면 parallax도 멈춤.
+            - BGM 페이드아웃: player.x ≥ _TUNNEL_END_X부터 STAGE_LENGTH까지
+              lerp(0, -60dB). 터널 통과 순간부터 점진 감쇠, 골 도달 시 거의 무음.
+              BgmPlayer.set_extra_attenuation_db(db) 사용. 트랙 전환(엔딩 진입) 시
+              자동 리셋.
 
 platform layout:
+  # 터널 안 (x < _TUNNEL_END_X = 1600)
   [x=400,  y=520, w=240]
   [x=800,  y=480, w=240]
   [x=1200, y=520, w=240]
+  # 터널 출구 ~ 야경
   [x=1600, y=480, w=240]
   [x=2000, y=520, w=240]
-  [x=2400, y=480, w=200]
+  [x=2400, y=480, w=240]
+  [x=2800, y=520, w=240]
+  [x=3200, y=480, w=240]
+  [x=3500, y=520, w=200]
 
-적 spawn:
-  patrol:  (600, 600), (1400, 600), (2200, 600)
-  drone:   (1600, 100)  [1마리만]
+적 spawn (2026-05-09 단순화):
+  patrol:  (600, 600), (1100, 600)   [둘 다 터널 안]
+  drone:   없음   [이전 (1600, 100) 제거 — 터널 출구가 어수선해짐]
+  → 터널 빠져나오면 적 없는 야경. "숨 고르기" 톤.
 
 보상: 기본 (risk=1)
 ```
