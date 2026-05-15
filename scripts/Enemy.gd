@@ -3,7 +3,7 @@ extends CharacterBody2D
 signal killed(at_position: Vector2)
 
 enum EnemyType { PATROL, SNIPER, DRONE, BOMBER, SHIELD }
-enum PatrolState { ROAMING, TELEGRAPH, CHARGING, RECOVERING }
+enum PatrolState { ROAMING, FIRING, TELEGRAPH, CHARGING, RECOVERING }
 enum BomberState { ROAMING, STALKING, ARMING }
 
 @export var enemy_type: int = EnemyType.PATROL
@@ -17,7 +17,7 @@ const GRAVITY: float = 1400.0
 const TOUCH_DAMAGE: int = 1
 const TOUCH_COOLDOWN: float = 0.6
 
-# Patrol — 평소 순찰 + 근접 시 텔레그래프 후 돌진
+# Patrol — 평소 순찰 + 중거리 사격 + 근접 시 텔레그래프 후 돌진
 const PATROL_SPEED: float = 70.0
 const PATROL_CHARGE_SPEED: float = 280.0
 const PATROL_DETECT_X: float = 260.0
@@ -25,6 +25,11 @@ const PATROL_DETECT_Y: float = 70.0
 const PATROL_TELEGRAPH: float = 0.45
 const PATROL_CHARGE_DURATION: float = 0.6
 const PATROL_RECOVERY: float = 1.0
+# 사격 — DETECT 범위 안 + CHARGE 범위 밖일 때 멈춰서 발사. 근접하면 돌진으로 전환.
+const PATROL_CHARGE_RANGE: float = 120.0
+const PATROL_FIRE_INTERVAL: float = 1.5
+const PATROL_FIRE_AIM_TIME: float = 0.3
+const PATROL_BULLET_DAMAGE: int = 1
 
 # Bomber — 천천히 접근 + 근접 시 자폭
 const BOMBER_SPEED: float = 50.0
@@ -92,6 +97,8 @@ func _has_ground_ahead(check_dir: int, lookahead: float = EDGE_LOOKAHEAD_X) -> b
 
 var patrol_state: int = PatrolState.ROAMING
 var patrol_state_timer: float = 0.0
+# FIRING phase 구분 — true면 조준 중(timer가면 발사), false면 쿨다운 중(timer가면 다시 조준 시작).
+var patrol_fire_armed: bool = false
 
 var fire_timer: float = 0.0
 var aim_line: Line2D
@@ -165,6 +172,10 @@ func _snap_to_floor() -> void:
 # 수치는 보수적으로 잡았으니 플레이테스트 후 조정 필요 (상의 항목).
 func _telegraph_time() -> float:
 	return PATROL_TELEGRAPH * (0.6 if GameState.is_high_risk() else 1.0)
+
+func _patrol_fire_interval() -> float:
+	# Sniper와 동일한 0.7 보정 — Risk 3에서 사격이 더 잦음.
+	return PATROL_FIRE_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
 
 func _sniper_interval() -> float:
 	return SNIPER_FIRE_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
@@ -258,9 +269,47 @@ func _tick_patrol(delta: float) -> void:
 				velocity.x = float(dir) * PATROL_SPEED
 			if not harmless and p != null and _player_in_charge_range(p):
 				dir = 1 if p.global_position.x > global_position.x else -1
-				patrol_state = PatrolState.TELEGRAPH
-				patrol_state_timer = _telegraph_time()
 				velocity.x = 0.0
+				# 근접이면 돌진, 중거리면 사격. CHARGE_RANGE를 경계로 분기.
+				var dist_p: float = global_position.distance_to(p.global_position)
+				if dist_p <= PATROL_CHARGE_RANGE:
+					patrol_state = PatrolState.TELEGRAPH
+					patrol_state_timer = _telegraph_time()
+				else:
+					patrol_state = PatrolState.FIRING
+					patrol_fire_armed = true
+					patrol_state_timer = PATROL_FIRE_AIM_TIME
+		PatrolState.FIRING:
+			velocity.x = 0.0
+			# 플레이어 방향 추적은 조준/쿨다운 둘 다에서 유지.
+			if p != null:
+				dir = 1 if p.global_position.x > global_position.x else -1
+			patrol_state_timer -= delta
+			# 조준 phase 시각 효과 — 텔레그래프(빨강)와 구분되는 노란 점멸.
+			if patrol_fire_armed and visual != null:
+				if int(patrol_state_timer * 10.0) % 2 == 0:
+					visual.modulate = Color(1.4, 1.4, 0.85)
+				else:
+					visual.modulate = Color(1, 1, 1)
+			if patrol_state_timer <= 0.0:
+				if visual != null:
+					visual.modulate = Color(1, 1, 1)
+				if patrol_fire_armed:
+					# 발사 순간
+					if p != null and not harmless:
+						_patrol_fire(p)
+					patrol_fire_armed = false
+					patrol_state_timer = _patrol_fire_interval()
+				else:
+					# 쿨다운 끝 — 상황에 따라 다음 행동 결정.
+					if p == null or not _player_in_charge_range(p):
+						patrol_state = PatrolState.ROAMING
+					elif global_position.distance_to(p.global_position) <= PATROL_CHARGE_RANGE:
+						patrol_state = PatrolState.TELEGRAPH
+						patrol_state_timer = _telegraph_time()
+					else:
+						patrol_fire_armed = true
+						patrol_state_timer = PATROL_FIRE_AIM_TIME
 		PatrolState.TELEGRAPH:
 			velocity.x = 0.0
 			patrol_state_timer -= delta
@@ -275,7 +324,6 @@ func _tick_patrol(delta: float) -> void:
 					visual.modulate = Color(1, 1, 1)
 				patrol_state = PatrolState.CHARGING
 				patrol_state_timer = PATROL_CHARGE_DURATION
-				SfxPlayer.play("enemy_patrol_fire")
 		PatrolState.CHARGING:
 			velocity.x = float(dir) * PATROL_CHARGE_SPEED
 			patrol_state_timer -= delta
@@ -299,6 +347,21 @@ func _player_in_charge_range(p: Node2D) -> bool:
 	var dx: float = abs(p.global_position.x - global_position.x)
 	var dy: float = abs(p.global_position.y - global_position.y)
 	return dx <= PATROL_DETECT_X and dy <= PATROL_DETECT_Y
+
+func _patrol_fire(p: Node2D) -> void:
+	SfxPlayer.play("enemy_patrol_fire")
+	var b := EnemyBullet.new()
+	b.damage = PATROL_BULLET_DAMAGE
+	# 플레이어 가슴 높이를 살짝 노린다. Sniper처럼 정확하진 않게 — 발 위치에서 발사하고
+	# 진행 방향은 dir(좌/우)을 따르되 y 성분을 player 방향으로 약간 기울임.
+	var muzzle_y: float = -18.0
+	var to_player: Vector2 = (p.global_position + Vector2(0, -24)) - (global_position + Vector2(0, muzzle_y))
+	var aim: Vector2 = to_player.normalized()
+	# x 부호는 dir로 강제 — 플레이어가 위/아래 있더라도 좌/우 방향 일관성 유지.
+	aim.x = abs(aim.x) * float(dir)
+	b.velocity = aim * EnemyBullet.BASE_SPEED
+	b.global_position = global_position + Vector2(float(dir) * 8.0, muzzle_y)
+	get_parent().add_child(b)
 
 # ─── Sniper ─────────────────────────────────────────────────
 

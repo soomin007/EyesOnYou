@@ -125,10 +125,14 @@
 ### 적 (3종, 행동 보강 완료)
 
 #### 정찰병 (Patrol)
-좌우 순찰 (range 140px) + 근접 시 텔레그래프 후 돌진:
-- ROAMING → TELEGRAPH (붉은 깜빡 0.45초) → CHARGING (0.6초, 280px/s) → RECOVERING (1초)
+좌우 순찰 (range 140px) + 중거리 사격 + 근접 시 텔레그래프 후 돌진:
+- ROAMING → (거리에 따라) FIRING 또는 TELEGRAPH → CHARGING → RECOVERING
 - 트리거: 플레이어가 dx≤260, dy≤70 안에 들어왔을 때
+- 거리 분기: dist≤120px면 돌진(TELEGRAPH), 120<dist≤260px면 사격(FIRING)
+- FIRING: 노란 점멸 조준 0.3초 → `EnemyBullet` 발사(360px/s) → 1.5초 쿨다운 → 거리 재평가
+- TELEGRAPH (붉은 깜빡 0.45초) → CHARGING (0.6초, 280px/s) → RECOVERING (1초)
 - 돌진 후 origin_x를 새 위치로 갱신 (이동 거리 누적)
+- Risk 3 보정: 텔레그래프 ×0.6, 사격 간격 ×0.7
 
 #### 저격수 (Sniper)
 정지, 사거리 520px, 사격 간격 2.6초, 조준 노출 0.7초:

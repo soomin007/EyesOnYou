@@ -9,7 +9,7 @@ extends RefCounted
 const ENEMIES: Dictionary = {
 	"patrol": {
 		"name": "정찰병",
-		"blurb": "좌우 순찰. 가까이 가면 머리 LED가 붉게 깜빡인다.",
+		"blurb": "좌우 순찰. 중거리에선 멈춰서 사격(노란 점멸), 가까이 가면 머리 LED가 붉게 깜빡이며 돌진한다.",
 	},
 	"sniper": {
 		"name": "저격수",
