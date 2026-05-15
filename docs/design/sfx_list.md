@@ -70,10 +70,10 @@
 - **트리거**: `Enemy.gd::take_damage` SHIELD 정면 막힘 + `TutorialDummy.gd::take_damage` 스킬 더미 튕김
 - **prompt**: Loud metallic clang of bullet ricocheting off heavy steel shield, bright high frequency ring with short tail, sci-fi armor deflect.
 
-### `bomb_throw` ✅ P0 (0.2s)
-- **트리거**: `Bomb.gd::_ready` (드론·보스 양쪽 자동 커버)
-- **현재 보정**: `+4dB` (거의 안 들림)
-- **prompt**: Quick airborne whoosh of small grenade tossed forward, light tail with subtle metallic hiss, dry.
+### `bomb_throw` ✅ P0 (0.2s) — **보스 전용**
+- **트리거**: `BossSentinel.gd::_drop_bomb`. (드론은 `enemy_drone_drop`만 재생 — 음향 분리.)
+- **현재 보정**: `-2dB`
+- **prompt**: Heavy launch thunk of large ordnance leaving a turret — short pneumatic punch with low-mid metallic body, no whoosh tail. Distinctly boss-scale, not handheld.
 
 ### `bomb_explode` ✅ P0 (0.5s)
 - **트리거**: `Bomb.gd::_explode`
@@ -96,10 +96,10 @@
 - **트리거**: `Enemy.gd::_fire_at_player`
 - **prompt**: Sharp cracking high-velocity rifle shot, bright snap with brief tail, distinctly louder and harsher than enemy_patrol_fire, single shot only.
 
-### `enemy_drone_hover` ✅ P1 (3s seamless loop)
-- **트리거**: `Enemy.gd::_tick_drone` hover_ok false→true 전환 시 1회 (현재는 loop 미지원 — 단발 재생)
-- **현재 보정**: `+6dB` (거의 안 들림)
-- **prompt**: Steady low electric drone hum with quadcopter rotor whine layered on top, seamless 3-second loop, no variation across the loop. Quiet enough to underlay other sfx but with audible rotor texture.
+### `enemy_drone_hover` ✅ P1 (3s seamless loop) — **positional, AudioStreamPlayer2D**
+- **트리거**: `Enemy.gd::_setup_drone_hover_audio` — 드론 spawn 시 1회 attach 후 자동 loop. SfxPlayer 경유 안 함.
+- **거리 감쇠**: `max_distance=900px`, `attenuation=1.6` (가까울수록 가속 커짐). base `volume_db=-14dB`에 `GameState.sfx_volume` 동기화.
+- **prompt**: Steady low electric drone hum with quadcopter rotor whine layered on top, seamless 3-second loop, no variation across the loop. The loop must be cleanly cuttable — no fade in/out within the sample. Texture should be present but unobtrusive so multiple drones don't cumulatively overwhelm.
 
 ### `enemy_drone_drop` ✅ P1 (0.2s)
 - **트리거**: `Enemy.gd::_drop_bomb` (드론이 폭탄 투하 직전)

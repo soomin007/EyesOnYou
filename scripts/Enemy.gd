@@ -107,8 +107,14 @@ var aim_line: Line2D
 var aim_los_clear: bool = false
 
 var drone_bomb_cd: float = 0.0
-# hover SFX는 hover_ok가 false→true로 바뀔 때만 1회 — 매 프레임 갱신 방지.
-var drone_was_hovering: bool = false
+
+# 드론 호버 positional loop SFX — 거리 감쇠는 SfxPlayer(non-positional) 처리 못 함.
+# 드론마다 AudioStreamPlayer2D를 자식으로 부착해 카메라(=플레이어)와의 거리로 자동 attenuation.
+# 사용자 피드백(2026-05-16): 멀리서부터 들리되 가까이서도 지금보다 작게.
+const DRONE_HOVER_VOLUME_DB: float = -14.0       # 거리 0 기준 base — close에서도 muted
+const DRONE_HOVER_MAX_DIST: float = 900.0        # 이 너머는 무음 — 화면 1.4배 정도
+const DRONE_HOVER_ATTENUATION: float = 1.6       # 1.0 거의 선형, >1 가까울수록 가속 커짐
+var hover_audio: AudioStreamPlayer2D = null
 
 var bomber_state: int = BomberState.ROAMING
 var bomber_state_timer: float = 0.0
@@ -138,6 +144,7 @@ func _ready() -> void:
 		EnemyType.DRONE:
 			hp = 1
 			visual = CharacterArt.build_drone(self)
+			_setup_drone_hover_audio()
 		EnemyType.BOMBER:
 			hp = 1
 			visual = CharacterArt.build_bomber(self)
@@ -445,10 +452,9 @@ func _tick_drone(delta: float) -> void:
 	var dx: float = abs(player.global_position.x - global_position.x)
 	var dy_above: float = player.global_position.y - global_position.y  # 양수면 드론이 위
 	var hover_ok: bool = dx <= DRONE_BOMB_X_BAND and dy_above >= DRONE_BOMB_Y_MIN and dy_above <= DRONE_BOMB_Y_MAX
-	# false→true 전환 시에만 hover SFX — 호버 유지 중엔 반복 재생 안 함.
-	if hover_ok and not drone_was_hovering:
-		SfxPlayer.play("enemy_drone_hover")
-	drone_was_hovering = hover_ok
+	# 호버 SFX는 AudioStreamPlayer2D loop라 매 tick 별도 트리거 불필요.
+	# 슬라이더 볼륨만 동기화.
+	_sync_hover_audio_volume()
 	if hover_ok and drone_bomb_cd <= 0.0 and not harmless:
 		velocity = Vector2.ZERO
 		_drop_bomb()
@@ -468,6 +474,40 @@ func _drop_bomb() -> void:
 	var b := Bomb.new()
 	b.global_position = global_position + Vector2(0, 8)
 	get_parent().add_child(b)
+
+# 드론 spawn 시 한 번만 호출 — AudioStreamPlayer2D를 자식으로 부착하고 loop 재생 시작.
+# 노드가 free될 때 자식 audio도 함께 정리되므로 별도 cleanup 불필요.
+func _setup_drone_hover_audio() -> void:
+	var path: String = "res://assets/sfx/enemy_drone_hover.mp3"
+	if not ResourceLoader.exists(path):
+		return
+	var stream: AudioStream = load(path) as AudioStream
+	if stream == null:
+		return
+	# SfxPlayer는 단발 SFX라 loop=false로 강제하지만, 호버는 loop가 정체성.
+	# duplicate() 안 하면 다른 드론들과 stream 인스턴스 공유 — Godot에서는 same stream이
+	# 동시 재생되어도 문제 없지만 loop 플래그 변경이 공유될 수 있어 안전하게 복제.
+	stream = stream.duplicate()
+	if stream is AudioStreamMP3:
+		(stream as AudioStreamMP3).loop = true
+	hover_audio = AudioStreamPlayer2D.new()
+	hover_audio.stream = stream
+	hover_audio.bus = "Master"
+	hover_audio.max_distance = DRONE_HOVER_MAX_DIST
+	hover_audio.attenuation = DRONE_HOVER_ATTENUATION
+	hover_audio.autoplay = true
+	add_child(hover_audio)
+	_sync_hover_audio_volume()
+
+func _sync_hover_audio_volume() -> void:
+	if hover_audio == null:
+		return
+	# 슬라이더 0이면 -80dB로 완전 무음. 그 외엔 DRONE_HOVER_VOLUME_DB + linear_to_db(slider).
+	var v: float = clampf(GameState.sfx_volume, 0.0, 1.0)
+	if v <= 0.001:
+		hover_audio.volume_db = -80.0
+	else:
+		hover_audio.volume_db = DRONE_HOVER_VOLUME_DB + linear_to_db(v)
 
 # ─── Bomber ─────────────────────────────────────────────────
 # 평소엔 천천히 좌우 순찰. 플레이어가 감지 범위에 들어오면 추적.

@@ -256,6 +256,7 @@ func _bomb_interval() -> float:
 	return BOMB_INTERVAL_P1
 
 func _drop_bomb() -> void:
+	SfxPlayer.play("bomb_throw")
 	var bomb := Bomb.new()
 	bomb.global_position = global_position + Vector2(0, 20.0)
 	bomb.velocity = Vector2(0, 60.0)
