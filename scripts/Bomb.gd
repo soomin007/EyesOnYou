@@ -35,6 +35,7 @@ func _ready() -> void:
 	fuse_dot.position = Vector2(-2, -10)
 	fuse_dot.size = Vector2(4, 3)
 	add_child(fuse_dot)
+	SfxPlayer.play("bomb_throw")
 
 func _process(delta: float) -> void:
 	if exploded:
@@ -52,6 +53,7 @@ func _on_body_entered(_body: Node) -> void:
 
 func _explode() -> void:
 	exploded = true
+	SfxPlayer.play("bomb_explode")
 	for n in get_tree().get_nodes_in_group("player"):
 		if not (n is Node2D):
 			continue

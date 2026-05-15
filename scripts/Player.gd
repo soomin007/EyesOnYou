@@ -279,6 +279,7 @@ func _try_attack() -> void:
 	if fb_tier >= 2:
 		sprint_t = _SPRINT_DURATION
 	_show_muzzle_flash()
+	SfxPlayer.play("bullet_fire")
 	# multishot T1=3발, T2/T3=5발.
 	var ms_tier: int = GameState.get_skill_tier("multishot")
 	var shots: int = 1

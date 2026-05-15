@@ -614,7 +614,11 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	# 즉 bullet의 진행 방향(from_dir)과 enemy의 dir이 반대 부호일 때 head-on이라 막음.
 	if enemy_type == EnemyType.SHIELD and from_dir != 0 and _shield_blocks(from_dir):
 		_show_block_spark(from_dir)
+		SfxPlayer.play("bullet_deflect_shield")
 		return
+	# from_dir != 0이면 bullet 명중. 폭발/스킬(from_dir == 0)은 자체 SFX 별도.
+	if from_dir != 0:
+		SfxPlayer.play("bullet_impact_enemy")
 	hp -= amount
 	modulate = Color(1.6, 1.6, 1.6)
 	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.15)

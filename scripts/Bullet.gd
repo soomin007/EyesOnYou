@@ -98,6 +98,7 @@ func _on_body_entered(body: Node) -> void:
 		if body in hit_enemies:
 			return
 		hit_enemies.append(body)
+		# 명중/디플렉트 SFX는 Enemy.take_damage 안에서 방패 막힘 분기를 보고 결정.
 		if body.has_method("take_damage"):
 			# bullet의 진행 방향(dir)을 전달 — 방패 판정에 사용. 위치(global_position.x)는
 			# 충돌 시점에 enemy 안쪽으로 이미 들어가 있어 부호가 어긋날 수 있음.
@@ -106,4 +107,5 @@ func _on_body_entered(body: Node) -> void:
 			queue_free()
 	elif body is StaticBody2D:
 		# 벽/플랫폼 충돌 — 사라짐
+		SfxPlayer.play("bullet_impact_wall")
 		queue_free()

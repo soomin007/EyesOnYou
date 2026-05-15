@@ -45,8 +45,11 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	if skill_only and from_dir != 0:
 		modulate = Color(1.8, 1.2, 0.6)
 		create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.18)
+		SfxPlayer.play("bullet_deflect_shield")
 		emit_signal("bullet_deflected")
 		return
+	if from_dir != 0:
+		SfxPlayer.play("bullet_impact_enemy")
 	hp -= amount
 	modulate = Color(1.6, 1.6, 1.6)
 	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.15)
