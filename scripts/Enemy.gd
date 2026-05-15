@@ -26,7 +26,9 @@ const PATROL_TELEGRAPH: float = 0.45
 const PATROL_CHARGE_DURATION: float = 0.6
 const PATROL_RECOVERY: float = 1.0
 # 사격 — DETECT 범위 안 + CHARGE 범위 밖일 때 멈춰서 발사. 근접하면 돌진으로 전환.
-const PATROL_CHARGE_RANGE: float = 120.0
+# 사용자 피드백: 돌진이 메인이라 거의 항상 돌진으로 가도록 — DETECT 260의 92% 지점.
+# 사격 윈도우는 240~260px 좁게 남겨두어 가끔 한두 발만 쏘게.
+const PATROL_CHARGE_RANGE: float = 240.0
 const PATROL_FIRE_INTERVAL: float = 1.5
 const PATROL_FIRE_AIM_TIME: float = 0.3
 const PATROL_BULLET_DAMAGE: int = 1

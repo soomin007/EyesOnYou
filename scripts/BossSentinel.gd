@@ -263,6 +263,7 @@ func _drop_bomb() -> void:
 
 func _fire_missiles() -> void:
 	# 좌/우 두 발 — 수평 이동, 플레이어 방향 노리지 않고 양방향으로 압박
+	SfxPlayer.play("boss_missile_launch")
 	_spawn_missile(global_position + Vector2(-30.0, -2.0), -1)
 	_spawn_missile(global_position + Vector2(30.0, -2.0), 1)
 
@@ -298,6 +299,8 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 		return
 	hp = max(0, hp - amount)
 	_flash_hit()
+	if hp > 0:
+		SfxPlayer.play("boss_hurt")
 	# 페이즈 전환 검사 — 스토리 모드는 P2/P3 모두 생략하고 자폭만 진입.
 	if not story_simplified:
 		if phase < 2 and hp <= HP_PHASE2:
@@ -320,6 +323,7 @@ func _flash_hit() -> void:
 func _transition_to(new_phase: int) -> void:
 	phase = new_phase
 	phase_freeze_t = PHASE_FREEZE_DURATION
+	SfxPlayer.play("boss_phase_change")
 	# 텔레그래프 노드 리셋 — 전환 직후 잔존 점등이 어색.
 	bomb_telegraph_t = 0.0
 	missile_telegraph_t = 0.0
@@ -383,6 +387,7 @@ func _spawn_minion(kind: int, pos: Vector2, hp_value: int) -> CharacterBody2D:
 func _arm_self_destruct() -> void:
 	self_destruct_active = true
 	self_destruct_t = 0.0
+	SfxPlayer.play("boss_self_destruct_alarm")
 	# 위험 영역 시각화 — inner(380, 풀뎀) 빨강, outer(1200, 1뎀) 노랑.
 	# outer 너머가 안전 영역. ARENA 1920이라 벽 끝까지 도망가면 outer 너머 도달.
 	danger_ring_inner = _make_danger_ring(SELF_DESTRUCT_INNER, Color(0.95, 0.25, 0.25, 0.85), 4.0)
@@ -457,6 +462,12 @@ func _die() -> void:
 	if dead:
 		return
 	dead = true
+	# 자폭 카운트다운 중에 처치 → 알람 해제 사운드. 자폭 폭발 후 _die면 disarm 부적절.
+	# self_destruct_t == 0이면 _arm 직후 즉사한 케이스, t < SELF_DESTRUCT_TIME이면 카운트다운 중.
+	# _detonate에서 _die가 호출되는 경우엔 t >= SELF_DESTRUCT_TIME이라 자동으로 분기됨.
+	if self_destruct_active and self_destruct_t < SELF_DESTRUCT_TIME:
+		SfxPlayer.play("boss_self_destruct_disarm")
+	SfxPlayer.play("boss_death")
 	# 보스가 죽으면 소환된 잔당도 함께 정리 — ARENA에 잔존 적이 남아 클리어 흐름이 어색해지는 것 방지.
 	for m in summoned_minions:
 		if is_instance_valid(m):

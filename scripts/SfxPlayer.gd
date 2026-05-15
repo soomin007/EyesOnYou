@@ -21,6 +21,14 @@ const VOLUME_OFFSETS: Dictionary = {
 	"player_dash":        -8.0,
 	"player_hurt":        -0.0,
 	"player_death":       0.0,
+	# 2026-05-16 사용자 피드백 기반 보정.
+	"bullet_fire":        -8.0,   # 사격 너무 큼 — 연발이라 더 신경 쓰임
+	"bullet_impact_wall": -5.0,   # 벽 충돌음 큼
+	"bomb_throw":         4.0,    # 거의 안 들림
+	"bomb_explode":       6.0,    # 너무 작음
+	"enemy_hurt":         -4.0,   # 적 피격 큼
+	"enemy_drone_hover":  6.0,    # 거의 안 들림
+	"enemy_drone_drop":   -8.0,   # 너무 큼
 }
 
 # 알려진 SFX ID 목록. 새 파일 추가하면 여기 등록 (또는 _register_sfx 직접 호출).
@@ -40,9 +48,9 @@ const KNOWN_SFX: Array[String] = [
 	"enemy_drone_hover", "enemy_drone_drop",
 	"enemy_bomber_beep", "enemy_bomber_explode",
 	"enemy_hurt", "enemy_death",
-	# Boss
-	"boss_phase_change", "boss_charge_telegraph", "boss_charge_dash",
-	"boss_missile_launch", "boss_hurt",
+	# Boss — BossSentinel은 charge 공격 없음(bomb + missile + self-destruct only).
+	# 기존 KNOWN_SFX에 있던 boss_charge_* 항목은 코드와 불일치라 제거.
+	"boss_phase_change", "boss_missile_launch", "boss_hurt",
 	"boss_self_destruct_alarm", "boss_self_destruct_disarm", "boss_death",
 	# Pickups
 	"xp_collect", "hp_collect", "levelup", "skill_pick", "skill_active_use",

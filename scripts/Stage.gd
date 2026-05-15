@@ -1738,6 +1738,8 @@ func _build_wall(x: float) -> void:
 	var wall_height: float = _world_size.y + 400.0
 	var body := StaticBody2D.new()
 	body.collision_layer = 1
+	# 맵 경계벽 — 게임 내 "실제 벽"이 아니라 월드 끝 가드. Bullet은 여기 맞아도 impact SFX 안 냄.
+	body.add_to_group("boundary_wall")
 	add_child(body)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()

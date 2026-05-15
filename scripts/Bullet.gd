@@ -106,6 +106,7 @@ func _on_body_entered(body: Node) -> void:
 		if not pierce:
 			queue_free()
 	elif body is StaticBody2D:
-		# 벽/플랫폼 충돌 — 사라짐
-		SfxPlayer.play("bullet_impact_wall")
+		# 벽/플랫폼 충돌 — 사라짐. 맵 경계벽은 "실제 벽"이 아니라 가드라 impact SFX 생략.
+		if not body.is_in_group("boundary_wall"):
+			SfxPlayer.play("bullet_impact_wall")
 		queue_free()

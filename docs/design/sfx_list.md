@@ -1,138 +1,296 @@
 # 효과음 목록 (SFX)
 
-직접 만들어 채울 효과음 전수 목록. 사용 위치 + 톤 가이드 + 우선순위.
-파일 포맷은 `.ogg` 권장(웹 빌드 호환). 각 항목은 짧은 단발(0.1~1.5s) 또는 명시된
-loop. 볼륨은 게임 안 `GameState.sfx_volume` 슬라이더에 연결될 예정.
+`assets/sfx/<id>.mp3`로 채울 효과음 전수 목록. 코드에서는 `SfxPlayer.play(id)`로 호출.
+각 항목은 짧은 단발(0.1~1.5s) 또는 명시된 loop. 볼륨은 `GameState.sfx_volume` 슬라이더 ×
+`SfxPlayer.VOLUME_OFFSETS[id]` 보정으로 결정.
 
-## 우선순위 표기
-- **P0** — 게임의 기본 행동 피드백. 빠지면 즉시 어색함.
-- **P1** — 시스템 보강. 빠져도 플레이는 가능하지만 quality 큰 차이.
-- **P2** — 분위기·연출. 있으면 좋고, 없어도 큰 문제 없음.
+## 표기
+- **상태**: ✅ 파일 존재 + 코드 wire-up 완료 / ⬜ 미작업 / ⚠ 파일은 있으나 미사용 또는 미연결
+- **우선순위 P0~P2**: P0 핵심 피드백 / P1 시스템 보강 / P2 분위기 연출
+- **트리거 코드**: 실제 `SfxPlayer.play()` 호출 위치 (파일:심볼 단위)
+
+## ElevenLabs 사용 가이드
+- 영문 prompt가 잘 먹힘. duration_seconds는 ElevenLabs UI에 그대로 입력. prompt_influence 0.4~0.6 권장.
+- 게임 톤: **사이버펑크 / 시설 침투 / 정밀한 SF**. 음악적이지 않게, 무톤(non-tonal) 또는 짧은 sub-bass.
+- 공통 prefix(원하면 모든 prompt 앞에 붙임): `cyberpunk infiltration game sfx, dry studio recording, no music, no reverb tail, mono`
+- loop 항목(`drone_hover`, `bomber_beep`, `self_destruct_alarm`)은 결과를 Audacity에서 zero-crossing trim 필요.
+- 변주 필요한 SFX(`player_step`, `player_hurt`)는 같은 prompt로 N개 생성 → 코드가 자동으로 `<id>1`, `<id>2` … 인식.
 
 ---
 
 ## 1. Player
 
-| ID | 설명 | 트리거 | 톤 / 길이 | 우선 |
-|---|---|---|---|---|
-| `player_jump` | 점프 | `Player._do_jump` | 짧은 woosh 0.15s | P0 |
-| `player_double_jump` | 이중 점프 | 두 번째 점프 | 첫 점프와 다른 톤 (살짝 높게) | P0 |
-| `player_land` | 착지 | floor에 닿는 순간 | 부드러운 thud 0.2s | P1 |
-| `player_dash` | 대시 | `Player._do_dash` | sharp woosh + 미세 잔향 0.3s | P0 |
-| `player_hurt` | 피격 | `Player.take_hit` | 짧은 그르렁 / 흠칫 0.3s | P0 |
-| `player_death` | 사망 | hp 0 → death 전환 | 호흡 끊김 + 다운 톤 0.6s | P0 |
-| `player_step` | 발걸음 | 이동 중 일정 간격 | 가벼운 step (loop 또는 timer) | P2 |
+### `player_jump` ✅ P0 (0.2s)
+- **트리거**: `Player.gd::_do_jump` (첫 점프 + 더블 점프 둘 다 재사용)
+- **현재 보정**: `-10dB` (사용자 피드백 — 너무 큼)
+- **prompt**: Short pneumatic jump push, soft fabric whoosh with quick mechanical click at the attack, dry, no reverb.
+
+### `player_land` ✅ P1 (0.25s)
+- **트리거**: `Player.gd::_handle_input` floor 착지 순간
+- **현재 보정**: `+5dB`
+- **prompt**: Soft thud of boots landing on metal grating, low frequency thump with very short metallic tap, dry.
+
+### `player_dash` ✅ P0 (0.35s)
+- **트리거**: `Player.gd::_do_dash`
+- **현재 보정**: `-8dB`
+- **prompt**: Sharp horizontal whoosh with electric crackle layered, fast attack, very short tail, sci-fi dash.
+
+### `player_hurt` ✅ P0 (0.3s, 3 variants)
+- **트리거**: `Player.gd::take_hit`
+- **prompt**: Quick masculine grunt cut short, layered with low metallic impact, no music, dry. (variant마다 grunt 톤 살짝 다르게)
+
+### `player_death` ✅ P0 (0.7s)
+- **트리거**: `Player.gd::take_hit` hp 0 분기
+- **prompt**: Heavy body collapse on metal floor, single low thump fading into electronic data corruption glitch, no music.
+
+### `player_step` ✅ P2 (0.15s, 4 variants)
+- **트리거**: `Player.gd::_handle_input` 이동 중 timer
+- **현재 보정**: `+6dB`
+- **prompt**: Soft single boot step on metal grating walkway, dry, mono, no reverb tail.
+
+---
 
 ## 2. Combat — 사격 / 폭발
 
-| ID | 설명 | 트리거 | 톤 / 길이 | 우선 |
-|---|---|---|---|---|
-| `bullet_fire` | 플레이어 사격 | `Bullet` 생성 | 짧은 pew 0.1s | P0 |
-| `bullet_impact_wall` | 벽/플랫폼 명중 | bullet과 world 충돌 | 짧은 click 0.08s | P1 |
-| `bullet_impact_enemy` | 적 명중 | bullet 적중 시 | 둔탁한 hit 0.12s | P0 |
-| `bullet_deflect_shield` | 방패병 튕김 | shield enemy bullet 튕김 | 금속 clang 0.2s | P0 |
-| `bomb_throw` | 폭발물 투척 | `Bomb` 생성 | 짧은 whoosh 0.15s | P0 |
-| `bomb_explode` | 폭발 | Bomb 터질 때 | 묵직한 boom + 잔향 0.4s | P0 |
+### `bullet_fire` ✅ P0 (0.15s)
+- **트리거**: `Player.gd::_try_attack` (multishot이어도 1회)
+- **현재 보정**: `-8dB` (너무 큼 — 연발이라 더 부담)
+- **prompt**: Suppressed pistol shot, quick metallic pew with subtle electronic snap, very dry, no echo. Tight low-mid body, no high sizzle.
+
+### `bullet_impact_wall` ✅ P1 (0.1s)
+- **트리거**: `Bullet.gd::_on_body_entered` StaticBody2D 충돌 (단, `boundary_wall` 그룹 제외 — 맵 끝 경계벽은 무음)
+- **현재 보정**: `-5dB`
+- **prompt**: Single sharp metallic ping of small caliber bullet hitting steel plate, very short tick, no decay, dry.
+
+### `bullet_impact_enemy` ✅ P0 (0.15s)
+- **트리거**: `Enemy.gd::take_damage` / `TutorialDummy.gd::take_damage` (from_dir != 0, 방패 막힘 제외)
+- **prompt**: Dull thud of bullet hitting armored synthetic body, low frequency punch with subtle soft impact, dry, no ring.
+
+### `bullet_deflect_shield` ✅ P0 (0.25s)
+- **트리거**: `Enemy.gd::take_damage` SHIELD 정면 막힘 + `TutorialDummy.gd::take_damage` 스킬 더미 튕김
+- **prompt**: Loud metallic clang of bullet ricocheting off heavy steel shield, bright high frequency ring with short tail, sci-fi armor deflect.
+
+### `bomb_throw` ✅ P0 (0.2s)
+- **트리거**: `Bomb.gd::_ready` (드론·보스 양쪽 자동 커버)
+- **현재 보정**: `+4dB` (거의 안 들림)
+- **prompt**: Quick airborne whoosh of small grenade tossed forward, light tail with subtle metallic hiss, dry.
+
+### `bomb_explode` ✅ P0 (0.5s)
+- **트리거**: `Bomb.gd::_explode`
+- **현재 보정**: `+6dB`
+- **prompt**: Compact close-range explosion, mid-low frequency thump with debris crackle and brief shrapnel hiss, short controlled tail, no big reverb.
+
+---
 
 ## 3. Enemy
 
-| ID | 설명 | 트리거 | 톤 / 길이 | 우선 |
-|---|---|---|---|---|
-| `enemy_patrol_fire` | 정찰병 사격 | patrol 발사 | 작은 pew (player보다 둔하게) | P0 |
-| `enemy_sniper_charge` | 저격수 조준 텔레그래프 | sniper TELEGRAPH | 짧은 hum + 미세 펄스 0.4s | P0 |
-| `enemy_sniper_fire` | 저격수 발사 | sniper 발사 | 날카로운 cracking pew 0.15s | P0 |
-| `enemy_drone_hover` | 드론 호버 | drone 활성 동안 loop | 낮은 미세 hum (loop) | P1 |
-| `enemy_drone_drop` | 드론 폭탄 투하 | drone bomb 생성 | 짧은 release click | P1 |
-| `enemy_bomber_beep` | bomber 자폭 카운트 | bomber 활성 임박 | 빨라지는 비프 (loop+pitch up) | P0 |
-| `enemy_bomber_explode` | bomber 자폭 | bomber 터질 때 | bomb_explode와 다른 톤 — 더 가까이 | P0 |
-| `enemy_hurt` | 적 피격 | `Enemy.take_hit` | 짧은 흠칫 0.1s | P0 |
-| `enemy_death` | 적 처치 | `Enemy.killed` emit | 작은 thud + dissipate 0.3s | P0 |
+### `enemy_patrol_fire` ✅ P0 (0.18s)
+- **트리거**: `Enemy.gd::_patrol_fire` (Patrol FIRING 상태에서 `EnemyBullet` 발사 시)
+- **prompt**: Mid-range military pistol shot, slightly muffled and heavier than player_fire, single dry crack with very small low-end punch, no high sparkle.
+
+### `enemy_sniper_charge` ✅ P0 (0.45s)
+- **트리거**: `Enemy.gd::_start_aim` (조준선 생성 순간)
+- **prompt**: Rising electric hum charge-up, faint pulsing rhythm at increasing rate, ends WITHOUT release/click, sci-fi targeting laser warming up. Should sound incomplete on its own — paired with sniper_fire.
+
+### `enemy_sniper_fire` ✅ P0 (0.18s)
+- **트리거**: `Enemy.gd::_fire_at_player`
+- **prompt**: Sharp cracking high-velocity rifle shot, bright snap with brief tail, distinctly louder and harsher than enemy_patrol_fire, single shot only.
+
+### `enemy_drone_hover` ✅ P1 (3s seamless loop)
+- **트리거**: `Enemy.gd::_tick_drone` hover_ok false→true 전환 시 1회 (현재는 loop 미지원 — 단발 재생)
+- **현재 보정**: `+6dB` (거의 안 들림)
+- **prompt**: Steady low electric drone hum with quadcopter rotor whine layered on top, seamless 3-second loop, no variation across the loop. Quiet enough to underlay other sfx but with audible rotor texture.
+
+### `enemy_drone_drop` ✅ P1 (0.2s)
+- **트리거**: `Enemy.gd::_drop_bomb` (드론이 폭탄 투하 직전)
+- **현재 보정**: `-8dB` (너무 큼)
+- **prompt**: Brief mechanical release click followed by faint object detachment whoosh, dry, subtle. NOT explosive — just the moment of release.
+
+### `enemy_bomber_beep` ✅ P0 (1.5s, loop+accelerating recommended)
+- **트리거**: `Enemy.gd::_tick_bomber` ARMING 진입 1회 (현재 단발 — 추후 loop 전환 검토)
+- **prompt**: Electronic warning beep that accelerates from slow (≈3Hz) to fast (≈10Hz) over 1.5 seconds, single pulse tone, sci-fi proximity arming alarm. Each pulse should be very short and clean.
+
+### `enemy_bomber_explode` ✅ P0 (0.6s)
+- **트리거**: `Enemy.gd::_bomber_explode`
+- **prompt**: Closer compact explosion than bomb_explode, sharper attack, slight glass-and-metal debris crackle, brief sub-bass thump under, no long tail.
+
+### `enemy_hurt` ✅ P0 (0.12s, variants OK)
+- **트리거**: `Enemy.gd::take_damage` (hp > 0)
+- **현재 보정**: `-4dB`
+- **prompt**: Brief mechanical buzz layered with a subtle low robotic grunt, dry. Short — should not linger past 0.15s.
+
+### `enemy_death` ✅ P0 (0.35s)
+- **트리거**: `Enemy.gd::_die` (Bomber 제외 — `_bomber_explode`가 죽음 소리 역할)
+- **prompt**: Robotic shutdown thud, mid-low frequency drop with brief electronic dissipation tail and tiny servo whine fading out.
+
+---
 
 ## 4. Boss (SENTINEL)
 
-| ID | 설명 | 트리거 | 톤 / 길이 | 우선 |
-|---|---|---|---|---|
-| `boss_phase_change` | 페이즈 전환 | `BossSentinel.phase_changed` | 묵직한 impact + 잔향 0.5s | P0 |
-| `boss_charge_telegraph` | 돌진 텔레그래프 | TELEGRAPH 진입 | 빨강 깜빡과 동기. 짧은 hum-up 0.3s | P0 |
-| `boss_charge_dash` | 돌진 | CHARGING 진입 | 큰 woosh + 진동 0.6s | P0 |
-| `boss_missile_launch` | 미사일 발사 | BossMissile 생성 | 발사 woosh 0.2s | P1 |
-| `boss_hurt` | 보스 피격 | hp 감소 | enemy_hurt보다 훨씬 둔탁 | P1 |
-| `boss_self_destruct_alarm` | 자폭 카운트다운 알람 | `self_destruct_started` | 5초 동안 비프 loop | P0 |
-| `boss_self_destruct_disarm` | 자폭 해제 | `self_destruct_disarmed` | 안도하는 페이드 1.2s | P1 |
-| `boss_death` | 보스 처치 | `BossSentinel.killed` | 큰 폭발 + 잔향 1.5s | P0 |
+### `boss_phase_change` ⬜ P0 (0.6s)
+- **트리거**: `BossSentinel.gd::_transition_to` (P1→P2, P2→P3 진입 순간)
+- **prompt**: Heavy mechanical impact with deep sub-bass slam, brief electronic surge tail, ominous sci-fi power-up. Should feel weighty and final — the boss is entering a new phase.
 
-## 5. Pickups
+### `boss_missile_launch` ⬜ P1 (0.25s)
+- **트리거**: `BossSentinel.gd::_fire_missiles` (좌/우 두 발이지만 1회 재생)
+- **prompt**: Compact twin missile launch hiss with mechanical ka-chunk, dry, slight metallic resonance, no reverb. Two-burst feel implied even though it's a single sample.
 
-| ID | 설명 | 트리거 | 톤 / 길이 | 우선 |
-|---|---|---|---|---|
-| `xp_collect` | XP orb 흡수 | `ExpOrb` magnet | 작은 chime 0.15s | P0 |
-| `hp_collect` | HP orb 흡수 | `HpOrb` 흡수 | 부드러운 heal 0.3s | P0 |
-| `levelup` | 레벨업 발생 | `LevelUpOverlay` 진입 | 상승하는 chime 0.6s | P0 |
-| `skill_pick` | 스킬 카드 선택 | LevelUp 카드 confirm | 짧은 confirm 0.2s | P1 |
-| `skill_active_use` | 액티브 스킬 발동 | `Player._try_skill` (폭발물 등) | 짧은 zap 0.2s | P0 |
+### `boss_hurt` ⬜ P1 (0.2s)
+- **트리거**: `BossSentinel.gd::take_damage` (hp > 0)
+- **prompt**: Heavy metallic dull impact, deeper and more resonant than enemy_hurt, brief electronic shudder tail, NO grunt — purely mechanical.
+
+### `boss_self_destruct_alarm` ⬜ P0 (3s seamless loop)
+- **트리거**: `BossSentinel.gd::_arm_self_destruct` (HP가 HP_SELF_DESTRUCT 이하로 떨어진 순간 — 현재 단발 재생, 추후 loop 전환 검토)
+- **prompt**: Loud urgent mechanical klaxon repeating roughly every 0.6s, slight metallic clang on each pulse, low-mid alarm tone, seamless 3-second loop, dread-inducing sci-fi self-destruct warning.
+
+### `boss_self_destruct_disarm` ⬜ P1 (1.2s)
+- **트리거**: `BossSentinel.gd::_die` (자폭 전 처치한 경우 — 카운트다운 진행 중)
+- **prompt**: Power-down hum descending in pitch over 1 second, system relaxing, soft electronic sigh tail. Sense of relief — the threat just got neutralized.
+
+### `boss_death` ⬜ P0 (1.6s)
+- **트리거**: `BossSentinel.gd::_die`
+- **prompt**: Massive mechanical explosion with prolonged metallic tearing tail, sub-bass slam followed by debris and brief electric arcs fading. Should sound bigger than enemy_bomber_explode.
+
+> **제거됨**: `boss_charge_telegraph` / `boss_charge_dash` — BossSentinel은 charge 공격이 없음 (bomb + missile + self-destruct only). 기존 design doc 잔재.
+
+---
+
+## 5. Pickups / Skills
+
+### `xp_collect` ⬜ P0 (0.18s)
+- **트리거**: `ExpOrb.gd` magnet 흡수
+- **prompt**: Tiny crystalline chime, single bright high-frequency note, very short, sci-fi pickup ping. Should be poly-able (many can play overlapping).
+
+### `hp_collect` ⬜ P0 (0.35s)
+- **트리거**: `HpOrb.gd` 흡수
+- **prompt**: Warm rising heal chime, two-note ascending interval, soft glow texture, no reverb, restorative sci-fi feel.
+
+### `levelup` ⬜ P0 (0.7s)
+- **트리거**: `LevelUpOverlay.gd` 진입
+- **prompt**: Triumphant ascending three-note chime sequence, sci-fi confirmation, mild crystalline shimmer, no big reverb, decisive.
+
+### `skill_pick` ⬜ P1 (0.22s)
+- **트리거**: `LevelUpOverlay.gd` 카드 confirm
+- **prompt**: Crisp digital confirm tick with subtle holographic sweep, dry, sci-fi UI selection.
+
+### `skill_active_use` ⬜ P0 (0.25s)
+- **트리거**: `Player.gd::_try_skill` (액티브 스킬 발동 — 폭발물 등)
+- **prompt**: Quick electric zap with mechanical release, sci-fi gadget activation, dry, focused punch.
+
+---
 
 ## 6. Environment / Hazards
 
-| ID | 설명 | 트리거 | 톤 / 길이 | 우선 |
-|---|---|---|---|---|
-| `spike_hit` | 가시 피격 | `_on_spike_touched` | 날카로운 metal stab 0.15s | P0 |
-| `lever_pull` | 레버 당김 | `LeverInteractable.try_pull` | 기계 ratchet click 0.3s | P0 |
-| `plate_step_inactive` | 비활성 발판 step | require_armed plate (armed=false) | 둔탁한 thump (피드백 X 시각화) | P2 |
-| `plate_step_active` | 활성 발판 step | armed plate stepped | 청량한 click + chime 0.25s | P0 |
-| `hatch_open` | 비밀 해치 fade | `_open_hatch` | 부드러운 ventilation hiss 0.5s | P1 |
-| `drop_platform_descend` | 강하 발판 내려옴 | `_descend_drop_platform` | 묵직한 rumble 0.6s | P1 |
-| `gate_unlock` | 도전방 게이트 fade | `_start_challenge_run` 게이트 자리 | 자석 unlock + slide 0.5s | P0 |
-| `siren_flash` | 사이렌 빨강 플래시 | `_play_siren_flash` | 짧은 alarm whoop ×2 (총 0.7s) | P0 |
-| `blackout_fade_in` | 도전 암전 fade | challenge_dark_root fade in | 잠긴 듯한 sub-bass swell 1.0s | P1 |
-| `challenge_clear` | 도전 클리어 | 도전 골 도달 | 안도 + 상승 chime 0.6s | P0 |
-| `challenge_fail` | 도전 실패 | `_challenge_fail` | 끊기는 buzzer + 다운 0.5s | P0 |
+### `spike_hit` ⬜ P0 (0.18s)
+- **트리거**: `Stage.gd` spike 충돌 처리
+- **prompt**: Sharp metallic stab with single high-frequency ring and quick pain pulse, dry, brief.
+
+### `lever_pull` ⬜ P0 (0.35s)
+- **트리거**: `LeverInteractable.gd::try_pull`
+- **prompt**: Mechanical lever ratchet click followed by heavy contact thunk, industrial old-facility feel, dry.
+
+### `plate_step_inactive` ⬜ P2 (0.2s)
+- **트리거**: `PressurePlate.gd` armed=false 상태에서 step
+- **prompt**: Dull metallic thump of foot on inactive pressure plate, no resonance, dead muted sound. Should feel ignored.
+
+### `plate_step_active` ⬜ P0 (0.3s)
+- **트리거**: `PressurePlate.gd` armed plate stepped
+- **prompt**: Crisp pneumatic click with rising power-on chime, plate activating beneath foot, sci-fi affirmative.
+
+### `hatch_open` ⬜ P1 (0.55s)
+- **트리거**: `Stage.gd::_open_hatch`
+- **prompt**: Pneumatic ventilation hiss with metal panel sliding aside, brief mechanical motor whir, sci-fi maintenance hatch.
+
+### `drop_platform_descend` ⬜ P1 (0.7s)
+- **트리거**: `Stage.gd::_descend_drop_platform`
+- **prompt**: Heavy mechanical platform lowering with hydraulic descent rumble, ends with soft thud landing.
+
+### `gate_unlock` ⬜ P0 (0.55s)
+- **트리거**: `Stage.gd` 도전방 게이트 fade
+- **prompt**: Magnetic lock disengaging with electric click, then heavy panel sliding away, sci-fi facility access grant.
+
+### `siren_flash` ⬜ P0 (0.8s)
+- **트리거**: `Stage.gd::_play_siren_flash`
+- **prompt**: Two short alarm whoops in quick succession (≈0.3s apart), urgent klaxon, danger warning, no reverb tail.
+
+### `blackout_fade_in` ⬜ P1 (1.2s)
+- **트리거**: challenge_dark_root fade in
+- **prompt**: Deep ominous sub-bass swell rising slowly, lights cutting out feeling, oppressive sci-fi atmosphere, ends sustained.
+
+### `challenge_clear` ⬜ P0 (0.7s)
+- **트리거**: 도전방 골 도달
+- **prompt**: Relieved ascending chime, breath of accomplishment, sci-fi success confirmation, brief.
+
+### `challenge_fail` ⬜ P0 (0.55s)
+- **트리거**: `Stage.gd::_challenge_fail`
+- **prompt**: Cutting buzzer error tone descending in pitch, abrupt failure signal, dry, no tail.
+
+---
 
 ## 7. UI / Menu
 
-| ID | 설명 | 트리거 | 톤 / 길이 | 우선 |
-|---|---|---|---|---|
-| `ui_focus` | 포커스 이동 | 버튼 focus_entered | 미세한 tick 0.05s | P1 |
-| `ui_confirm` | 확정 | 버튼 pressed | 부드러운 confirm 0.12s | P0 |
-| `ui_cancel` | 취소 / 뒤로 | ESC / B | 낮은 tick 0.1s | P1 |
-| `ui_slider_tick` | 슬라이더 변경 | volume slider 값 변경 | 매우 짧은 micro tick 0.04s | P2 |
-| `ui_pause_open` | 일시정지 메뉴 진입 | pause overlay open | 살짝 muffled woosh 0.2s | P2 |
+### `ui_focus` ⬜ P1 (0.06s)
+- **트리거**: 메뉴 버튼 focus_entered
+- **prompt**: Tiny digital tick, single high-frequency click, very short, UI navigation feedback.
+
+### `ui_confirm` ⬜ P0 (0.14s)
+- **트리거**: 메뉴 버튼 pressed
+- **prompt**: Soft sci-fi confirmation chime, two-tone ascending, brief, no reverb.
+
+### `ui_cancel` ⬜ P1 (0.12s)
+- **트리거**: ESC / B
+- **prompt**: Low descending UI click, brief negative feedback tone, dry.
+
+### `ui_slider_tick` ⬜ P2 (0.05s)
+- **트리거**: volume slider 값 변경
+- **prompt**: Micro digital tick at very low volume, single grain, very short.
+
+### `ui_pause_open` ⬜ P2 (0.25s)
+- **트리거**: pause overlay open
+- **prompt**: Muffled woosh as if pulling away from the world, slight low frequency drop, sci-fi pause-in.
+
+---
 
 ## 8. Story / Special
 
-| ID | 설명 | 트리거 | 톤 / 길이 | 우선 |
-|---|---|---|---|---|
-| `veil_subtitle_in` | VEIL 자막 등장 | `_show_veil_subtitle` fade in | 미세한 데이터 chirp 0.1s | P2 |
-| `arcturus_enter` | ARCTURUS 시퀀스 진입 | `_start_arcturus_sequence` | 깊은 sub-bass swell + 페이지 turn 0.8s | P1 |
-| `terminal_typewrite` | 단말기 타이핑 | ARCTURUS 문서 타자 | per-char 미세 click (loop 가능) | P2 |
-| `bestiary_first_seen` | 도감 첫 조우 카드 | `mark_enemy_seen` | 짧은 deep chime 0.3s | P2 |
-| `stage_clear_chime` | stage 클리어 | `_begin_clear_sequence` | 안도하는 짧은 fanfare 0.6s | P1 |
-| `boss_alert_text` | 보스 강조 자막 | `_show_boss_alert` | 짧은 alarm sting 0.3s | P1 |
+### `veil_subtitle_in` ⬜ P2 (0.12s)
+- **트리거**: VEIL 자막 fade in
+- **prompt**: Subtle digital chirp, brief data transmission tick, sci-fi communicator, very faint — should not interrupt the line.
 
-## 9. Tutorial
+### `arcturus_enter` ⬜ P1 (0.9s)
+- **트리거**: `ArcturusDocumentOverlay.gd` 진입
+- **prompt**: Deep ominous sub-bass swell with paper-like rustle and time-stop hush, mysterious archive opening, sense of stepping into something older.
 
-대부분 위 항목 재사용. 별도 SFX 없음.
+### `terminal_typewrite` ⬜ P2 (0.05s, one-shot click; code loops per char)
+- **트리거**: ARCTURUS 문서 타자 per-char
+- **prompt**: Single mechanical key click of old terminal keyboard, very dry, very short, no resonance.
+
+### `bestiary_first_seen` ⬜ P2 (0.35s)
+- **트리거**: `BestiaryData.gd::mark_enemy_seen` 첫 조우
+- **prompt**: Deep contemplative chime, single resonant note, sci-fi catalog entry, brief but weighty.
+
+### `stage_clear_chime` ⬜ P1 (0.7s)
+- **트리거**: `Stage.gd::_begin_clear_sequence`
+- **prompt**: Brief relieving fanfare, three ascending notes, breath of accomplishment, sci-fi, no big reverb.
+
+### `boss_alert_text` ⬜ P1 (0.3s)
+- **트리거**: `Stage.gd::_show_boss_alert`
+- **prompt**: Sharp alarm sting with single high-frequency stab, danger emphasis, brief.
 
 ---
 
 ## 구현 순서 권장
 
-1. **Player + Combat (P0)** — `player_jump` / `player_dash` / `player_hurt` /
-   `bullet_fire` / `bomb_explode`. 게임 1분 안에 사용자가 듣는 핵심.
-2. **Enemy + Pickup (P0)** — `enemy_death` / `xp_collect` / `levelup`.
-   진행 보상 피드백.
-3. **Environment (P0)** — `lever_pull` / `plate_step_active` / `siren_flash` /
-   `spike_hit`. 환경 인터랙션 학습 강화.
-4. **Boss (P0)** — `boss_phase_change` / `boss_self_destruct_alarm` /
-   `boss_death`. 클라이맥스 임팩트.
-5. **UI (P0~P1)** — `ui_confirm` / `levelup` / `challenge_clear`/`challenge_fail`.
-6. **나머지 P1~P2** — 환경/연출 보강.
+1. **Boss (P0)** — `boss_phase_change` / `boss_self_destruct_alarm` / `boss_death`. 코드 wire-up은 이미 끝나있고 파일만 추가하면 됨. 클라이맥스 임팩트 최우선.
+2. **Pickups (P0)** — `xp_collect` / `hp_collect` / `levelup`. 진행 보상 피드백 — 매 적 처치마다 들음.
+3. **Environment (P0)** — `lever_pull` / `plate_step_active` / `siren_flash` / `spike_hit` / `gate_unlock` / `challenge_clear`·`fail`. 환경 인터랙션 학습 강화.
+4. **UI (P0~P1)** — `ui_confirm` / `skill_active_use` / `skill_pick`. 메뉴·스킬 피드백.
+5. **나머지 P1~P2** — 환경/연출 보강 + Story SFX.
 
 ## 코드 연결 메모
 
-- 각 SFX는 `assets/sfx/<id>.ogg`로. (현재 `assets/sfx/` 폴더 신설 필요)
-- `BgmPlayer`와 비슷한 패턴의 `SfxPlayer` autoload 신설 권장 — 풀링된 N개의
-  AudioStreamPlayer 슬롯으로 동시 재생 처리. `GameState.sfx_volume` 참조.
-- 일부 loop SFX(`enemy_drone_hover`, `boss_self_destruct_alarm`)는 streaming
-  AudioStreamPlayer 별도 인스턴스로.
-- 코드 호출 패턴: `SfxPlayer.play("player_jump")`. 위치 기반 attenuation 필요한
-  경우(폭발 등)는 AudioStreamPlayer2D를 spawn.
+- 파일 위치: `assets/sfx/<id>.mp3`. 확장자 mp3/ogg/wav 모두 가능 (`SfxPlayer._SFX_EXTENSIONS` 순서대로 시도).
+- variant: `<id>1.mp3`, `<id>2.mp3` … 자동 등록. `SfxPlayer.play(id)`가 무작위 하나 재생.
+- 볼륨 보정은 `scripts/SfxPlayer.gd::VOLUME_OFFSETS` 사전에 dB 값 추가.
+- loop SFX(`drone_hover`, `bomber_beep`, `self_destruct_alarm`)는 현재 단발 재생 — 추후 loop 지원 추가 시 별도 처리 필요.
+- 신규 SFX ID 추가 시 `KNOWN_SFX` 배열에도 등록.

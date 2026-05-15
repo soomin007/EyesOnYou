@@ -5,8 +5,10 @@ extends Area2D
 # 플레이어 Bullet과 분리한 이유: collision mask, 색상, 속도, 데미지 규칙이 달라
 # 한 클래스에 분기를 넣기보다 별도 클래스가 깔끔.
 
-const BASE_SPEED: float = 360.0
-const BASE_LIFETIME: float = 1.1
+# 사용자 피드백(2026-05-16): 360은 회피가 거의 불가능 — 240으로 낮춤.
+# Player bullet 900 대비 27% 속도라 점프/대시로 충분히 피할 수 있는 영역.
+const BASE_SPEED: float = 240.0
+const BASE_LIFETIME: float = 1.6  # 속도 낮춘 만큼 lifetime 늘려 사거리 유지(384px → 384px)
 
 var velocity: Vector2 = Vector2.ZERO
 var damage: int = 1
