@@ -68,6 +68,12 @@ var barrier_indicator: Node2D = null
 func _ready() -> void:
 	add_to_group("player")
 	z_index = 2
+	# 명시 AudioListener2D — default listener는 active Camera2D인데, ARENA(보스전)에선
+	# 카메라가 월드 중앙 고정이라 거리 감쇠가 플레이어 기준이 아니게 됨. listener를
+	# 플레이어에 묶으면 카메라 모드와 무관하게 positional audio가 플레이어 위치 기준.
+	var listener := AudioListener2D.new()
+	add_child(listener)
+	listener.make_current()
 	visual = CharacterArt.build_player(self)
 	torso = visual.get_node_or_null("Torso")
 	if torso != null:

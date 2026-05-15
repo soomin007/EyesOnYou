@@ -108,12 +108,13 @@ var aim_los_clear: bool = false
 
 var drone_bomb_cd: float = 0.0
 
-# 드론 호버 positional loop SFX — 거리 감쇠는 SfxPlayer(non-positional) 처리 못 함.
-# 드론마다 AudioStreamPlayer2D를 자식으로 부착해 카메라(=플레이어)와의 거리로 자동 attenuation.
-# 사용자 피드백(2026-05-16): 멀리서부터 들리되 가까이서도 지금보다 작게.
-const DRONE_HOVER_VOLUME_DB: float = -14.0       # 거리 0 기준 base — close에서도 muted
-const DRONE_HOVER_MAX_DIST: float = 900.0        # 이 너머는 무음 — 화면 1.4배 정도
-const DRONE_HOVER_ATTENUATION: float = 1.6       # 1.0 거의 선형, >1 가까울수록 가속 커짐
+# 드론 호버 positional loop SFX — listener는 Player.AudioListener2D.
+# 사용자 피드백(2026-05-16 #2): 거리 변화가 잘 안 느껴지고, 가까이 와도 별로 안 커짐.
+# 원인: base가 너무 낮아 가까이서도 muted, attenuation 곡선이 완만(1.6)해 falloff 미묘.
+# 조정: base 좀 올리고(가까이 잘 들리게), attenuation 가파르게(거리 변화 뚜렷), max_dist 키움(멀리서부터 미세하게 들림).
+const DRONE_HOVER_VOLUME_DB: float = -10.0       # 거리 0 기준 base
+const DRONE_HOVER_MAX_DIST: float = 1100.0       # 이 너머는 무음 — 화면 폭 1280의 86%
+const DRONE_HOVER_ATTENUATION: float = 2.0       # 클수록 가파른 falloff — 가까이 vs 멀리 차이 극적
 var hover_audio: AudioStreamPlayer2D = null
 
 var bomber_state: int = BomberState.ROAMING
