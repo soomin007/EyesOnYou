@@ -98,6 +98,8 @@ var aim_line: Line2D
 var aim_los_clear: bool = false
 
 var drone_bomb_cd: float = 0.0
+# hover SFX는 hover_ok가 false→true로 바뀔 때만 1회 — 매 프레임 갱신 방지.
+var drone_was_hovering: bool = false
 
 var bomber_state: int = BomberState.ROAMING
 var bomber_state_timer: float = 0.0
@@ -273,6 +275,7 @@ func _tick_patrol(delta: float) -> void:
 					visual.modulate = Color(1, 1, 1)
 				patrol_state = PatrolState.CHARGING
 				patrol_state_timer = PATROL_CHARGE_DURATION
+				SfxPlayer.play("enemy_patrol_fire")
 		PatrolState.CHARGING:
 			velocity.x = float(dir) * PATROL_CHARGE_SPEED
 			patrol_state_timer -= delta
@@ -349,6 +352,7 @@ func _start_aim() -> void:
 	aim_line.default_color = Color(1.0, 0.30, 0.30, 0.55)
 	aim_line.z_index = 1
 	get_parent().add_child(aim_line)
+	SfxPlayer.play("enemy_sniper_charge")
 
 func _update_aim() -> void:
 	if aim_line == null:
@@ -376,6 +380,10 @@ func _tick_drone(delta: float) -> void:
 	var dx: float = abs(player.global_position.x - global_position.x)
 	var dy_above: float = player.global_position.y - global_position.y  # 양수면 드론이 위
 	var hover_ok: bool = dx <= DRONE_BOMB_X_BAND and dy_above >= DRONE_BOMB_Y_MIN and dy_above <= DRONE_BOMB_Y_MAX
+	# false→true 전환 시에만 hover SFX — 호버 유지 중엔 반복 재생 안 함.
+	if hover_ok and not drone_was_hovering:
+		SfxPlayer.play("enemy_drone_hover")
+	drone_was_hovering = hover_ok
 	if hover_ok and drone_bomb_cd <= 0.0 and not harmless:
 		velocity = Vector2.ZERO
 		_drop_bomb()
@@ -391,6 +399,7 @@ func _tick_drone(delta: float) -> void:
 	move_and_slide()
 
 func _drop_bomb() -> void:
+	SfxPlayer.play("enemy_drone_drop")
 	var b := Bomb.new()
 	b.global_position = global_position + Vector2(0, 8)
 	get_parent().add_child(b)
@@ -442,6 +451,7 @@ func _tick_bomber(delta: float) -> void:
 					bomber_state = BomberState.ARMING
 					bomber_state_timer = BOMBER_ARM_TIME
 					velocity.x = 0.0
+					SfxPlayer.play("enemy_bomber_beep")
 				elif not _bomber_in_detect_range(p):
 					bomber_state = BomberState.ROAMING
 		BomberState.ARMING:
@@ -469,6 +479,7 @@ func _bomber_in_detect_range(p: Node2D) -> bool:
 func _bomber_explode() -> void:
 	if dead:
 		return
+	SfxPlayer.play("enemy_bomber_explode")
 	# 폭발 데미지 — 반경 안의 플레이어에게
 	var p := _find_player()
 	if p != null and global_position.distance_to(p.global_position) <= BOMBER_BLAST_RADIUS:
@@ -568,6 +579,7 @@ func _fire_at_player() -> void:
 	var dist: float = global_position.distance_to(player.global_position)
 	if dist > SNIPER_RANGE:
 		return
+	SfxPlayer.play("enemy_sniper_fire")
 	var tracer := Line2D.new()
 	tracer.width = 2.5
 	tracer.default_color = Color(1.0, 0.55, 0.30, 1.0)
@@ -624,6 +636,8 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.15)
 	if hp <= 0:
 		_die()
+	else:
+		SfxPlayer.play("enemy_hurt")
 
 func _show_block_spark(from_dir: int) -> void:
 	# 방패 막힘 — 노란 짧은 라인이 방패 면(enemy.dir 쪽 외곽)에서 튀는 효과
@@ -645,5 +659,8 @@ func _show_block_spark(from_dir: int) -> void:
 
 func _die() -> void:
 	dead = true
+	# Bomber는 _bomber_explode가 폭발 SFX를 먼저 재생하므로 여기서 enemy_death는 생략 — 음향 중복 방지.
+	if enemy_type != EnemyType.BOMBER:
+		SfxPlayer.play("enemy_death")
 	emit_signal("killed", global_position)
 	queue_free()
