@@ -875,6 +875,7 @@ func _build_ground() -> void:
 	var ground := StaticBody2D.new()
 	ground.collision_layer = 1
 	ground.collision_mask = 0
+	ground.add_to_group("ground")
 	add_child(ground)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
@@ -2902,6 +2903,10 @@ func _challenge_fail(_reason: String) -> void:
 	GameState.player_hp = GameState.player_max_hp
 	if player != null and is_instance_valid(player):
 		player.set("invuln", 5.0)
+	# 안전 처리: paused 상태가 어떤 경로로든 set되어 있으면 풀어줘서 await timer가 진행되게.
+	# restrict_combat_input도 명시 해제 — 다음 stage carry되어 입력 잠김 방지.
+	get_tree().paused = false
+	GameState.restrict_combat_input = false
 	# VEIL 실패 대사 + 조용히 다음 stage로 (보상 0, 페널티 없음).
 	_show_veil_subtitle("괜찮아요. 다음 구역으로 가요.", 2.5)
 	await get_tree().create_timer(2.8).timeout
@@ -2911,6 +2916,9 @@ func _challenge_fail(_reason: String) -> void:
 	# 보상/레벨업 없이 stage 카운트만 증가시킨 뒤 다음 씬으로.
 	GameState.current_stage += 1
 	GameState.player_hp = GameState.player_max_hp
+	# transition 직전 한 번 더 안전 reset.
+	get_tree().paused = false
+	GameState.restrict_combat_input = false
 	_transition_after_clear()
 
 func _on_player_revived() -> void:

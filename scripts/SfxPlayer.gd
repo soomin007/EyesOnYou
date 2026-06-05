@@ -39,6 +39,13 @@ const VOLUME_OFFSETS: Dictionary = {
 	"ui_cancel":          4.0,    # 살짝 작음
 	"ui_pause_open":      4.0,    # 살짝 작음
 	"ui_slider_tick":     -8.0,   # 너무 큼 — slider 끌면 연속 발화
+	# 2026-06-05 사용자 피드백 (2차).
+	"levelup":            -3.0,   # 조금 크게 들림
+	"skill_pick":         -3.0,
+	"hatch_open":         -6.0,   # 너무 큼 — lever_pull은 OK, 해치만 큼
+	"enemy_bomber_beep":  -5.0,
+	"enemy_bomber_explode": -4.0,
+	"enemy_sniper_charge": -4.0,
 }
 
 # 알려진 SFX ID 목록. 새 파일 추가하면 여기 등록 (또는 _register_sfx 직접 호출).

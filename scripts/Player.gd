@@ -434,7 +434,9 @@ func take_hit(amount: int) -> void:
 	# hp T2 = 피격 후 1s 무적 (기본 0.8보다 길게).
 	# hp T3 = 추가로 짧은 슬로모션 (Engine.time_scale 감속).
 	var hp_tier: int = GameState.get_skill_tier("hp")
-	invuln = 1.0 if hp_tier >= 2 else INVULN_AFTER_HIT
+	# max() — 신호 핸들러(예: 도전방 _challenge_fail)가 더 긴 invuln을 set한 케이스 보존.
+	# 이전 코드는 직접 대입이라 핸들러가 emit 안에서 set한 5.0이 보존됐지만, 순서가 바뀌어도 안전하게.
+	invuln = max(invuln, 1.0 if hp_tier >= 2 else INVULN_AFTER_HIT)
 	if hp_tier >= 3:
 		_trigger_hit_slowmo()
 	emit_signal("damaged")

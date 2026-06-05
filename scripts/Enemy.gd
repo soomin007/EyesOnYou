@@ -30,7 +30,7 @@ const PATROL_RECOVERY: float = 1.0
 # 사격 윈도우는 240~260px 좁게 남겨두어 가끔 한두 발만 쏘게.
 const PATROL_CHARGE_RANGE: float = 240.0
 const PATROL_FIRE_INTERVAL: float = 1.5
-const PATROL_FIRE_AIM_TIME: float = 0.3
+const PATROL_FIRE_AIM_TIME: float = 1.0  # 2026-06-05 사용자 피드백 — 0.3은 보자마자 발사 수준이라 회피 불가능. 1.0이면 조준 텔레그래프 인지 + 회피 윈도우 확보.
 const PATROL_BULLET_DAMAGE: int = 1
 
 # Bomber — 천천히 접근 + 근접 시 자폭
@@ -362,14 +362,11 @@ func _patrol_fire(p: Node2D) -> void:
 	SfxPlayer.play("enemy_patrol_fire")
 	var b := EnemyBullet.new()
 	b.damage = PATROL_BULLET_DAMAGE
-	# 플레이어 가슴 높이를 살짝 노린다. Sniper처럼 정확하진 않게 — 발 위치에서 발사하고
-	# 진행 방향은 dir(좌/우)을 따르되 y 성분을 player 방향으로 약간 기울임.
+	# 2026-06-05 사용자 피드백 — 발사가 수평이 아니라 살짝 비스듬해서 옆으로 날아옴.
+	# Patrol은 sniper가 아니므로 정밀 조준 안 함. 그냥 자기 dir 방향으로 수평 발사.
+	# 플레이어가 위/아래에 있으면 점프/숙임으로 회피 가능 — 정찰병 정체성에 맞음.
 	var muzzle_y: float = -18.0
-	var to_player: Vector2 = (p.global_position + Vector2(0, -24)) - (global_position + Vector2(0, muzzle_y))
-	var aim: Vector2 = to_player.normalized()
-	# x 부호는 dir로 강제 — 플레이어가 위/아래 있더라도 좌/우 방향 일관성 유지.
-	aim.x = abs(aim.x) * float(dir)
-	b.velocity = aim * EnemyBullet.BASE_SPEED
+	b.velocity = Vector2(float(dir), 0.0) * EnemyBullet.BASE_SPEED
 	b.global_position = global_position + Vector2(float(dir) * 8.0, muzzle_y)
 	get_parent().add_child(b)
 
