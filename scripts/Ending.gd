@@ -98,7 +98,8 @@ func _build_hold_hint() -> void:
 	box.add_child(bg)
 
 func _setup_ending_d_atmosphere() -> void:
-	# 미세한 노이즈 레이어 — 정적 느낌
+	# 미세한 노이즈 레이어 — 정적 느낌. 진폭/주기 사용자 피드백 후 완화 (이전엔 0.08s
+	# 주기로 alpha 1.2까지 가서 화면이 번쩍였음 — 결말 D 진입 시 거슬리는 깜빡임).
 	var noise_layer := CanvasLayer.new()
 	noise_layer.layer = 50
 	add_child(noise_layer)
@@ -109,9 +110,9 @@ func _setup_ending_d_atmosphere() -> void:
 	noise_layer.add_child(noise)
 	var noise_tw := noise.create_tween()
 	noise_tw.set_loops()
-	noise_tw.tween_property(noise, "modulate:a", 0.6, 0.08)
-	noise_tw.tween_property(noise, "modulate:a", 1.2, 0.06)
-	noise_tw.tween_property(noise, "modulate:a", 0.4, 0.10)
+	noise_tw.tween_property(noise, "modulate:a", 0.6, 0.9)
+	noise_tw.tween_property(noise, "modulate:a", 1.0, 0.8)
+	noise_tw.tween_property(noise, "modulate:a", 0.4, 1.1)
 	# 우상단 VEIL: ... 깜빡이다 꺼짐
 	var veil_blink := Label.new()
 	veil_blink.text = "VEIL: ..."

@@ -110,7 +110,7 @@ const ALL_ROUTES: Array = [
 		"guaranteed_in_stages": [3, 4],
 		"tags": ["우회", "어두운_환경", "은폐"],
 		"veil_comment": "격리 병동이에요. 도면이랑 다르게 생겼을 거예요.",
-		"entry_comment": "이 구역은 오래됐어요. 누가 봉인했는지 저도 몰라요.",
+		"entry_comment": "격리 병동에 들어왔어요. 안쪽이 어둡고 좁아요.",
 		"stage_color": Color(0.12, 0.10, 0.14),
 	},
 	{

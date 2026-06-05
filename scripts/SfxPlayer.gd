@@ -24,11 +24,21 @@ const VOLUME_OFFSETS: Dictionary = {
 	# 2026-05-16 사용자 피드백 기반 보정.
 	"bullet_fire":        -8.0,   # 사격 너무 큼 — 연발이라 더 신경 쓰임
 	"bullet_impact_wall": -5.0,   # 벽 충돌음 큼
-	"bomb_throw":         -2.0,   # 보스 전용으로 분리 후 너무 컸음 (드론은 enemy_drone_drop만 재생)
+	"bomb_throw":         -7.0,   # 보스 폭탄 — 사용자 피드백: 너무 큼 (-2 → -7)
 	"bomb_explode":       6.0,    # 너무 작음
 	"enemy_hurt":         -4.0,   # 적 피격 큼
 	"enemy_drone_drop":   -8.0,   # 너무 큼
 	# enemy_drone_hover는 SfxPlayer 경유 안 함 — Enemy.gd가 AudioStreamPlayer2D로 positional 처리.
+	# 2026-06-05 사용자 피드백 — 첫 풀 플레이.
+	"skill_active_use":   6.0,    # 폭발 스킬 발동이 너무 작아 안 들림 (+ _spawn_explosion에서 bomb_explode 레이어로 임팩트 보강)
+	"boss_phase_change":  -4.0,   # 좀 큼
+	"veil_subtitle_in":   -6.0,   # 대사마다 울려 거슬림 — 더 fade
+	"arcturus_enter":     -3.0,   # 아주 조금 줄임
+	"ui_focus":           14.0,   # 아예 안 들렸음 — 크게 끌어올림
+	"ui_confirm":         4.0,    # 살짝 작음
+	"ui_cancel":          4.0,    # 살짝 작음
+	"ui_pause_open":      4.0,    # 살짝 작음
+	"ui_slider_tick":     -8.0,   # 너무 큼 — slider 끌면 연속 발화
 }
 
 # 알려진 SFX ID 목록. 새 파일 추가하면 여기 등록 (또는 _register_sfx 직접 호출).

@@ -368,6 +368,8 @@ func _refresh_skill_charges() -> void:
 
 func _spawn_explosion() -> void:
 	var center: Vector2 = global_position + Vector2(0, -28)
+	# 폭발 임팩트 — skill_active_use(발동 클릭) 위에 bomb_explode를 레이어해서 폭발감 보강.
+	SfxPlayer.play("bomb_explode")
 	# explosive T2/T3 = 반경 +30%
 	var radius: float = EXPLOSION_RADIUS
 	if GameState.get_skill_tier("explosive") >= 2:
