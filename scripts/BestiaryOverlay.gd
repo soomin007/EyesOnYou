@@ -22,6 +22,8 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	var layer := CanvasLayer.new()
 	layer.layer = 45
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	# 안전판: layer가 _close 콜백 없이 외부 경로(host free 등)로 사라져도 _active/paused 누락 차단.
+	layer.tree_exited.connect(_on_layer_gone)
 
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.78)
@@ -104,3 +106,10 @@ static func _close(layer: CanvasLayer) -> void:
 	if tree != null:
 		tree.paused = false
 	layer.queue_free()
+
+# layer가 _close 경로 외(scene 전환, host free 등)로 tree에서 빠질 때 호출. 안전판.
+static func _on_layer_gone() -> void:
+	_active = false
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null:
+		tree.paused = false

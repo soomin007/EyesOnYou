@@ -326,3 +326,10 @@ func _emit_done() -> void:
 	emit_signal("finished")
 	if layer != null and is_instance_valid(layer):
 		layer.queue_free()
+
+# 안전판: _emit_done이 어떤 이유로든 호출 안 된 채 self가 tree에서 빠지면 paused 해제.
+# (외부 free / scene 전환 / 예외 등)
+func _exit_tree() -> void:
+	var tree := get_tree()
+	if tree != null:
+		tree.paused = false

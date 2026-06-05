@@ -241,9 +241,11 @@ func _try_drop_through() -> void:
 		var collider: Object = c.get_collider()
 		if collider is Node and (collider as Node).is_in_group("platform"):
 			add_collision_exception_with(collider)
-			get_tree().create_timer(DROP_THROUGH_DURATION).timeout.connect(
+			# process_always=true — paused 상태(LevelUp 등) 중에도 timer 진행되어
+			# collision_exception이 dangling 안 되도록 (이전엔 paused 중 fire 안 돼 다음 씬으로 carry 위험).
+			get_tree().create_timer(DROP_THROUGH_DURATION, true).timeout.connect(
 				func() -> void:
-					if is_instance_valid(collider):
+					if is_instance_valid(self) and is_instance_valid(collider):
 						remove_collision_exception_with(collider)
 			)
 			position.y += 2.0

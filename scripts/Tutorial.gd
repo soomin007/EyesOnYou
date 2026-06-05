@@ -79,6 +79,8 @@ var settings_overlay: Control
 
 func _ready() -> void:
 	add_to_group("stage")
+	# 안전망: 이전 scene에서 paused가 carry되어 Tutorial이 freeze되는 패턴 차단.
+	get_tree().paused = false
 	# dash, double_jump는 GameState.STARTING_SKILLS로 이미 보유 (Title.reset에서 부여됨)
 	GameState.player_hp = GameState.player_max_hp
 	# 레벨업이 둘째 처치 직후 트리거되도록 XP 직전치까지 채워둠

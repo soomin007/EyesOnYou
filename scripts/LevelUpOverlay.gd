@@ -19,6 +19,13 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	var layer := CanvasLayer.new()
 	layer.layer = 40
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	# 안전판: layer가 _on_levelup_picked 콜백 없이 외부 경로(scene 전환, host free 등)로
+	# 사라져도 paused 누락 차단. host(Stage)가 set한 paused=true가 carry되어 다음 씬 freeze 방지.
+	layer.tree_exited.connect(func() -> void:
+		var tree := Engine.get_main_loop() as SceneTree
+		if tree != null:
+			tree.paused = false
+	)
 
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.82)

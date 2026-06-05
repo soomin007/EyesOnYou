@@ -334,11 +334,6 @@ func _build_av_tab() -> Control:
 	section_b.add_child(_make_section_header("사운드"))
 	section_b.add_child(_make_volume_row("배경음 볼륨", "bgm"))
 	section_b.add_child(_make_volume_row("효과음 볼륨", "sfx"))
-	var note := Label.new()
-	note.text = "배경음은 슬라이더에 즉시 반영. 효과음 슬라이더는 미리 노출(추후 SFX 연결)."
-	note.add_theme_font_size_override("font_size", 12)
-	note.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
-	section_b.add_child(note)
 	return outer
 
 # 크레딧 탭 — 패널에서 직접 띄우는 오버레이. Settings를 닫지 않고 그 위에 겹쳐 띄움.
@@ -449,7 +444,7 @@ func _on_volume_changed(value: float, kind: String) -> void:
 		BgmPlayer.refresh_volume()
 	else:
 		GameState.sfx_volume = value
-		# 효과음은 추후 SFX 신호 연결 시 별도 bus/AudioStreamPlayer에서 GameState.sfx_volume 참조.
+		# SfxPlayer._target_db()가 매 play 호출 시 GameState.sfx_volume 참조 — 즉시 반영.
 	GameState.save_settings()
 
 func _refresh_all_keybind_buttons() -> void:
