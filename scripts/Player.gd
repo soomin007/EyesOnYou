@@ -352,6 +352,7 @@ func _try_skill() -> void:
 	skill_charges -= 1
 	if skill_cd <= 0.0:
 		skill_cd = get_skill_cd_max()
+	SfxPlayer.play("skill_active_use")
 	_spawn_explosion()
 
 # T3에서 max 2 charges. 매 _ready/_try_skill 진입 시 호출해 티어 갱신을 반영.

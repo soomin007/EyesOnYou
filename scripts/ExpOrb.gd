@@ -40,6 +40,7 @@ func _find_player() -> Node2D:
 
 func _collect() -> void:
 	collected = true
+	SfxPlayer.play("xp_collect")
 	var leveled_up: bool = GameState.add_xp(VALUE)
 	get_tree().call_group("stage", "_on_xp_collected", leveled_up)
 	queue_free()

@@ -36,5 +36,6 @@ func _find_player() -> Node2D:
 
 func _collect() -> void:
 	collected = true
+	SfxPlayer.play("hp_collect")
 	GameState.heal_player(HEAL_AMOUNT)
 	queue_free()

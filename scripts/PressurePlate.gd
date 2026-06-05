@@ -104,9 +104,11 @@ func _try_step() -> void:
 	if pressed and one_shot:
 		return
 	if require_armed and not armed:
+		SfxPlayer.play("plate_step_inactive")
 		return
 	pressed = true
 	if one_shot:
 		locked = true
 	_refresh_visual()
+	SfxPlayer.play("plate_step_active")
 	stepped.emit(plate_id)

@@ -15,6 +15,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		advice_family = str((advice as Dictionary).get("family", ""))
 	elif advice is String:
 		advice_line = advice as String
+	SfxPlayer.play("levelup")
 	var layer := CanvasLayer.new()
 	layer.layer = 40
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -122,6 +123,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 
 static func _finish(layer: CanvasLayer, picked_id: String, on_picked: Callable) -> void:
 	if picked_id != "":
+		SfxPlayer.play("skill_pick")
 		GameState.add_skill(picked_id)
 	if on_picked.is_valid():
 		on_picked.call(picked_id)

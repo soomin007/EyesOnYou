@@ -1094,6 +1094,7 @@ func _on_spike_touched(body: Node, zone: Area2D) -> void:
 		var d: int = 1
 		if is_instance_valid(zone):
 			d = int(zone.get_meta("damage", 1))
+		SfxPlayer.play("spike_hit")
 		body.take_hit(d)
 
 # 토글 가능한 가시 — 시각 + 콜리전을 그룹으로 묶어 한 번에 on/off.
@@ -2596,6 +2597,7 @@ func _open_hatch(hatch: Node2D) -> void:
 	if hatch.get_meta("opened", false):
 		return
 	hatch.set_meta("opened", true)
+	SfxPlayer.play("hatch_open")
 	var tw := hatch.create_tween()
 	tw.set_parallel(true)
 	tw.tween_property(hatch, "modulate:a", 0.0, 0.45)
@@ -2644,6 +2646,7 @@ func _descend_drop_platform(body: Node) -> void:
 	if body.get_meta("descended", false):
 		return
 	body.set_meta("descended", true)
+	SfxPlayer.play("drop_platform_descend")
 	var col: CollisionShape2D = body.get_meta("col_node")
 	var visual: Node2D = body.get_meta("visual_node")
 	var end_pos: Vector2 = body.get_meta("end_pos")
@@ -2796,6 +2799,9 @@ func _trigger_stage_clear() -> void:
 # 사용자 피드백: "도전방에서 마지막 적 처치 시 XP 못 먹고 바로 맵 선택으로"
 # 보스/ARENA — 2.6s, 일반 골 — 1.0s.
 func _begin_clear_sequence() -> void:
+	# 도전방 클리어는 별도 챔 — 일반 stage_clear_chime은 §8 wire-up에서 처리.
+	if challenge_active and not challenge_failed:
+		SfxPlayer.play("challenge_clear")
 	GameState.restrict_combat_input = true
 	# 남은 XP orb를 player 근처로 텔레포트 → 자동 흡수 (PICKUP_RANGE 내).
 	if player != null and is_instance_valid(player):
@@ -2887,6 +2893,7 @@ func _challenge_fail(_reason: String) -> void:
 	if challenge_failed:
 		return
 	challenge_failed = true
+	SfxPlayer.play("challenge_fail")
 	# 잔여 데미지로 인한 사망 방지: HP 리필 + 긴 invuln (대기 중 죽으면 데스 씬으로 새버림).
 	GameState.player_hp = GameState.player_max_hp
 	if player != null and is_instance_valid(player):
@@ -3082,6 +3089,7 @@ func _on_challenge_plate_stepped(_id: String) -> void:
 # 도전 실제 시작 — 문 fade + 사이렌 플래시 + 암전 + 타이머 HUD + 클리어 조건 배너.
 func _start_challenge_run() -> void:
 	challenge_active = true
+	SfxPlayer.play("gate_unlock")
 	# 1) 문 + 차폐막 fade out + 충돌 disable.
 	if challenge_gate_visual != null and is_instance_valid(challenge_gate_visual):
 		var tw_v := challenge_gate_visual.create_tween()
@@ -3102,6 +3110,7 @@ func _start_challenge_run() -> void:
 	# 3) 암전 — 0 → 정상 강도 fade in. CanvasLayer 안의 Control 노드를 트윈.
 	_build_challenge_blackout()
 	if challenge_dark_root != null:
+		SfxPlayer.play("blackout_fade_in")
 		challenge_dark_root.modulate.a = 0.0
 		var tw_d := challenge_dark_root.create_tween()
 		tw_d.tween_interval(0.4)
@@ -3112,6 +3121,7 @@ func _start_challenge_run() -> void:
 	_show_challenge_briefing_banner()
 
 func _play_siren_flash() -> void:
+	SfxPlayer.play("siren_flash")
 	var siren := CanvasLayer.new()
 	siren.layer = 18
 	add_child(siren)

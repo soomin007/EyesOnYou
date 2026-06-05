@@ -88,6 +88,7 @@ func try_pull() -> bool:
 		for n in get_tree().get_nodes_in_group("player"):
 			if n.get("nearby_lever") == self:
 				n.set("nearby_lever", null)
+	SfxPlayer.play("lever_pull")
 	_animate_pull()
 	pulled.emit(lever_id)
 	return true

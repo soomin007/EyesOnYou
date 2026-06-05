@@ -23,6 +23,15 @@
 
 이벤트성 SFX(`siren_flash`, `boss_*`, `challenge_*`, `levelup`)는 임팩트가 필요하지만 **harshness ≠ impact** — piercing high-freq 대신 **low-frequency 무게**로 임팩트를 만든다.
 
+### 음악 해석 주의 (음 시퀀스가 들어가는 prompt)
+ElevenLabs는 음악 용어를 그대로 해석한다 — **모호한 단어는 의도와 다르게 나온다**:
+- `chord` = **동시 화음** (도-미-솔 동시 울림)
+- `notes / tones` 만 쓰면 **동시인지 순차인지 불명확** → ElevenLabs는 화음으로 해석할 때가 많음
+- 순차 멜로디를 원하면 **`sequential` / `played one after another` / `arpeggio`** 같이 명시
+- 동시 화음을 원하면 **`chord` / `simultaneous`** 명시
+- `two-tone` / `three-note` 같은 표현은 그 자체로 모호 — 항상 sequential/simultaneous 보강
+- `phrase` / `sequence` 도 음악 해석상 약함 — sequential인지 다시 강조 필요
+
 빈도 분류:
 - **고빈도** (매 분 N회): xp_collect, ui_focus, ui_confirm, ui_slider_tick, plate_step_*, terminal_typewrite, veil_subtitle_in, skill_active_use
 - **중빈도** (스테이지당 N회): hp_collect, skill_pick, lever_pull, hatch_open, spike_hit, bullet_impact_*
@@ -169,23 +178,25 @@
 
 ## 5. Pickups / Skills
 
-### `xp_collect` ⬜ P0 (0.15s) — **고빈도 / poly**
+### `xp_collect` ✅ P0 (0.15s) — **고빈도 / poly**
 - **트리거**: `ExpOrb.gd` magnet 흡수
-- **prompt**: Very soft rounded pluck, brief warm low-mid pickup tone, no high sparkle, no metallic ring, decays naturally and unobtrusively. Many can overlap without harshness — must remain pleasant after hundreds of plays.
+- **prompt**: Single very soft brief pickup sound with warm low-mid body, like a muted soft impact or rounded thud (NOT a plucked string, NOT a chime, NOT a bell), no high sparkle, no metallic ring, decays naturally in 0.15s. Designed so many can overlap without harshness — must remain pleasant after hundreds of plays.
 
-### `hp_collect` ⬜ P0 (0.35s)
+### `hp_collect` ✅ P0 (0.35s)
 - **트리거**: `HpOrb.gd` 흡수
-- **prompt**: Warm rounded breath of restoration, soft two-tone low-mid swell, no chime brightness or shimmer, gentle restorative pad-like body, smooth 0.35s decay.
+- **prompt**: Brief soft muted whoosh of warm air being absorbed, completely non-tonal — no pitch, no chord, no chime, no bell character. Single low-mid body like a cushioned cloth settling or a quiet exhale. Dry, 0.35s gentle decay.
+- **참고**: "heal/restoration/health" 같은 단어는 ElevenLabs가 bright fantasy chime으로 해석함 → prompt에서 의도적으로 제거. 대신 물리적 이벤트(공기 흡수/천 접힘)로 묘사.
 
-### `levelup` ⬜ P0 (0.7s) — **이벤트성**
+### `levelup` ✅ P0 (0.7s) — **이벤트성**
 - **트리거**: `LevelUpOverlay.gd` 진입
-- **prompt**: Three-note rising warm chord, rounded mid-low body with satisfying weight, no crystalline shimmer or high sparkle, decisive but not piercing, gentle 0.7s decay.
+- **prompt**: Three warm rounded notes played sequentially one after another in rising pitch (like do-mi-sol arpeggio, NOT a chord), each note brief and clean, mid-low body without crystalline shimmer or high sparkle, decisive but not piercing, total duration 0.7s with gentle decay on the last note.
+- **참고**: "chord" 쓰면 동시 화음으로 해석됨 → `sequentially one after another` + `NOT a chord` 명시.
 
-### `skill_pick` ⬜ P1 (0.22s)
+### `skill_pick` ✅ P1 (0.22s)
 - **트리거**: `LevelUpOverlay.gd` 카드 confirm
 - **prompt**: Muted digital tap of selection, soft warm low-mid click, no holographic sweep or sparkle, dry and brief, 0.22s.
 
-### `skill_active_use` ⬜ P0 (0.25s) — **고빈도**
+### `skill_active_use` ✅ P0 (0.25s) — **고빈도**
 - **트리거**: `Player.gd::_try_skill` (액티브 스킬 발동 — 폭발물 등)
 - **prompt**: Brief warm pneumatic release with muted low-mid punch, sci-fi gadget engaging, no electric zap or crackle, no high frequencies, dry and focused.
 
@@ -193,47 +204,47 @@
 
 ## 6. Environment / Hazards
 
-### `spike_hit` ⬜ P0 (0.18s)
+### `spike_hit` ✅ P0 (0.18s)
 - **트리거**: `Stage.gd` spike 충돌 처리
-- **prompt**: Dull body impact with muted pain pulse, low-mid thud, no metallic ring or high-frequency stab, grounded and brief.
+- **prompt**: Single dull low-mid body impact with brief muted thud, mechanical NOT vocal, no metallic ring, no high-frequency stab, grounded and brief 0.18s.
 
-### `lever_pull` ⬜ P0 (0.35s)
+### `lever_pull` ✅ P0 (0.35s)
 - **트리거**: `LeverInteractable.gd::try_pull`
 - **prompt**: Heavy mechanical lever motion, low-mid ratchet body with weighted contact thunk, dry industrial, no metallic resonance or high overtones.
 
-### `plate_step_inactive` ⬜ P2 (0.2s) — **고빈도**
+### `plate_step_inactive` ✅ P2 (0.2s) — **고빈도**
 - **트리거**: `PressurePlate.gd` armed=false 상태에서 step
 - **prompt**: Dull muted footstep on dead plate, very brief low thud, no resonance, designed to feel ignored — should not register strongly.
 
-### `plate_step_active` ⬜ P0 (0.3s) — **고빈도**
+### `plate_step_active` ✅ P0 (0.3s) — **고빈도**
 - **트리거**: `PressurePlate.gd` armed plate stepped
-- **prompt**: Soft pneumatic engage with brief warm power-on tone in mid-low range, plate confirming under foot, no bright chime or sparkle, 0.3s.
+- **prompt**: Soft pneumatic engage click followed by a single brief warm power-on hum in mid-low range (single sustained tone, not a melody), plate confirming under foot, no bright chime or sparkle, total 0.3s.
 
-### `hatch_open` ⬜ P1 (0.55s)
+### `hatch_open` ✅ P1 (0.55s)
 - **트리거**: `Stage.gd::_open_hatch`
 - **prompt**: Gentle pneumatic release with low-mid panel sliding, soft motor whir, dry and unobtrusive, no sharp hiss.
 
-### `drop_platform_descend` ⬜ P1 (0.7s)
+### `drop_platform_descend` ✅ P1 (0.7s)
 - **트리거**: `Stage.gd::_descend_drop_platform`
 - **prompt**: Low hydraulic rumble of platform lowering, warm low-mid body, soft thud landing at the end, no high mechanical detail.
 
-### `gate_unlock` ⬜ P0 (0.55s) — **이벤트성**
+### `gate_unlock` ✅ P0 (0.55s) — **이벤트성**
 - **트리거**: `Stage.gd` 도전방 게이트 fade
 - **prompt**: Warm low magnetic disengage with muted panel slide, sci-fi access tone in mid range, no electric click sparkle, satisfying without harshness.
 
-### `siren_flash` ⬜ P0 (0.8s) — **이벤트성**
+### `siren_flash` ✅ P0 (0.8s) — **이벤트성**
 - **트리거**: `Stage.gd::_play_siren_flash`
 - **prompt**: Two short mid-low alarm whoops in quick succession (≈0.3s apart), warm warning tone, urgent but NOT piercing — no high-frequency klaxon edge.
 
-### `blackout_fade_in` ⬜ P1 (1.2s) — **이벤트성**
+### `blackout_fade_in` ✅ P1 (1.2s) — **이벤트성**
 - **트리거**: challenge_dark_root fade in
 - **prompt**: Deep ominous sub-bass swell rising slowly, oppressive sci-fi atmosphere, no high frequencies, ends sustained in low register.
 
-### `challenge_clear` ⬜ P0 (0.7s) — **이벤트성**
+### `challenge_clear` ✅ P0 (0.7s) — **이벤트성**
 - **트리거**: 도전방 골 도달
-- **prompt**: Soft relieving warm chime sequence, two to three rounded ascending tones, breath of accomplishment, no crystalline sparkle, gentle 0.7s decay.
+- **prompt**: Two or three soft warm rounded tones played sequentially one after another in rising pitch (arpeggio style, NOT simultaneous chord), each tone brief with gentle attack, relieved feeling, no crystalline sparkle or high shimmer, total 0.7s with soft decay on the last tone.
 
-### `challenge_fail` ⬜ P0 (0.55s) — **이벤트성**
+### `challenge_fail` ✅ P0 (0.55s) — **이벤트성**
 - **트리거**: `Stage.gd::_challenge_fail`
 - **prompt**: Low descending muted tone of failure, warm mid-low body, abrupt but not harsh, dry, no buzzer edge or high-frequency cut.
 
@@ -247,7 +258,7 @@
 
 ### `ui_confirm` ⬜ P0 (0.14s) — **고빈도**
 - **트리거**: 메뉴 버튼 pressed
-- **prompt**: Soft warm two-tone confirm pulse, brief muted low-mid body, no chime brightness, dry 0.14s.
+- **prompt**: Two soft warm muted tones played in very quick succession (one after another, NOT simultaneous), brief low-mid body, no chime brightness or sparkle, dry total 0.14s.
 
 ### `ui_cancel` ⬜ P1 (0.12s)
 - **트리거**: ESC / B
@@ -283,7 +294,7 @@
 
 ### `stage_clear_chime` ⬜ P1 (0.7s) — **이벤트성**
 - **트리거**: `Stage.gd::_begin_clear_sequence`
-- **prompt**: Soft warm three-note ascending phrase, breath of accomplishment, rounded mid-low tones, no crystalline ring or sparkle, gentle 0.7s decay.
+- **prompt**: Three soft warm notes played sequentially one after another in rising pitch (arpeggio style, NOT a chord), each note rounded and brief, mid-low warmth without crystalline ring or sparkle, satisfied accomplishment feeling, total 0.7s with gentle decay on the last note.
 
 ### `boss_alert_text` ⬜ P1 (0.3s) — **이벤트성**
 - **트리거**: `Stage.gd::_show_boss_alert`
