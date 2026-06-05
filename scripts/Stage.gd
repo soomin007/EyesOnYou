@@ -702,11 +702,12 @@ func _ensure_subtitle_stack() -> void:
 	_subtitle_stack_box.add_theme_constant_override("separation", 6)
 	holder.add_child(_subtitle_stack_box)
 
-func _show_veil_subtitle(message: String, duration: float) -> void:
+func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = false) -> void:
 	SfxPlayer.play("veil_subtitle_in")
 	_ensure_subtitle_stack()
 	var l := Label.new()
-	l.text = "VEIL  —  " + message
+	# plain_prefix=true: VEIL-1/VEIL-2 시퀀스(??? 방 등) 끝에 현재 VEIL이 이어 말할 때 시각 일관성용 — em dash 제거.
+	l.text = ("VEIL\n" if plain_prefix else "VEIL  —  ") + message
 	l.add_theme_font_size_override("font_size", 18)
 	l.add_theme_color_override("font_color", Color(0.7, 0.9, 1.0))
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
@@ -3293,8 +3294,8 @@ func _on_arcturus_lines_done() -> void:
 	GameState.visited_arcturus = true
 	GameState.save_settings()
 	GameState.restrict_combat_input = false
-	# VEIL outro — 한 호흡(같은 톤의 마무리) 한 줄로 묶음.
-	_show_veil_subtitle("저도 이 파일들 읽은 적 있어요.\n계속 가요, 요원.", 3.2)
+	# VEIL outro — VEIL-1/VEIL-2 시퀀스 직후라 em dash 없이 화자 라벨만(시각 일관성).
+	_show_veil_subtitle("저도 이 파일들 읽은 적 있어요.\n계속 가요, 요원.", 3.2, true)
 
 # ARCTURUS 아카이브 문서 — 3 단말기.
 # kind: "title" (큰 헤더) / "speaker" (회색 작은 발화자) / "body" (본문) / "blank" (간격)
