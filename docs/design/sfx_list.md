@@ -13,7 +13,7 @@
 - 영문 prompt가 잘 먹힘. duration_seconds는 ElevenLabs UI에 그대로 입력. prompt_influence 0.4~0.6 권장.
 - 게임 톤: **사이버펑크 / 시설 침투 / 정밀한 SF**. 음악적이지 않게, 무톤(non-tonal) 또는 짧은 sub-bass.
 - 공통 prefix(원하면 모든 prompt 앞에 붙임): `cyberpunk infiltration game sfx, dry studio recording, no music, no reverb tail, mono`
-- loop 항목(`drone_hover`, `bomber_beep`, `self_destruct_alarm`)은 결과를 Audacity에서 zero-crossing trim 필요.
+- 실제 loop 처리: `drone_hover`만 (positional AudioStreamPlayer2D). 결과를 Audacity에서 zero-crossing trim. 그 외 alarm/beep 류는 단발 재생.
 - 변주 필요한 SFX(`player_step`, `player_hurt`)는 같은 prompt로 N개 생성 → 코드가 자동으로 `<id>1`, `<id>2` … 인식.
 
 ### 청취 부담 원칙 (장시간 플레이 기준)
@@ -302,18 +302,10 @@ ElevenLabs는 음악 용어를 그대로 해석한다 — **모호한 단어는 
 
 ---
 
-## 구현 순서 권장
-
-1. **Boss (P0)** — `boss_phase_change` / `boss_self_destruct_alarm` / `boss_death`. 코드 wire-up은 이미 끝나있고 파일만 추가하면 됨. 클라이맥스 임팩트 최우선.
-2. **Pickups (P0)** — `xp_collect` / `hp_collect` / `levelup`. 진행 보상 피드백 — 매 적 처치마다 들음.
-3. **Environment (P0)** — `lever_pull` / `plate_step_active` / `siren_flash` / `spike_hit` / `gate_unlock` / `challenge_clear`·`fail`. 환경 인터랙션 학습 강화.
-4. **UI (P0~P1)** — `ui_confirm` / `skill_active_use` / `skill_pick`. 메뉴·스킬 피드백.
-5. **나머지 P1~P2** — 환경/연출 보강 + Story SFX.
-
 ## 코드 연결 메모
 
 - 파일 위치: `assets/sfx/<id>.mp3`. 확장자 mp3/ogg/wav 모두 가능 (`SfxPlayer._SFX_EXTENSIONS` 순서대로 시도).
 - variant: `<id>1.mp3`, `<id>2.mp3` … 자동 등록. `SfxPlayer.play(id)`가 무작위 하나 재생.
 - 볼륨 보정은 `scripts/SfxPlayer.gd::VOLUME_OFFSETS` 사전에 dB 값 추가.
-- loop SFX(`drone_hover`, `bomber_beep`, `self_destruct_alarm`)는 현재 단발 재생 — 추후 loop 지원 추가 시 별도 처리 필요.
+- loop 처리: `drone_hover`만 `AudioStreamPlayer2D` positional loop (`Enemy.gd::_setup_drone_hover_audio`). `enemy_bomber_beep` / `boss_self_destruct_alarm`은 단발 재생 유지 결정.
 - 신규 SFX ID 추가 시 `KNOWN_SFX` 배열에도 등록.

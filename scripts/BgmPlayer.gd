@@ -27,7 +27,7 @@ const FADE_IN: float = 1.2
 const FADE_OUT: float = 0.9
 const BASE_DB: float = -8.0     # 1.0 master에서 적당히 들리도록
 const SILENT_DB: float = -80.0
-# 사망 화면 등에서 BGM을 살짝 죽여 먹먹한 느낌. 실제 SFX는 추후, 일단 dB 감쇠만.
+# 사망 화면 등에서 BGM을 dB 감쇠로 먹먹하게 — 트랙 전환 없이 즉시 ducking.
 const DUCKED_OFFSET_DB: float = -12.0
 const DUCK_FADE: float = 0.4
 
