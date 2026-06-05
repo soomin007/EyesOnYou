@@ -17,6 +17,8 @@ var risk_reward_panel: PanelContainer = null
 var risk_reward_label: Label = null
 
 func _ready() -> void:
+	# 안전망: 이전 scene에서 paused가 carry되어 메뉴가 freeze되는 패턴 차단.
+	get_tree().paused = false
 	stage_label.text = "STAGE %d / %d  —  루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	subtitle_label.text = "● 위험도 / 보상   —   ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)

@@ -16,6 +16,8 @@ var done: bool = false
 var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
 
 func _ready() -> void:
+	# 안전망: 이전 scene에서 paused가 carry되어 Death가 freeze되는 패턴 차단.
+	get_tree().paused = false
 	title_label.text = "MISSION FAILED"
 	speaker_label.text = "VEIL"
 	full_text = VeilDialogue.get_death_briefing(GameState.death_count, GameState.followed_veil_last_choice)

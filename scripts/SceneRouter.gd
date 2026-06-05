@@ -13,6 +13,9 @@ const SETTINGS: String  = "res://scenes/settings.tscn"
 const CREDITS: String   = "res://scenes/credits.tscn"
 
 static func go(tree: SceneTree, path: String) -> void:
+	# 안전망: scene 전환 시 paused 무조건 해제 — 직전 scene의 LevelUpOverlay/도전방 fail 등에서
+	# 해제 누락 시 새 scene이 freeze되는 패턴 차단.
+	tree.paused = false
 	tree.change_scene_to_file(path)
 
 static func start_after_title(tree: SceneTree) -> void:

@@ -45,6 +45,9 @@ const CD_BAR_WIDTH: float = 90.0
 
 func _ready() -> void:
 	add_to_group("stage")
+	# 안전망: 이전 scene에서 paused=true 상태가 carry되어 새 stage가 freeze되는 패턴 차단
+	# (LevelUpOverlay/도전방 fail 등에서 paused 해제 누락 시 빈 화면).
+	get_tree().paused = false
 	GameState.player_hp = GameState.player_max_hp
 	# BGM — 맵별 트랙 선택. ??? 방은 Gravity Static, 보스 맵은 Chrome Grit,
 	# 그 외에는 stage_index 기반으로 Cold Gear(초중반)/Cold Wire(중후반) 분기.
