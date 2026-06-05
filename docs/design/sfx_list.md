@@ -16,6 +16,18 @@
 - loop 항목(`drone_hover`, `bomber_beep`, `self_destruct_alarm`)은 결과를 Audacity에서 zero-crossing trim 필요.
 - 변주 필요한 SFX(`player_step`, `player_hurt`)는 같은 prompt로 N개 생성 → 코드가 자동으로 `<id>1`, `<id>2` … 인식.
 
+### 청취 부담 원칙 (장시간 플레이 기준)
+**고빈도 SFX는 "들리지만 거슬리지 않게"**. 매분 수십 번 듣는 항목(`xp_collect`, `ui_*`, `plate_step_*`, `terminal_typewrite`, `veil_subtitle_in`)은 다음 금지어를 피한다:
+- `bright`, `high-frequency`, `sharp`, `metallic ring`, `crystalline`, `chime`, `sparkle`, `stab`, `ping`, `sizzle`
+- 대신: `warm`, `muted`, `rounded`, `soft`, `low-mid`, `wooden`, `breath`, `dull`
+
+이벤트성 SFX(`siren_flash`, `boss_*`, `challenge_*`, `levelup`)는 임팩트가 필요하지만 **harshness ≠ impact** — piercing high-freq 대신 **low-frequency 무게**로 임팩트를 만든다.
+
+빈도 분류:
+- **고빈도** (매 분 N회): xp_collect, ui_focus, ui_confirm, ui_slider_tick, plate_step_*, terminal_typewrite, veil_subtitle_in, skill_active_use
+- **중빈도** (스테이지당 N회): hp_collect, skill_pick, lever_pull, hatch_open, spike_hit, bullet_impact_*
+- **저빈도 / 이벤트** (한두 번): levelup, gate_unlock, siren_flash, challenge_*, stage_clear_chime, arcturus_enter, bestiary_first_seen, boss_alert_text, boss_*, blackout_fade_in
+
 ---
 
 ## 1. Player
@@ -157,25 +169,25 @@
 
 ## 5. Pickups / Skills
 
-### `xp_collect` ⬜ P0 (0.18s)
+### `xp_collect` ⬜ P0 (0.15s) — **고빈도 / poly**
 - **트리거**: `ExpOrb.gd` magnet 흡수
-- **prompt**: Tiny crystalline chime, single bright high-frequency note, very short, sci-fi pickup ping. Should be poly-able (many can play overlapping).
+- **prompt**: Very soft rounded pluck, brief warm low-mid pickup tone, no high sparkle, no metallic ring, decays naturally and unobtrusively. Many can overlap without harshness — must remain pleasant after hundreds of plays.
 
 ### `hp_collect` ⬜ P0 (0.35s)
 - **트리거**: `HpOrb.gd` 흡수
-- **prompt**: Warm rising heal chime, two-note ascending interval, soft glow texture, no reverb, restorative sci-fi feel.
+- **prompt**: Warm rounded breath of restoration, soft two-tone low-mid swell, no chime brightness or shimmer, gentle restorative pad-like body, smooth 0.35s decay.
 
-### `levelup` ⬜ P0 (0.7s)
+### `levelup` ⬜ P0 (0.7s) — **이벤트성**
 - **트리거**: `LevelUpOverlay.gd` 진입
-- **prompt**: Triumphant ascending three-note chime sequence, sci-fi confirmation, mild crystalline shimmer, no big reverb, decisive.
+- **prompt**: Three-note rising warm chord, rounded mid-low body with satisfying weight, no crystalline shimmer or high sparkle, decisive but not piercing, gentle 0.7s decay.
 
 ### `skill_pick` ⬜ P1 (0.22s)
 - **트리거**: `LevelUpOverlay.gd` 카드 confirm
-- **prompt**: Crisp digital confirm tick with subtle holographic sweep, dry, sci-fi UI selection.
+- **prompt**: Muted digital tap of selection, soft warm low-mid click, no holographic sweep or sparkle, dry and brief, 0.22s.
 
-### `skill_active_use` ⬜ P0 (0.25s)
+### `skill_active_use` ⬜ P0 (0.25s) — **고빈도**
 - **트리거**: `Player.gd::_try_skill` (액티브 스킬 발동 — 폭발물 등)
-- **prompt**: Quick electric zap with mechanical release, sci-fi gadget activation, dry, focused punch.
+- **prompt**: Brief warm pneumatic release with muted low-mid punch, sci-fi gadget engaging, no electric zap or crackle, no high frequencies, dry and focused.
 
 ---
 
@@ -183,99 +195,99 @@
 
 ### `spike_hit` ⬜ P0 (0.18s)
 - **트리거**: `Stage.gd` spike 충돌 처리
-- **prompt**: Sharp metallic stab with single high-frequency ring and quick pain pulse, dry, brief.
+- **prompt**: Dull body impact with muted pain pulse, low-mid thud, no metallic ring or high-frequency stab, grounded and brief.
 
 ### `lever_pull` ⬜ P0 (0.35s)
 - **트리거**: `LeverInteractable.gd::try_pull`
-- **prompt**: Mechanical lever ratchet click followed by heavy contact thunk, industrial old-facility feel, dry.
+- **prompt**: Heavy mechanical lever motion, low-mid ratchet body with weighted contact thunk, dry industrial, no metallic resonance or high overtones.
 
-### `plate_step_inactive` ⬜ P2 (0.2s)
+### `plate_step_inactive` ⬜ P2 (0.2s) — **고빈도**
 - **트리거**: `PressurePlate.gd` armed=false 상태에서 step
-- **prompt**: Dull metallic thump of foot on inactive pressure plate, no resonance, dead muted sound. Should feel ignored.
+- **prompt**: Dull muted footstep on dead plate, very brief low thud, no resonance, designed to feel ignored — should not register strongly.
 
-### `plate_step_active` ⬜ P0 (0.3s)
+### `plate_step_active` ⬜ P0 (0.3s) — **고빈도**
 - **트리거**: `PressurePlate.gd` armed plate stepped
-- **prompt**: Crisp pneumatic click with rising power-on chime, plate activating beneath foot, sci-fi affirmative.
+- **prompt**: Soft pneumatic engage with brief warm power-on tone in mid-low range, plate confirming under foot, no bright chime or sparkle, 0.3s.
 
 ### `hatch_open` ⬜ P1 (0.55s)
 - **트리거**: `Stage.gd::_open_hatch`
-- **prompt**: Pneumatic ventilation hiss with metal panel sliding aside, brief mechanical motor whir, sci-fi maintenance hatch.
+- **prompt**: Gentle pneumatic release with low-mid panel sliding, soft motor whir, dry and unobtrusive, no sharp hiss.
 
 ### `drop_platform_descend` ⬜ P1 (0.7s)
 - **트리거**: `Stage.gd::_descend_drop_platform`
-- **prompt**: Heavy mechanical platform lowering with hydraulic descent rumble, ends with soft thud landing.
+- **prompt**: Low hydraulic rumble of platform lowering, warm low-mid body, soft thud landing at the end, no high mechanical detail.
 
-### `gate_unlock` ⬜ P0 (0.55s)
+### `gate_unlock` ⬜ P0 (0.55s) — **이벤트성**
 - **트리거**: `Stage.gd` 도전방 게이트 fade
-- **prompt**: Magnetic lock disengaging with electric click, then heavy panel sliding away, sci-fi facility access grant.
+- **prompt**: Warm low magnetic disengage with muted panel slide, sci-fi access tone in mid range, no electric click sparkle, satisfying without harshness.
 
-### `siren_flash` ⬜ P0 (0.8s)
+### `siren_flash` ⬜ P0 (0.8s) — **이벤트성**
 - **트리거**: `Stage.gd::_play_siren_flash`
-- **prompt**: Two short alarm whoops in quick succession (≈0.3s apart), urgent klaxon, danger warning, no reverb tail.
+- **prompt**: Two short mid-low alarm whoops in quick succession (≈0.3s apart), warm warning tone, urgent but NOT piercing — no high-frequency klaxon edge.
 
-### `blackout_fade_in` ⬜ P1 (1.2s)
+### `blackout_fade_in` ⬜ P1 (1.2s) — **이벤트성**
 - **트리거**: challenge_dark_root fade in
-- **prompt**: Deep ominous sub-bass swell rising slowly, lights cutting out feeling, oppressive sci-fi atmosphere, ends sustained.
+- **prompt**: Deep ominous sub-bass swell rising slowly, oppressive sci-fi atmosphere, no high frequencies, ends sustained in low register.
 
-### `challenge_clear` ⬜ P0 (0.7s)
+### `challenge_clear` ⬜ P0 (0.7s) — **이벤트성**
 - **트리거**: 도전방 골 도달
-- **prompt**: Relieved ascending chime, breath of accomplishment, sci-fi success confirmation, brief.
+- **prompt**: Soft relieving warm chime sequence, two to three rounded ascending tones, breath of accomplishment, no crystalline sparkle, gentle 0.7s decay.
 
-### `challenge_fail` ⬜ P0 (0.55s)
+### `challenge_fail` ⬜ P0 (0.55s) — **이벤트성**
 - **트리거**: `Stage.gd::_challenge_fail`
-- **prompt**: Cutting buzzer error tone descending in pitch, abrupt failure signal, dry, no tail.
+- **prompt**: Low descending muted tone of failure, warm mid-low body, abrupt but not harsh, dry, no buzzer edge or high-frequency cut.
 
 ---
 
 ## 7. UI / Menu
 
-### `ui_focus` ⬜ P1 (0.06s)
+### `ui_focus` ⬜ P1 (0.06s) — **고빈도 / 거의 안 들릴 정도**
 - **트리거**: 메뉴 버튼 focus_entered
-- **prompt**: Tiny digital tick, single high-frequency click, very short, UI navigation feedback.
+- **prompt**: Almost imperceptible soft tap, very brief muted mid-tone tick, no high-frequency edge, designed to be felt more than heard.
 
-### `ui_confirm` ⬜ P0 (0.14s)
+### `ui_confirm` ⬜ P0 (0.14s) — **고빈도**
 - **트리거**: 메뉴 버튼 pressed
-- **prompt**: Soft sci-fi confirmation chime, two-tone ascending, brief, no reverb.
+- **prompt**: Soft warm two-tone confirm pulse, brief muted low-mid body, no chime brightness, dry 0.14s.
 
 ### `ui_cancel` ⬜ P1 (0.12s)
 - **트리거**: ESC / B
-- **prompt**: Low descending UI click, brief negative feedback tone, dry.
+- **prompt**: Brief low descending muted click, soft negative tone, no sharp edge, dry 0.12s.
 
-### `ui_slider_tick` ⬜ P2 (0.05s)
+### `ui_slider_tick` ⬜ P2 (0.05s) — **최고빈도 / 가장 부드러워야**
 - **트리거**: volume slider 값 변경
-- **prompt**: Micro digital tick at very low volume, single grain, very short.
+- **prompt**: Micro soft tick, single muted grain, extremely brief, no tonal character, nearly subliminal — many can fire in rapid succession without fatigue.
 
 ### `ui_pause_open` ⬜ P2 (0.25s)
 - **트리거**: pause overlay open
-- **prompt**: Muffled woosh as if pulling away from the world, slight low frequency drop, sci-fi pause-in.
+- **prompt**: Soft muffled woosh pulling inward, brief low-frequency dip, warm sci-fi pause-in, no sharp transient or high air.
 
 ---
 
 ## 8. Story / Special
 
-### `veil_subtitle_in` ⬜ P2 (0.12s)
+### `veil_subtitle_in` ⬜ P2 (0.12s) — **고빈도 / 대사마다**
 - **트리거**: VEIL 자막 fade in
-- **prompt**: Subtle digital chirp, brief data transmission tick, sci-fi communicator, very faint — should not interrupt the line.
+- **prompt**: Faintest soft data tick, very brief muted comm chirp at low volume, no high-frequency edge — must not interrupt the spoken line or fatigue the listener.
 
-### `arcturus_enter` ⬜ P1 (0.9s)
+### `arcturus_enter` ⬜ P1 (0.9s) — **이벤트성**
 - **트리거**: `ArcturusDocumentOverlay.gd` 진입
-- **prompt**: Deep ominous sub-bass swell with paper-like rustle and time-stop hush, mysterious archive opening, sense of stepping into something older.
+- **prompt**: Deep ominous low swell with soft paper rustle and hush, warm mysterious archive opening, sense of stepping into something older, no high frequencies.
 
-### `terminal_typewrite` ⬜ P2 (0.05s, one-shot click; code loops per char)
+### `terminal_typewrite` ⬜ P2 (0.05s, one-shot click; code loops per char) — **최고빈도 / 글자마다**
 - **트리거**: ARCTURUS 문서 타자 per-char
-- **prompt**: Single mechanical key click of old terminal keyboard, very dry, very short, no resonance.
+- **prompt**: Very soft muted key tap, brief warm wooden-like click without mechanical edge or resonance, extremely short, designed to layer hundreds of times without becoming harsh.
 
-### `bestiary_first_seen` ⬜ P2 (0.35s)
+### `bestiary_first_seen` ⬜ P2 (0.35s) — **이벤트성**
 - **트리거**: `BestiaryData.gd::mark_enemy_seen` 첫 조우
-- **prompt**: Deep contemplative chime, single resonant note, sci-fi catalog entry, brief but weighty.
+- **prompt**: Warm low resonant tone, single rounded note of catalog acknowledgment, brief weight without bell sparkle or high overtones.
 
-### `stage_clear_chime` ⬜ P1 (0.7s)
+### `stage_clear_chime` ⬜ P1 (0.7s) — **이벤트성**
 - **트리거**: `Stage.gd::_begin_clear_sequence`
-- **prompt**: Brief relieving fanfare, three ascending notes, breath of accomplishment, sci-fi, no big reverb.
+- **prompt**: Soft warm three-note ascending phrase, breath of accomplishment, rounded mid-low tones, no crystalline ring or sparkle, gentle 0.7s decay.
 
-### `boss_alert_text` ⬜ P1 (0.3s)
+### `boss_alert_text` ⬜ P1 (0.3s) — **이벤트성**
 - **트리거**: `Stage.gd::_show_boss_alert`
-- **prompt**: Sharp alarm sting with single high-frequency stab, danger emphasis, brief.
+- **prompt**: Low warm alarm sting with mid-range warning pulse, danger emphasis through weight not piercing edge, no high-frequency stab, brief 0.3s.
 
 ---
 

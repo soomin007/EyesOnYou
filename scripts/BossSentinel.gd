@@ -293,7 +293,7 @@ func _find_player() -> Node2D:
 	return null
 
 func take_damage(amount: int, _from_dir: int = 0) -> void:
-	if dead or self_destruct_active:
+	if dead:
 		return
 	# 페이즈 전환 동안은 무적 — 플레이어가 페이즈 연출을 인지할 시간 보장.
 	if phase_freeze_t > 0.0:
@@ -302,16 +302,17 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 	_flash_hit()
 	if hp > 0:
 		SfxPlayer.play("boss_hurt")
-	# 페이즈 전환 검사 — 스토리 모드는 P2/P3 모두 생략하고 자폭만 진입.
-	if not story_simplified:
+	# 페이즈 전환 검사 — 자폭 진입 후에는 페이즈 재전환 안 함.
+	if not story_simplified and not self_destruct_active:
 		if phase < 2 and hp <= HP_PHASE2:
 			_transition_to(2)
 		elif phase < 3 and hp <= HP_PHASE3:
 			_transition_to(3)
-	# 자폭 트리거 (HP 1 이하)
+	# 자폭 트리거 (HP 1 이하) — 이미 진행 중이면 재진입 안 함.
 	if not self_destruct_active and hp <= HP_SELF_DESTRUCT:
 		_arm_self_destruct()
-	if hp <= 0 and not self_destruct_active:
+	# 자폭 중 마지막 hp 깎이면 disarm 처치 — _die가 self_destruct_t < SELF_DESTRUCT_TIME 보고 알아서 분기.
+	if hp <= 0:
 		_die()
 
 func _flash_hit() -> void:
