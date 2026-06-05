@@ -21,6 +21,9 @@ func _ready() -> void:
 	title_label.text = "MISSION FAILED"
 	speaker_label.text = "VEIL"
 	full_text = VeilDialogue.get_death_briefing(GameState.death_count, GameState.followed_veil_last_choice)
+	# 첫 사망에만 다회차 hint — 너무 적극적이지 않게, VEIL 톤으로 슬쩍.
+	if GameState.death_count == 1:
+		full_text += "\n\n...요원, 다른 결말도 있을지 몰라요."
 	stats_label.text = "사망 횟수  %d  /  도달 스테이지  %d" % [GameState.death_count, GameState.current_stage + 1]
 	text_label.text = ""
 	hint_label.text = ""

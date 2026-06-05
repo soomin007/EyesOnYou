@@ -42,9 +42,6 @@ func _ready() -> void:
 	# 라이브 lore 라인을 보여주고, 미방문 시엔 짧고 호기심 hint 라인.
 	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus
 	lines = EndingResolver.get_ending_lines(ending_id, explored_lore)
-	# 진단 — 사용자 보고 "결말 C 멘트 안 나옴" 추적용.
-	print("[Ending] ending_id=%s explored_lore=%s lines.size()=%d story_mode=%s" % [
-		ending_id, str(explored_lore), lines.size(), str(GameState.story_mode)])
 	if lines.is_empty():
 		push_warning("[Ending] lines is EMPTY for ending_id='%s' — fallback line 표시" % ending_id)
 		# 안전판 — 빈 결말이면 최소한 마무리 한 줄 보여주기.
@@ -137,7 +134,6 @@ func _setup_ending_d_atmosphere() -> void:
 func _start_line() -> void:
 	# 매 새 라인마다 watchdog reset — 첫 라인뿐 아니라 followup·이후 라인 모두 보호.
 	stall_watchdog_t = 0.0
-	print("[Ending] _start_line idx=%d/%d" % [line_idx, lines.size()])
 	if line_idx >= lines.size():
 		_on_sequence_done()
 		return
@@ -249,7 +245,6 @@ func _show_choice() -> void:
 	GameState.arm_focus_with_delay(self, b1)
 
 func _pick_choice(asked: bool) -> void:
-	print("[Ending] _pick_choice asked=%s" % str(asked))
 	waiting_choice = false
 	choice_box.visible = false
 	# 이전 choice 버튼 명시 정리 — 잔재 노드가 layout에 영향 주는 일 차단.
@@ -257,7 +252,6 @@ func _pick_choice(asked: bool) -> void:
 		c.queue_free()
 	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus
 	lines = EndingResolver.get_ending_c_followup(asked, explored_lore)
-	print("[Ending] followup lines.size()=%d" % lines.size())
 	line_idx = 0
 	# typing 상태 변수 다시 정렬 — _start_line이 처리하지만 명시.
 	revealed = 0

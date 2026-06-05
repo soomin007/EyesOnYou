@@ -510,12 +510,14 @@ func _alt_veil1_first_mission() -> Array:
 
 func _alt_veil2_final_log() -> Array:
 	# 두 화자(VEIL-2 / ARCTURUS) 교차 — 색이 바뀌어 긴장감 유지.
+	# 마지막 ARCTURUS 비고 — 다회차 진입한 사용자에게 분기 존재 hint (4종).
 	return [
 		{"speaker": "VEIL-2",   "text": "요원이 살 확률이 12%예요.", "delay": 2.5},
 		{"speaker": "ARCTURUS", "text": "임무 계속.", "delay": 1.6},
 		{"speaker": "VEIL-2",   "text": "임무 중단을 권고해요.", "delay": 2.2},
 		{"speaker": "ARCTURUS", "text": "계속.", "delay": 1.4},
 		{"speaker": "VEIL-2",   "text": "중단.", "delay": 2.0},
+		{"speaker": "ARCTURUS", "text": "비고: 같은 시작, 네 가지 끝. 시뮬레이션 분기 기록됨.", "delay": 2.8},
 		{"speaker": "ARCTURUS", "text": "[접속 종료]", "delay": 2.5},
 	]
 
