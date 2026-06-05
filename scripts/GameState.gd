@@ -93,9 +93,13 @@ func is_pad_mode() -> bool:
 # release 대기보다 시간 기반(기본 1.0s)이 더 단순·예측 가능.
 const INPUT_LOCKOUT_DURATION: float = 1.0
 
-func arm_focus_with_delay(host: Node, first_btn: Button, delay: float = INPUT_LOCKOUT_DURATION) -> void:
+func arm_focus_with_delay(host: Node, first_btn: Button, delay: float = INPUT_LOCKOUT_DURATION, wire_sfx: bool = true) -> void:
 	if first_btn == null:
 		return
+	# 메뉴 root 아래 모든 Button에 ui_focus / ui_confirm 자동 hook.
+	# 게임 내 선택(LevelUpOverlay 카드)처럼 별도 SFX가 있는 곳은 wire_sfx=false.
+	if wire_sfx and host != null:
+		SfxPlayer.wire_ui_buttons(host)
 	var btn_ref: WeakRef = weakref(first_btn)
 	get_tree().create_timer(delay).timeout.connect(func() -> void:
 		var b := btn_ref.get_ref() as Button

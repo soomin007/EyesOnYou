@@ -252,23 +252,23 @@ ElevenLabs는 음악 용어를 그대로 해석한다 — **모호한 단어는 
 
 ## 7. UI / Menu
 
-### `ui_focus` ⬜ P1 (0.06s) — **고빈도 / 거의 안 들릴 정도**
+### `ui_focus` ✅ P1 (0.06s) — **고빈도 / 거의 안 들릴 정도**
 - **트리거**: 메뉴 버튼 focus_entered
 - **prompt**: Almost imperceptible soft tap, very brief muted mid-tone tick, no high-frequency edge, designed to be felt more than heard.
 
-### `ui_confirm` ⬜ P0 (0.14s) — **고빈도**
+### `ui_confirm` ✅ P0 (0.14s) — **고빈도**
 - **트리거**: 메뉴 버튼 pressed
 - **prompt**: Two soft warm muted tones played in very quick succession (one after another, NOT simultaneous), brief low-mid body, no chime brightness or sparkle, dry total 0.14s.
 
-### `ui_cancel` ⬜ P1 (0.12s)
+### `ui_cancel` ✅ P1 (0.12s)
 - **트리거**: ESC / B
 - **prompt**: Brief low descending muted click, soft negative tone, no sharp edge, dry 0.12s.
 
-### `ui_slider_tick` ⬜ P2 (0.05s) — **최고빈도 / 가장 부드러워야**
+### `ui_slider_tick` ✅ P2 (0.05s) — **최고빈도 / 가장 부드러워야**
 - **트리거**: volume slider 값 변경
 - **prompt**: Micro soft tick, single muted grain, extremely brief, no tonal character, nearly subliminal — many can fire in rapid succession without fatigue.
 
-### `ui_pause_open` ⬜ P2 (0.25s)
+### `ui_pause_open` ✅ P2 (0.25s)
 - **트리거**: pause overlay open
 - **prompt**: Soft muffled woosh pulling inward, brief low-frequency dip, warm sci-fi pause-in, no sharp transient or high air.
 
@@ -276,27 +276,27 @@ ElevenLabs는 음악 용어를 그대로 해석한다 — **모호한 단어는 
 
 ## 8. Story / Special
 
-### `veil_subtitle_in` ⬜ P2 (0.12s) — **고빈도 / 대사마다**
+### `veil_subtitle_in` ✅ P2 (0.12s) — **고빈도 / 대사마다**
 - **트리거**: VEIL 자막 fade in
 - **prompt**: Faintest soft data tick, very brief muted comm chirp at low volume, no high-frequency edge — must not interrupt the spoken line or fatigue the listener.
 
-### `arcturus_enter` ⬜ P1 (0.9s) — **이벤트성**
+### `arcturus_enter` ✅ P1 (0.9s) — **이벤트성**
 - **트리거**: `ArcturusDocumentOverlay.gd` 진입
 - **prompt**: Deep ominous low swell with soft paper rustle and hush, warm mysterious archive opening, sense of stepping into something older, no high frequencies.
 
-### `terminal_typewrite` ⬜ P2 (0.05s, one-shot click; code loops per char) — **최고빈도 / 글자마다**
+### `terminal_typewrite` ✅ P2 (0.05s, one-shot click; code loops per char) — **최고빈도 / 글자마다**
 - **트리거**: ARCTURUS 문서 타자 per-char
 - **prompt**: Very soft muted key tap, brief warm wooden-like click without mechanical edge or resonance, extremely short, designed to layer hundreds of times without becoming harsh.
 
-### `bestiary_first_seen` ⬜ P2 (0.35s) — **이벤트성**
+### `bestiary_first_seen` ✅ P2 (0.35s) — **이벤트성**
 - **트리거**: `BestiaryData.gd::mark_enemy_seen` 첫 조우
 - **prompt**: Warm low resonant tone, single rounded note of catalog acknowledgment, brief weight without bell sparkle or high overtones.
 
-### `stage_clear_chime` ⬜ P1 (0.7s) — **이벤트성**
+### `stage_clear_chime` ✅ P1 (0.7s) — **이벤트성**
 - **트리거**: `Stage.gd::_begin_clear_sequence`
 - **prompt**: Three soft warm notes played sequentially one after another in rising pitch (arpeggio style, NOT a chord), each note rounded and brief, mid-low warmth without crystalline ring or sparkle, satisfied accomplishment feeling, total 0.7s with gentle decay on the last note.
 
-### `boss_alert_text` ⬜ P1 (0.3s) — **이벤트성**
+### `boss_alert_text` ✅ P1 (0.3s) — **이벤트성**
 - **트리거**: `Stage.gd::_show_boss_alert`
 - **prompt**: Low warm alarm sting with mid-range warning pulse, danger emphasis through weight not piercing edge, no high-frequency stab, brief 0.3s.
 

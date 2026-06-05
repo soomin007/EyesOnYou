@@ -160,6 +160,7 @@ func _set_state(new_state: int) -> void:
 			b_back.pressed.connect(_on_back_pressed)
 			buttons_box.add_child(b_back)
 			b_yes.grab_focus.call_deferred()
+	SfxPlayer.wire_ui_buttons(buttons_box)
 	_refresh_hint()
 
 func _make_button(text: String) -> Button:

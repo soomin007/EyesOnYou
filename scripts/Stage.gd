@@ -700,6 +700,7 @@ func _ensure_subtitle_stack() -> void:
 	holder.add_child(_subtitle_stack_box)
 
 func _show_veil_subtitle(message: String, duration: float) -> void:
+	SfxPlayer.play("veil_subtitle_in")
 	_ensure_subtitle_stack()
 	var l := Label.new()
 	l.text = "VEIL  —  " + message
@@ -733,6 +734,7 @@ func _purge_subtitles() -> void:
 # 보스전 전용 강조 자막 — 일반 _show_veil_subtitle보다 큰 폰트 + 어두운 박스 배경 +
 # 색상으로 위험도 차등화. 화면 중앙 위쪽에 배치해 폭발 효과/총알 위에서도 인지 가능.
 func _show_boss_alert(message: String, color: Color, duration: float) -> void:
+	SfxPlayer.play("boss_alert_text")
 	# 절대 size 1280로 좌측 치우침 발생하던 문제 — anchor preset만으로 화면 폭 채움.
 	var msg_layer := CanvasLayer.new()
 	msg_layer.layer = 22
@@ -2799,9 +2801,11 @@ func _trigger_stage_clear() -> void:
 # 사용자 피드백: "도전방에서 마지막 적 처치 시 XP 못 먹고 바로 맵 선택으로"
 # 보스/ARENA — 2.6s, 일반 골 — 1.0s.
 func _begin_clear_sequence() -> void:
-	# 도전방 클리어는 별도 챔 — 일반 stage_clear_chime은 §8 wire-up에서 처리.
+	# 도전방은 별도 챔, 일반 stage clear는 stage_clear_chime.
 	if challenge_active and not challenge_failed:
 		SfxPlayer.play("challenge_clear")
+	else:
+		SfxPlayer.play("stage_clear_chime")
 	GameState.restrict_combat_input = true
 	# 남은 XP orb를 player 근처로 텔레포트 → 자동 흡수 (PICKUP_RANGE 내).
 	if player != null and is_instance_valid(player):
@@ -3342,11 +3346,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _show_pause() -> void:
 	get_tree().paused = true
+	SfxPlayer.play("ui_pause_open")
 	pause_overlay = PauseHelper.build(self, _on_pause_resume, _on_pause_settings, _on_pause_to_title)
 	add_child(pause_overlay)
 
 func _hide_pause() -> void:
 	if pause_overlay != null:
+		SfxPlayer.play("ui_cancel")
 		pause_overlay.queue_free()
 		pause_overlay = null
 	get_tree().paused = false

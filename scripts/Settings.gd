@@ -120,6 +120,7 @@ func _ready() -> void:
 
 	_refresh_all_keybind_buttons()
 	# 진입 시 첫 키바인드 버튼에 포커스 잡기 (1s 락아웃 — 메뉴 연타 사고 방지).
+	# arm_focus_with_delay가 host 아래 Button들에 ui_focus/ui_confirm SFX도 자동 wire.
 	if ACTIONS.size() > 0:
 		var first_btns: Array = key_buttons.get(str(ACTIONS[0]["id"]), [])
 		if first_btns.size() > 0 and first_btns[0] is Button:
@@ -441,6 +442,7 @@ func _make_secondary_button(text: String) -> Button:
 	return b
 
 func _on_volume_changed(value: float, kind: String) -> void:
+	SfxPlayer.play("ui_slider_tick")
 	if kind == "bgm":
 		GameState.bgm_volume = value
 		# BGM autoload — 배경음 볼륨 즉시 반영(다음 트랙 전환까지 기다리지 않게).

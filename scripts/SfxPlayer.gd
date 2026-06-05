@@ -131,3 +131,27 @@ func _target_db() -> float:
 	if v <= 0.001:
 		return SILENT_DB
 	return BASE_DB + linear_to_db(v)
+
+# 메뉴 root 아래 모든 Button에 ui_focus / ui_confirm SFX 자동 연결.
+# 메타 "ui_sfx_wired" 체크해 중복 connect 방지.
+# 게임 내 선택(LevelUpOverlay 카드 등) 버튼은 별도 SFX가 있으니 skip — 호출 사이트가 wire 호출 자체를 안 함.
+func wire_ui_buttons(root: Node) -> void:
+	if root == null:
+		return
+	_wire_recursive(root)
+
+func _wire_recursive(node: Node) -> void:
+	if node is Button:
+		var b: Button = node
+		if not b.has_meta("ui_sfx_wired"):
+			b.set_meta("ui_sfx_wired", true)
+			b.focus_entered.connect(_on_ui_button_focus)
+			b.pressed.connect(_on_ui_button_pressed)
+	for c in node.get_children():
+		_wire_recursive(c)
+
+func _on_ui_button_focus() -> void:
+	play("ui_focus")
+
+func _on_ui_button_pressed() -> void:
+	play("ui_confirm")

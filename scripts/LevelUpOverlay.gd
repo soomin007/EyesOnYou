@@ -116,9 +116,12 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		btn.process_mode = Node.PROCESS_MODE_ALWAYS
 		var sid: String = str(skill.get("id", ""))
 		btn.pressed.connect(func() -> void: _finish(layer, sid, on_picked))
+		btn.focus_entered.connect(SfxPlayer.play.bind("ui_focus", 0.0))
 		hb.add_child(btn)
 	host.add_child(layer)
-	GameState.arm_focus_with_delay(layer, hb.get_child(0) as Button)
+	# 카드 버튼은 ui_confirm + skill_pick 중복 방지를 위해 wire_sfx=false.
+	# focus_entered만 별도로 ui_focus에 연결됨 (위 loop 안).
+	GameState.arm_focus_with_delay(layer, hb.get_child(0) as Button, GameState.INPUT_LOCKOUT_DURATION, false)
 	return layer
 
 static func _finish(layer: CanvasLayer, picked_id: String, on_picked: Callable) -> void:

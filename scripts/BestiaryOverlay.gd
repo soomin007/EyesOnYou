@@ -17,6 +17,7 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 		return null
 	_active = true
 	host.get_tree().paused = true
+	SfxPlayer.play("bestiary_first_seen")
 
 	var layer := CanvasLayer.new()
 	layer.layer = 45

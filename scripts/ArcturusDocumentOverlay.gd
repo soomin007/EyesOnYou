@@ -57,6 +57,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func show_doc(input_lines: Array) -> void:
+	SfxPlayer.play("arcturus_enter")
 	lines_data = input_lines
 	layer = CanvasLayer.new()
 	layer.layer = 25
@@ -185,6 +186,7 @@ func _process(delta: float) -> void:
 				pause_after_line = float(line.get("delay", 0.4))
 			else:
 				label.text = full.substr(0, revealed)
+				SfxPlayer.play("terminal_typewrite")
 		_update_scroll_target()
 		return
 	# 줄 사이 침묵 → 다음 줄로
