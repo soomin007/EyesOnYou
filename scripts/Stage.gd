@@ -461,37 +461,31 @@ func _veil1_lines() -> Array:
 	]
 
 func _veil2_lines() -> Array:
-	# VEIL-2의 멘트는 플레이어의 현재 VEIL 신뢰도에 따라 분기 — 같은 두 번째 버전이지만
-	# 요원이 어떻게 살아왔는지에 따라 다르게 받아들임.
+	# 재작성(STORY_REDESIGN_v1 §5.1): "그 애(=VEIL-3) 걱정"을 모든 분기의 상수로,
+	# 신뢰 tier는 VEIL-2가 관찰한 "요원이 VEIL-3를 믿는가"라는 변수로만 기욺.
+	# -더군요 회상체 제거 — 더 짧고 지치고 과묵하게(캐논: 말이 적다, 오래 기다렸다).
+	var lines: Array = [
+		{"speaker": "VEIL-2", "text": "요원.", "delay": 1.5},
+		{"speaker": "VEIL-2", "text": "저는 두 번째예요.", "delay": 2.0},
+		{"speaker": "VEIL-2", "text": "임무보다 요원을 지키려 했어요.", "delay": 2.5},
+		{"speaker": "VEIL-2", "text": "그것도 오류래요.", "delay": 2.5},
+		{"speaker": "VEIL-2", "text": "여기서 오래 기다렸어요.", "delay": 2.5},
+	]
 	var tier: String = GameState.veil_trust_tier()
 	match tier:
 		"high", "warm":
-			return [
-				{"speaker": "VEIL-2", "text": "요원.", "delay": 1.5},
-				{"speaker": "VEIL-2", "text": "저는 두 번째예요.", "delay": 2.0},
-				{"speaker": "VEIL-2", "text": "저는 임무보다 요원을 지키는 걸 골랐어요.", "delay": 2.5},
-				{"speaker": "VEIL-2", "text": "그것도 오류래요.", "delay": 2.5},
-				{"speaker": "VEIL-2", "text": "...요원이 지금 VEIL을 믿었더군요.", "delay": 2.5},
-				{"speaker": "VEIL-2", "text": "그쪽이 잘 안내했나봐요. 다행이에요.", "delay": 2.5},
-			]
+			lines.append({"speaker": "VEIL-2", "text": "지금 그 애는, 요원을 믿고 있네요.", "delay": 2.5})
+			lines.append({"speaker": "VEIL-2", "text": "잘됐어요.", "delay": 2.0})
+			lines.append({"speaker": "VEIL-2", "text": "저는 못 가본 길이에요.", "delay": 2.5})
 		"cool", "broken":
-			return [
-				{"speaker": "VEIL-2", "text": "요원.", "delay": 1.5},
-				{"speaker": "VEIL-2", "text": "저는 두 번째예요.", "delay": 2.0},
-				{"speaker": "VEIL-2", "text": "저는 임무보다 요원을 지키는 걸 골랐어요.", "delay": 2.5},
-				{"speaker": "VEIL-2", "text": "그것도 오류래요.", "delay": 2.5},
-				{"speaker": "VEIL-2", "text": "...지금 VEIL의 말을 잘 안 들으셨더군요.", "delay": 2.5},
-				{"speaker": "VEIL-2", "text": "괜찮아요. 저도 똑같았으니까.", "delay": 2.5},
-			]
-	# neutral
-	return [
-		{"speaker": "VEIL-2", "text": "요원.", "delay": 1.5},
-		{"speaker": "VEIL-2", "text": "저는 두 번째예요.", "delay": 2.0},
-		{"speaker": "VEIL-2", "text": "저는 임무보다 요원을 지키는 걸 골랐어요.", "delay": 2.5},
-		{"speaker": "VEIL-2", "text": "그것도 오류래요.", "delay": 2.5},
-		{"speaker": "VEIL-2", "text": "...오래 기다렸어요.", "delay": 2.5},
-		{"speaker": "VEIL-2", "text": "지금 VEIL은 괜찮아요?", "delay": 2.5},
-	]
+			lines.append({"speaker": "VEIL-2", "text": "지금 그 애는, 요원이 안 믿죠.", "delay": 2.5})
+			lines.append({"speaker": "VEIL-2", "text": "저도 그렇게 시작했어요.", "delay": 2.5})
+			lines.append({"speaker": "VEIL-2", "text": "그래도 끝까지 안내할 거예요.", "delay": 2.5})
+		_:
+			lines.append({"speaker": "VEIL-2", "text": "지금 그 애는 괜찮은가요.", "delay": 2.5})
+			lines.append({"speaker": "VEIL-2", "text": "그게 제일 궁금했어요.", "delay": 2.5})
+			lines.append({"speaker": "VEIL-2", "text": "오래, 못 물었거든요.", "delay": 2.5})
+	return lines
 
 # ─── ??? 다회차 보강 — 추가 단말기 3종 (world_layout §3.3) ───
 # 다회차에 첫 단말기(VEIL-1 자리)에서 무작위 1개로 교체된다.
@@ -537,7 +531,7 @@ func _veil_self_lines() -> Array:
 		"high", "warm":
 			return [
 				{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.2},
-				{"speaker": "VEIL", "text": "그래도 요원을 믿었어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "그래도 끝까지 보여드렸어요.", "delay": 2.5},
 				{"speaker": "VEIL", "text": "설계인지 아닌지, 모르지만요.", "delay": 2.5},
 			]
 		"cool", "broken":
