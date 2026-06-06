@@ -91,7 +91,7 @@ const BRIEFINGS: Array = [
 # 첫 임무 시작 화면 — Briefing.gd가 stage 0 진입 시 한 번만 표시.
 # 한 화면에 임무명·목표·VEIL 동행을 같이 통보 — 이전엔 라인이 4개로 쪼개져
 # 사용자가 무슨 내용인지 못 읽고 그냥 ENTER로 넘기던 문제(사용자 보고).
-const INTRO_SYSTEM: String = "OPERATION PALIMPSEST\nSILO-7. 데이터 회수.\n사전 정보 없음. 현장 지원: VEIL."
+const INTRO_SYSTEM: String = "침투 작전 — 보안 시설 SILO-7\n목표: 핵심 데이터 회수\n도면 없음. 사전 정보 없음.\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
 
 # 시스템 텍스트 직후 VEIL 첫 마디 — 한 화면(여러 줄)으로 묶음.
 # 한 줄씩 나누면 ENTER 연타로 의미가 다 새서 한 호흡으로 통보.
