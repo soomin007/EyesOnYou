@@ -634,7 +634,7 @@ static func _lab() -> Dictionary:
 
 # ─── 12. 도전 방 — 블랙아웃 런 (HORIZONTAL, 짧음, 노 데미지 30s) ──
 # world_layout §3.2. Stage 4 분기 의도적 선택지.
-# 강화: 좁은 발판(60~120px) + 가시 함정 + drone/bomber 압박 + 직선상 patrol 5.
+# 강화: 좁은 발판(60~120px) + 가시 함정 + drone/bomber 압박 + 직선상 patrol 4(입구 여유).
 # 1 hit fail이라 어떤 데미지도 즉시 실패 — "긴장감"은 정밀 이동 + 시야 제한에서 나옴.
 static func _blackout() -> Dictionary:
 	return {
@@ -656,9 +656,12 @@ static func _blackout() -> Dictionary:
 			{"pos": Vector2(2160, 520), "w": 140.0},
 		],
 		"enemies": {
-			# 지면 patrol 5 + bomber 1 압박 + 천장 drone 2 (폭탄 투하)
+			# 지면 patrol 4 + bomber 1 압박 + 천장 drone 2 (폭탄 투하)
+			# 입구 여유(사용자 피드백 2026-06-07: "불 켜지자마자 코앞에 적이라 당황스럽다") —
+			# 게이트(x=240) 코앞에 있던 첫 patrol(x=400)을 제거. 첫 적은 x=750(게이트에서
+			# ~510px 런웨이, 첫 가시 480 넘은 뒤). 불 켜지면 우선 살펴볼 여유가 생긴다.
 			"patrol": [
-				Vector2(400, 600), Vector2(750, 600), Vector2(1100, 600),
+				Vector2(750, 600), Vector2(1100, 600),
 				Vector2(1500, 600), Vector2(1850, 600),
 			],
 			"bomber": [Vector2(1300, 600)],
