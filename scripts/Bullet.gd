@@ -111,5 +111,5 @@ func _on_body_entered(body: Node) -> void:
 		var skip_sfx: bool = body.is_in_group("boundary_wall") \
 			or body.is_in_group("ground") or body.is_in_group("platform")
 		if not skip_sfx:
-			SfxPlayer.play("bullet_impact_wall")
+			SfxPlayer.play_at("bullet_impact_wall", global_position)
 		queue_free()

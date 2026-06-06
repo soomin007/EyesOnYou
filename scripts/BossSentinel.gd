@@ -256,7 +256,7 @@ func _bomb_interval() -> float:
 	return BOMB_INTERVAL_P1
 
 func _drop_bomb() -> void:
-	SfxPlayer.play("bomb_throw")
+	SfxPlayer.play_at("bomb_throw", global_position)
 	var bomb := Bomb.new()
 	bomb.global_position = global_position + Vector2(0, 20.0)
 	bomb.velocity = Vector2(0, 60.0)
@@ -264,7 +264,7 @@ func _drop_bomb() -> void:
 
 func _fire_missiles() -> void:
 	# 좌/우 두 발 — 수평 이동, 플레이어 방향 노리지 않고 양방향으로 압박
-	SfxPlayer.play("boss_missile_launch")
+	SfxPlayer.play_at("boss_missile_launch", global_position)
 	_spawn_missile(global_position + Vector2(-30.0, -2.0), -1)
 	_spawn_missile(global_position + Vector2(30.0, -2.0), 1)
 
@@ -301,7 +301,7 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 	hp = max(0, hp - amount)
 	_flash_hit()
 	if hp > 0:
-		SfxPlayer.play("boss_hurt")
+		SfxPlayer.play_at("boss_hurt", global_position)
 	# 페이즈 전환 검사 — 자폭 진입 후에는 페이즈 재전환 안 함.
 	if not story_simplified and not self_destruct_active:
 		if phase < 2 and hp <= HP_PHASE2:
@@ -325,7 +325,7 @@ func _flash_hit() -> void:
 func _transition_to(new_phase: int) -> void:
 	phase = new_phase
 	phase_freeze_t = PHASE_FREEZE_DURATION
-	SfxPlayer.play("boss_phase_change")
+	SfxPlayer.play_at("boss_phase_change", global_position)
 	# 텔레그래프 노드 리셋 — 전환 직후 잔존 점등이 어색.
 	bomb_telegraph_t = 0.0
 	missile_telegraph_t = 0.0
@@ -389,7 +389,7 @@ func _spawn_minion(kind: int, pos: Vector2, hp_value: int) -> CharacterBody2D:
 func _arm_self_destruct() -> void:
 	self_destruct_active = true
 	self_destruct_t = 0.0
-	SfxPlayer.play("boss_self_destruct_alarm")
+	SfxPlayer.play_at("boss_self_destruct_alarm", global_position)
 	# 위험 영역 시각화 — inner(380, 풀뎀) 빨강, outer(1200, 1뎀) 노랑.
 	# outer 너머가 안전 영역. ARENA 1920이라 벽 끝까지 도망가면 outer 너머 도달.
 	danger_ring_inner = _make_danger_ring(SELF_DESTRUCT_INNER, Color(0.95, 0.25, 0.25, 0.85), 4.0)
@@ -468,8 +468,8 @@ func _die() -> void:
 	# self_destruct_t == 0이면 _arm 직후 즉사한 케이스, t < SELF_DESTRUCT_TIME이면 카운트다운 중.
 	# _detonate에서 _die가 호출되는 경우엔 t >= SELF_DESTRUCT_TIME이라 자동으로 분기됨.
 	if self_destruct_active and self_destruct_t < SELF_DESTRUCT_TIME:
-		SfxPlayer.play("boss_self_destruct_disarm")
-	SfxPlayer.play("boss_death")
+		SfxPlayer.play_at("boss_self_destruct_disarm", global_position)
+	SfxPlayer.play_at("boss_death", global_position)
 	# 보스가 죽으면 소환된 잔당도 함께 정리 — ARENA에 잔존 적이 남아 클리어 흐름이 어색해지는 것 방지.
 	for m in summoned_minions:
 		if is_instance_valid(m):

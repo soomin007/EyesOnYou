@@ -54,7 +54,7 @@ func _on_body_entered(_body: Node) -> void:
 
 func _explode() -> void:
 	exploded = true
-	SfxPlayer.play("bomb_explode")
+	SfxPlayer.play_at("bomb_explode", global_position)
 	for n in get_tree().get_nodes_in_group("player"):
 		if not (n is Node2D):
 			continue

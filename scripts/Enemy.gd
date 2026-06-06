@@ -30,7 +30,7 @@ const PATROL_RECOVERY: float = 1.0
 # 사격 윈도우는 240~260px 좁게 남겨두어 가끔 한두 발만 쏘게.
 const PATROL_CHARGE_RANGE: float = 240.0
 const PATROL_FIRE_INTERVAL: float = 1.5
-const PATROL_FIRE_AIM_TIME: float = 1.0  # 2026-06-05 사용자 피드백 — 0.3은 보자마자 발사 수준이라 회피 불가능. 1.0이면 조준 텔레그래프 인지 + 회피 윈도우 확보.
+const PATROL_FIRE_AIM_TIME: float = 0.7  # 2026-06-06 사용자 피드백 — 1.0은 너무 느슨. 0.7로 살짝 조여 인식/반응을 빠르게 (Sniper와 동일). 여전히 텔레그래프 인지 + 회피 윈도우는 남김.
 const PATROL_BULLET_DAMAGE: int = 1
 
 # Bomber — 천천히 접근 + 근접 시 자폭
@@ -359,7 +359,7 @@ func _player_in_charge_range(p: Node2D) -> bool:
 	return dx <= PATROL_DETECT_X and dy <= PATROL_DETECT_Y
 
 func _patrol_fire(p: Node2D) -> void:
-	SfxPlayer.play("enemy_patrol_fire")
+	SfxPlayer.play_at("enemy_patrol_fire", global_position)
 	var b := EnemyBullet.new()
 	b.damage = PATROL_BULLET_DAMAGE
 	# 2026-06-05 사용자 피드백 — 발사가 수평이 아니라 살짝 비스듬해서 옆으로 날아옴.
@@ -422,7 +422,7 @@ func _start_aim() -> void:
 	aim_line.default_color = Color(1.0, 0.30, 0.30, 0.55)
 	aim_line.z_index = 1
 	get_parent().add_child(aim_line)
-	SfxPlayer.play("enemy_sniper_charge")
+	SfxPlayer.play_at("enemy_sniper_charge", global_position)
 
 func _update_aim() -> void:
 	if aim_line == null:
@@ -468,7 +468,7 @@ func _tick_drone(delta: float) -> void:
 	move_and_slide()
 
 func _drop_bomb() -> void:
-	SfxPlayer.play("enemy_drone_drop")
+	SfxPlayer.play_at("enemy_drone_drop", global_position)
 	var b := Bomb.new()
 	b.global_position = global_position + Vector2(0, 8)
 	get_parent().add_child(b)
@@ -554,7 +554,7 @@ func _tick_bomber(delta: float) -> void:
 					bomber_state = BomberState.ARMING
 					bomber_state_timer = BOMBER_ARM_TIME
 					velocity.x = 0.0
-					SfxPlayer.play("enemy_bomber_beep")
+					SfxPlayer.play_at("enemy_bomber_beep", global_position)
 				elif not _bomber_in_detect_range(p):
 					bomber_state = BomberState.ROAMING
 		BomberState.ARMING:
@@ -582,7 +582,7 @@ func _bomber_in_detect_range(p: Node2D) -> bool:
 func _bomber_explode() -> void:
 	if dead:
 		return
-	SfxPlayer.play("enemy_bomber_explode")
+	SfxPlayer.play_at("enemy_bomber_explode", global_position)
 	# 폭발 데미지 — 반경 안의 플레이어에게
 	var p := _find_player()
 	if p != null and global_position.distance_to(p.global_position) <= BOMBER_BLAST_RADIUS:
@@ -682,7 +682,7 @@ func _fire_at_player() -> void:
 	var dist: float = global_position.distance_to(player.global_position)
 	if dist > SNIPER_RANGE:
 		return
-	SfxPlayer.play("enemy_sniper_fire")
+	SfxPlayer.play_at("enemy_sniper_fire", global_position)
 	var tracer := Line2D.new()
 	tracer.width = 2.5
 	tracer.default_color = Color(1.0, 0.55, 0.30, 1.0)
@@ -729,18 +729,18 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	# 즉 bullet의 진행 방향(from_dir)과 enemy의 dir이 반대 부호일 때 head-on이라 막음.
 	if enemy_type == EnemyType.SHIELD and from_dir != 0 and _shield_blocks(from_dir):
 		_show_block_spark(from_dir)
-		SfxPlayer.play("bullet_deflect_shield")
+		SfxPlayer.play_at("bullet_deflect_shield", global_position)
 		return
 	# from_dir != 0이면 bullet 명중. 폭발/스킬(from_dir == 0)은 자체 SFX 별도.
 	if from_dir != 0:
-		SfxPlayer.play("bullet_impact_enemy")
+		SfxPlayer.play_at("bullet_impact_enemy", global_position)
 	hp -= amount
 	modulate = Color(1.6, 1.6, 1.6)
 	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.15)
 	if hp <= 0:
 		_die()
 	else:
-		SfxPlayer.play("enemy_hurt")
+		SfxPlayer.play_at("enemy_hurt", global_position)
 
 func _show_block_spark(from_dir: int) -> void:
 	# 방패 막힘 — 노란 짧은 라인이 방패 면(enemy.dir 쪽 외곽)에서 튀는 효과
@@ -764,6 +764,6 @@ func _die() -> void:
 	dead = true
 	# Bomber는 _bomber_explode가 폭발 SFX를 먼저 재생하므로 여기서 enemy_death는 생략 — 음향 중복 방지.
 	if enemy_type != EnemyType.BOMBER:
-		SfxPlayer.play("enemy_death")
+		SfxPlayer.play_at("enemy_death", global_position)
 	emit_signal("killed", global_position)
 	queue_free()

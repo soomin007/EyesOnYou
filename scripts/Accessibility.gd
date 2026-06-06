@@ -33,15 +33,16 @@ const CAPTION_MAP: Dictionary = {
 	"enemy_drone_drop": "[드론 강하]",
 	"enemy_bomber_beep": "[자폭 카운트다운]",
 	"enemy_bomber_explode": "[자폭 폭발]",
-	# 보스
-	"boss_phase_change": "[보스 변화]",
-	"boss_missile_launch": "[미사일 발사]",
-	"boss_self_destruct_alarm": "[자폭 경보]",
-	"boss_self_destruct_disarm": "[자폭 해제]",
+	"enemy_death": "[적 처치]",
+	# 보스 — 누가 하는 공격인지 분명하게 "보스" 접두.
+	"boss_phase_change": "[보스 단계 전환]",
+	"boss_missile_launch": "[보스 미사일 발사]",
+	"boss_self_destruct_alarm": "[보스 자폭 경보]",
+	"boss_self_destruct_disarm": "[보스 자폭 해제]",
 	"boss_death": "[보스 파괴]",
-	"boss_alert_text": "[경고]",
-	# 폭발물 / 투사체
-	"bomb_throw": "[폭탄 투척]",
+	"boss_alert_text": "[보스 경고]",
+	# 폭발물 / 투사체 (bomb_throw는 보스 전용 — 보스 폭탄)
+	"bomb_throw": "[보스 폭탄 투척]",
 	"bomb_explode": "[폭발]",
 	"bullet_deflect_shield": "[방패에 튕김]",
 	# 환경 위협 / 상호작용

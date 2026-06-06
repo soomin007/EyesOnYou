@@ -11,6 +11,14 @@ const POOL_SIZE: int = 8
 const BASE_DB: float = -6.0
 const SILENT_DB: float = -80.0
 
+# 위치 기반(2D) 풀 — play_at()이 사용. 음원을 world_pos에 두고 Player의
+# AudioListener2D 기준으로 거리 감쇠 + 좌우 팬. 적/보스/폭탄/총알 등 화면상
+# 위치가 있는 소리에 사용 (UI·스토리·플레이어 자기 소리는 기존 play() 유지).
+const POOL2D_SIZE: int = 12
+# max_distance에서 무음. 가장 큰 ARENA(폭 1920)에서도 반대편 끝이 약하게 들리도록 넉넉히.
+const SFX_2D_MAX_DISTANCE: float = 2400.0
+const SFX_2D_ATTENUATION: float = 1.2
+
 # 효과음 재생 시 emit — 접근성 자막(Accessibility)이 구독. id는 base id(variant 번호 없음).
 # 볼륨 0이어도 play()는 호출되므로 무음 플레이 중에도 자막은 동작한다.
 signal sfx_played(id: String)
@@ -88,6 +96,8 @@ const KNOWN_SFX: Array[String] = [
 
 var _players: Array[AudioStreamPlayer] = []
 var _next_idx: int = 0
+var _players2d: Array[AudioStreamPlayer2D] = []
+var _next_idx2d: int = 0
 # id → Array[AudioStream]. 길이 0이면 미등록(아직 파일 없음) — play() 호출 시 무시.
 var _streams: Dictionary = {}
 
@@ -99,6 +109,14 @@ func _ready() -> void:
 		p.volume_db = SILENT_DB
 		add_child(p)
 		_players.append(p)
+	for i in POOL2D_SIZE:
+		var p2 := AudioStreamPlayer2D.new()
+		p2.bus = "Master"
+		p2.volume_db = SILENT_DB
+		p2.max_distance = SFX_2D_MAX_DISTANCE
+		p2.attenuation = SFX_2D_ATTENUATION
+		add_child(p2)
+		_players2d.append(p2)
 	for id in KNOWN_SFX:
 		_register_sfx(id)
 
@@ -143,6 +161,26 @@ func play(id: String, volume_offset_db: float = 0.0) -> void:
 	var player: AudioStreamPlayer = _players[_next_idx]
 	_next_idx = (_next_idx + 1) % _players.size()
 	player.stream = stream
+	var preset_offset: float = float(VOLUME_OFFSETS.get(id, 0.0))
+	player.volume_db = _target_db() + preset_offset + volume_offset_db
+	player.play()
+	emit_signal("sfx_played", id)
+
+# 위치 기반 재생. world_pos에 음원을 두고 Player.AudioListener2D 기준 거리 감쇠 + 좌우 팬.
+# 그 외 규약은 play()와 동일 — 미등록 id no-op, 볼륨 0이어도 자막 위해 play + emit.
+func play_at(id: String, world_pos: Vector2, volume_offset_db: float = 0.0) -> void:
+	if not _streams.has(id):
+		return
+	var variants: Array = _streams[id]
+	if variants.is_empty():
+		return
+	var stream: AudioStream = variants[randi() % variants.size()]
+	if stream == null:
+		return
+	var player: AudioStreamPlayer2D = _players2d[_next_idx2d]
+	_next_idx2d = (_next_idx2d + 1) % _players2d.size()
+	player.stream = stream
+	player.global_position = world_pos
 	var preset_offset: float = float(VOLUME_OFFSETS.get(id, 0.0))
 	player.volume_db = _target_db() + preset_offset + volume_offset_db
 	player.play()

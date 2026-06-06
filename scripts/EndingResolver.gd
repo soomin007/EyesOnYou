@@ -102,9 +102,17 @@ static func _get_ending_lines_brief(ending: String) -> Array:
 				{"speaker": "SUB",  "text": "안에 무엇이 있었는지는 알 수 없다.", "delay": 2.5},
 			]
 		ENDING_C:
+			# ??? 미방문 시엔 "물어볼 거 있다/없다" 선택지를 띄우지 않는다.
+			# (사용자 피드백 2026-06-06: 아무 맥락 없이 그 선택을 보면 "있다"를 누르게 되고,
+			#  그러면 봉인 구역 등 맥락 없는 내용이 갑자기 튀어나와 부자연스러움.)
+			# 대신 짧게 자족적으로 닫되, 잠긴 문으로 호기심 hint만 남겨 2회차를 유도.
 			return [
 				{"speaker": "VEIL", "text": "임무 완료예요, 요원.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "...하나만 물어봐도 돼요?", "delay": 0.0, "choice": true},
+				{"speaker": "VEIL", "text": "같이 왔는데, 아직 요원을 다 모르겠어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "물어보고 싶은 게 있었는데.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "...그 잠긴 문 안쪽까지 같이 가게 되면, 그때 물어볼게요.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "이 시설엔 끝까지 닿지 못한 구역이 있었다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "거기 무엇이 있었는지는, 아직 기록되지 않았다.", "delay": 2.5},
 			]
 		ENDING_D:
 			return [
