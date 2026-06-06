@@ -34,7 +34,7 @@ const ALL_ROUTES: Array = [
 		"min_stage": 0, "max_stage": 1,
 		"tags": ["원거리", "노출", "이동"],
 		"veil_comment": "옥상으로 갈래요? 시야는 트이지만 그만큼 노출돼요.",
-		"entry_comment": "옥상이 출구예요. 멈추면 저격에 잡혀요 — 계속 움직여요.",
+		"entry_comment": "옥상이 출구예요. 멈추면 저격에 잡혀요. 계속 움직여요.",
 		"stage_color": Color(0.10, 0.13, 0.20),
 	},
 	{
@@ -64,7 +64,7 @@ const ALL_ROUTES: Array = [
 		"min_stage": 1, "max_stage": 3,
 		"tags": ["근접전", "함정", "전투"],
 		"veil_comment": "옛 지하철이에요. 좁고 어두워요. 대시 써서 함정 넘어가세요.",
-		"entry_comment": "지하철 통로예요. 좁아요 — 한 번에 멀리 가요.",
+		"entry_comment": "지하철 통로예요. 좁아요. 한 번에 멀리 가요.",
 		"stage_color": Color(0.08, 0.10, 0.14),
 	},
 	{
@@ -93,7 +93,7 @@ const ALL_ROUTES: Array = [
 		# stage 1부터 등장 가능 — 외벽 옥상 직후 감시탑(둘 다 노출+높이)이 자연스럽게 이어짐.
 		"min_stage": 1, "max_stage": 4,
 		"tags": ["원거리", "전투", "노출"],
-		"veil_comment": "감시탑은 위험해요. 저격이 많아요 — 엄폐 짧게, 이동은 빠르게.",
+		"veil_comment": "감시탑은 위험해요. 저격이 많아요. 엄폐 짧게, 이동은 빠르게.",
 		"entry_comment": "관제 구역이에요. 시야 안에 들어가는 순간 쏴와요.",
 		"stage_color": Color(0.18, 0.16, 0.22),
 	},
@@ -151,7 +151,7 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 5, "max_stage": 6,
 		"tags": ["전투", "드론", "밝은_환경"],
-		"veil_comment": "핵심부예요. 정면 돌파 — 드론 상시 순찰. 보상은 큽니다.",
+		"veil_comment": "핵심부예요. 정면 돌파, 드론 상시 순찰. 보상은 큽니다.",
 		"entry_comment": "핵심부에 들어왔어요. 거리 잘 잡아요.",
 		"stage_color": Color(0.22, 0.18, 0.18),
 	},

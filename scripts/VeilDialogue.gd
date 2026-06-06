@@ -51,7 +51,7 @@ const BRIEFINGS: Array = [
 	],
 	# stage 2 — ACT 1→2 전환 (VEIL 판단 틀림 인정)
 	[
-		"중간이에요. 저격수 자리가 더 많아져요 — 시야 끊기는 곳 골라요.",
+		"중간이에요. 저격수 자리가 더 많아져요. 시야 끊기는 곳 골라요.",
 		"경비가 예상보다 많아요. 제 판단이 틀렸어요.",
 		"이 시설, 생각보다 오래됐어요.",
 	],
@@ -84,7 +84,7 @@ const BRIEFINGS: Array = [
 # 첫 임무 시작 화면 — Briefing.gd가 stage 0 진입 시 한 번만 표시.
 # 한 화면에 임무명·목표·VEIL 동행을 같이 통보 — 이전엔 라인이 4개로 쪼개져
 # 사용자가 무슨 내용인지 못 읽고 그냥 ENTER로 넘기던 문제(사용자 보고).
-const INTRO_SYSTEM: String = "OPERATION PALIMPSEST\nSILO-7 — 분류 미상의 데이터 회수.\n사전 정보 없음. AI 동반자 VEIL과 동행."
+const INTRO_SYSTEM: String = "OPERATION PALIMPSEST\nSILO-7: 분류 미상의 데이터 회수.\n사전 정보 없음. AI 동반자 VEIL과 동행."
 
 # 시스템 텍스트 직후 VEIL 첫 마디 — 한 화면(여러 줄)으로 묶음.
 # 한 줄씩 나누면 ENTER 연타로 의미가 다 새서 한 호흡으로 통보.

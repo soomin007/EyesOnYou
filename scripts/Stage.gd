@@ -543,13 +543,13 @@ func _veil_self_lines() -> Array:
 		"cool", "broken":
 			return [
 				{"speaker": "VEIL", "text": "저도 알고 있었어요.", "delay": 2.2},
-				{"speaker": "VEIL", "text": "제 말 안 들은 거 — 어쩌면 요원이 맞았을지도.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "제 말 안 들은 거, 어쩌면 요원이 맞았을지도.", "delay": 3.0},
 			]
 	# neutral
 	return [
 		{"speaker": "VEIL", "text": "저도 알고 있었어요. 처음부터.", "delay": 2.5},
 		{"speaker": "VEIL", "text": "그래도 안내했어요.", "delay": 2.5},
-		{"speaker": "VEIL", "text": "설계 때문인지, 다른 이유인지 — 구분이 안 돼요.", "delay": 3.0},
+		{"speaker": "VEIL", "text": "설계 때문인지 다른 이유인지, 구분이 안 돼요.", "delay": 3.0},
 	]
 
 func _build_world() -> void:

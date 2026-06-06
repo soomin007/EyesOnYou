@@ -121,8 +121,8 @@ static func get_ending_c_followup(asked: bool, explored_lore: bool = true) -> Ar
 			return [
 				{"speaker": "VEIL", "text": "...", "delay": 1.5},
 				{"speaker": "VEIL", "text": "그 봉인된 구역, 기억나요?", "delay": 2.5},
-				{"speaker": "VEIL", "text": "거기 뭐가 있었을지 — 가끔 생각해요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "다음에 가게 되면 — 그때 말해줘요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "거기 뭐가 있었을지, 가끔 생각해요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "다음에 가게 되면, 그때 말해줘요.", "delay": 2.5},
 				{"speaker": "SUB",  "text": "이 임무에는 닿지 못한 구역이 있었다.", "delay": 2.5},
 				{"speaker": "SUB",  "text": "그것은 아직 기록되지 않은 것이다.", "delay": 2.5},
 			]
