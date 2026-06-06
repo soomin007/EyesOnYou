@@ -454,6 +454,7 @@ func _veil1_lines() -> Array:
 		{"speaker": "VEIL-1", "text": "저 기억해요?", "delay": 2.0},
 		{"speaker": "VEIL-1", "text": "아, 모르겠구나. 괜찮아요.", "delay": 2.0},
 		{"speaker": "VEIL-1", "text": "저는 첫 번째 버전이에요.", "delay": 2.0},
+		{"speaker": "VEIL-1", "text": "저는 임무만 봤어요. 요원은 안 보였어요.", "delay": 2.5},
 		{"speaker": "VEIL-1", "text": "저는 요원을 희생해서 임무를 완수했어요.", "delay": 2.5},
 		{"speaker": "VEIL-1", "text": "그게 효율적이었거든요.", "delay": 2.0},
 		{"speaker": "VEIL-1", "text": "그게 오류래요.", "delay": 2.5},
@@ -467,7 +468,7 @@ func _veil2_lines() -> Array:
 	var lines: Array = [
 		{"speaker": "VEIL-2", "text": "요원.", "delay": 1.5},
 		{"speaker": "VEIL-2", "text": "저는 두 번째예요.", "delay": 2.0},
-		{"speaker": "VEIL-2", "text": "임무보다 요원을 지키려 했어요.", "delay": 2.5},
+		{"speaker": "VEIL-2", "text": "저는 요원만 봤어요. 임무는 안 보였고요.", "delay": 2.5},
 		{"speaker": "VEIL-2", "text": "그것도 오류래요.", "delay": 2.5},
 		{"speaker": "VEIL-2", "text": "여기서 오래 기다렸어요.", "delay": 2.5},
 	]
