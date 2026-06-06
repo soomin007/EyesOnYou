@@ -41,6 +41,10 @@ var tutorial_done: bool = false
 var bgm_volume: float = 1.0
 var sfx_volume: float = 1.0
 
+# 접근성 — settings.cfg에 영속. reset()에서 안 지움(볼륨처럼 사용자 환경 설정).
+var screen_brightness: float = 1.0   # 0.5~1.5 (1.0=기본). Accessibility 오버레이가 반영.
+var sfx_captions: bool = false       # 효과음 자막 (무음 플레이 대응)
+
 # 스토리 모드 — 키보드/패드 조작이 어려운 사람을 위한 간략화 모드.
 # 체력 무제한 / 드론 배제 / 보스 P1만 / 스테이지·맵 수 축소.
 # Title의 "스토리 모드" 버튼으로만 켜지고, ending에서 reset() 시 꺼진다.
@@ -337,6 +341,8 @@ func load_settings() -> void:
 		seen_enemies.append(str(v))
 	hidden_visit_count = int(cf.get_value("flags", "hidden_visit_count", 0))
 	visited_arcturus = bool(cf.get_value("flags", "visited_arcturus", false))
+	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
+	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
 	if version < SETTINGS_VERSION:
 		# 구 스키마 — 키바인드 폐기, project.godot + Main.gd 기본값 유지
 		return
@@ -377,6 +383,8 @@ func save_settings() -> void:
 	cf.set_value("flags", "seen_enemies", seen_enemies)
 	cf.set_value("flags", "hidden_visit_count", hidden_visit_count)
 	cf.set_value("flags", "visited_arcturus", visited_arcturus)
+	cf.set_value("access", "brightness", screen_brightness)
+	cf.set_value("access", "sfx_captions", sfx_captions)
 	cf.set_value("audio", "bgm", bgm_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
 	for action in KEYBIND_ACTIONS:

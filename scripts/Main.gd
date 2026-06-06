@@ -4,6 +4,7 @@ func _ready() -> void:
 	_bind_default_mouse_inputs()
 	_bind_wasd_to_ui()
 	GameState.load_settings()
+	Accessibility.apply()
 	GameState.reset()
 	get_tree().change_scene_to_file(SceneRouter.TITLE)
 

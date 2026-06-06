@@ -96,6 +96,7 @@ func _ready() -> void:
 
 	tabs.add_child(_build_keybind_tab())
 	tabs.add_child(_build_av_tab())
+	tabs.add_child(_build_accessibility_tab())
 	tabs.add_child(_build_credits_tab())
 	# 디버그 탭은 잠금 해제(GameState.debug_unlocked) 시에만 노출.
 	# 잠금 해제는 Title 화면에서 비밀 키 시퀀스 "snu" 입력으로.
@@ -335,6 +336,104 @@ func _build_av_tab() -> Control:
 	section_b.add_child(_make_volume_row("배경음 볼륨", "bgm"))
 	section_b.add_child(_make_volume_row("효과음 볼륨", "sfx"))
 	return outer
+
+# 접근성 탭 — 화면 밝기 + 효과음 자막. 값은 GameState에 영속, Accessibility 오버레이가 반영.
+func _build_accessibility_tab() -> Control:
+	var outer := MarginContainer.new()
+	outer.name = "접근성"
+	outer.add_theme_constant_override("margin_left", 16)
+	outer.add_theme_constant_override("margin_right", 16)
+	outer.add_theme_constant_override("margin_top", 18)
+	outer.add_theme_constant_override("margin_bottom", 18)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 18)
+	outer.add_child(v)
+
+	v.add_child(_make_section_header("화면 밝기"))
+	var bri_note := Label.new()
+	bri_note.text = "화면이 너무 어둡거나 밝게 느껴지면 조절하세요. 기본 100%."
+	bri_note.add_theme_font_size_override("font_size", 13)
+	bri_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	bri_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(bri_note)
+	v.add_child(_make_brightness_row())
+
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 8)
+	v.add_child(spacer)
+
+	v.add_child(_make_section_header("효과음 자막"))
+	var cap_note := Label.new()
+	cap_note.text = "소리 없이 플레이할 때, 중요한 효과음(적 사격·폭발·경보 등)을 화면 우하단에 글로 표시해요."
+	cap_note.add_theme_font_size_override("font_size", 13)
+	cap_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	cap_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(cap_note)
+	v.add_child(_make_captions_row())
+	return outer
+
+var _brightness_value_label: Label
+
+func _make_brightness_row() -> Control:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 14)
+	var l := Label.new()
+	l.text = "밝기"
+	l.custom_minimum_size = Vector2(110, 28)
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hb.add_child(l)
+	var slider := HSlider.new()
+	slider.min_value = 0.5
+	slider.max_value = 1.5
+	slider.step = 0.05
+	slider.custom_minimum_size = Vector2(260, 28)
+	slider.value = GameState.screen_brightness
+	slider.value_changed.connect(_on_brightness_changed)
+	hb.add_child(slider)
+	_brightness_value_label = Label.new()
+	_brightness_value_label.custom_minimum_size = Vector2(56, 28)
+	_brightness_value_label.add_theme_font_size_override("font_size", 14)
+	_brightness_value_label.add_theme_color_override("font_color", Color(0.78, 0.82, 0.9))
+	_brightness_value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_brightness_value_label.text = "%d%%" % int(round(GameState.screen_brightness * 100.0))
+	hb.add_child(_brightness_value_label)
+	return hb
+
+func _on_brightness_changed(value: float) -> void:
+	GameState.screen_brightness = value
+	Accessibility.apply()
+	if _brightness_value_label != null:
+		_brightness_value_label.text = "%d%%" % int(round(value * 100.0))
+	SfxPlayer.play("ui_slider_tick")
+	GameState.save_settings()
+
+func _make_captions_row() -> Control:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 14)
+	var l := Label.new()
+	l.text = "효과음 자막"
+	l.custom_minimum_size = Vector2(110, 28)
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hb.add_child(l)
+	var toggle := CheckButton.new()
+	toggle.button_pressed = GameState.sfx_captions
+	toggle.text = "켜짐" if GameState.sfx_captions else "꺼짐"
+	toggle.add_theme_font_size_override("font_size", 14)
+	toggle.toggled.connect(_on_captions_toggled.bind(toggle))
+	hb.add_child(toggle)
+	return hb
+
+func _on_captions_toggled(pressed: bool, toggle: CheckButton) -> void:
+	GameState.sfx_captions = pressed
+	toggle.text = "켜짐" if pressed else "꺼짐"
+	GameState.save_settings()
+	# 켤 때 위치/모양을 보여주는 예시 한 줄.
+	if pressed:
+		Accessibility.preview_caption()
 
 # 크레딧 탭 — 패널에서 직접 띄우는 오버레이. Settings를 닫지 않고 그 위에 겹쳐 띄움.
 func _build_credits_tab() -> Control:

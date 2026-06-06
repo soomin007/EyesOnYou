@@ -11,6 +11,10 @@ const POOL_SIZE: int = 8
 const BASE_DB: float = -6.0
 const SILENT_DB: float = -80.0
 
+# 효과음 재생 시 emit — 접근성 자막(Accessibility)이 구독. id는 base id(variant 번호 없음).
+# 볼륨 0이어도 play()는 호출되므로 무음 플레이 중에도 자막은 동작한다.
+signal sfx_played(id: String)
+
 # SFX별 dB 보정 — 어떤 효과음은 너무 크고 어떤 건 너무 작아서 mixing 균형용.
 # 사용자 피드백 기반(2026-05-09): jump/double_jump 너무 큼, step/land 거의 안 들림.
 # 양수 = 더 크게, 음수 = 더 작게.
@@ -142,6 +146,7 @@ func play(id: String, volume_offset_db: float = 0.0) -> void:
 	var preset_offset: float = float(VOLUME_OFFSETS.get(id, 0.0))
 	player.volume_db = _target_db() + preset_offset + volume_offset_db
 	player.play()
+	emit_signal("sfx_played", id)
 
 func _target_db() -> float:
 	var v: float = clampf(GameState.sfx_volume, 0.0, 1.0)
