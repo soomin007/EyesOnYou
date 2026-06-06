@@ -16,6 +16,7 @@ const ROUTE_OPTIONS: Array = [
 	{"id": "route_datacenter", "label": "데이터"},
 	{"id": "route_escape",     "label": "탈출로"},
 	{"id": "route_lab",        "label": "핵심부"},
+	{"id": "route_blackout",   "label": "도전"},
 	{"id": "route_hidden",     "label": "???"},
 ]
 
