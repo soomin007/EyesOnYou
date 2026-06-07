@@ -227,7 +227,7 @@ func _enter_reading_done() -> void:
 	read_lockout_t = READ_LOCKOUT
 	# 화면 하단 닫기 안내.
 	close_hint_label = Label.new()
-	close_hint_label.text = "[ ↑↓ 스크롤   확인 키로 닫기 ]"
+	close_hint_label.text = "[ ↑↓ · W/S · 휠 스크롤   Space·Enter로 닫기 ]"
 	close_hint_label.add_theme_font_size_override("font_size", 14)
 	close_hint_label.add_theme_color_override("font_color", Color(0.95, 0.92, 0.78))
 	close_hint_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
@@ -244,11 +244,15 @@ func _enter_reading_done() -> void:
 
 func _handle_user_scroll(_delta: float) -> void:
 	# 위/아래 hold로 paper_target_y 조정 — 사용자가 다시 읽을 수 있게.
-	if Input.is_action_pressed("ui_up") or Input.is_action_pressed("move_left"):
-		paper_target_y += 12.0
-	elif Input.is_action_pressed("ui_down") or Input.is_action_pressed("move_right"):
-		paper_target_y -= 12.0
-	# 클램프 — 종이 윗단/아랫단을 적당히 보이게.
+	# W/S는 jump 등에 묶여 ui_up/down에 안 붙을 수 있어 물리 키로 직접 체크(사용자: WS로도 스크롤).
+	if Input.is_action_pressed("ui_up") or Input.is_action_pressed("move_left") or Input.is_key_pressed(KEY_W):
+		_scroll_paper(12.0)
+	elif Input.is_action_pressed("ui_down") or Input.is_action_pressed("move_right") or Input.is_key_pressed(KEY_S):
+		_scroll_paper(-12.0)
+
+# 종이를 amount만큼 스크롤하고 윗단/아랫단 클램프. 키 hold·마우스 휠 공용.
+func _scroll_paper(amount: float) -> void:
+	paper_target_y += amount
 	var min_y: float = -(paper.size.y - VIEWPORT_H + MARGIN_TOP * 2.0)
 	if min_y > MARGIN_TOP:
 		min_y = MARGIN_TOP
@@ -264,8 +268,19 @@ func _input(event: InputEvent) -> void:
 	if reading_done:
 		if read_lockout_t > 0.0:
 			return
+		# 마우스 휠 — 종이 스크롤 (휠 업=위로 거슬러 보기). 사용자: 휠로도 스크롤.
+		if event is InputEventMouseButton and event.pressed:
+			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				_scroll_paper(48.0)
+				get_viewport().set_input_as_handled()
+				return
+			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				_scroll_paper(-48.0)
+				get_viewport().set_input_as_handled()
+				return
+		# 닫기 — 확인 키(Space/Enter)·스킵·공격·좌클릭. jump(W)는 스크롤에 쓰므로 닫기에서 뺀다.
 		var close_pressed: bool = false
-		if event.is_action_pressed("jump") or event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack"):
+		if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack"):
 			close_pressed = true
 		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			close_pressed = true

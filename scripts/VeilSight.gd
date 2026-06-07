@@ -6,7 +6,7 @@ extends Control
 #   - 화면 안 위협 → 시안색 다이아몬드 reticle (요원도 보니 은은하게)
 #   - 화면 밖 위협 → 화면 가장자리 화살표 ("네가 못 보는 걸 내가 본다") ← 핵심 가치
 #   - 공격 임박(조준/돌진/폭탄) → 경고색 주황으로 펄스 ("VEIL이 위험을 미리 짚어준다")
-# ACT3(degraded=true)에선 마커가 staggered하게 깜빡이고 군데군데 꺼진다 = "제 눈이 여기서 멈춰요"가
+# ACT3(degraded=true)에선 마커가 staggered하게 깜빡이고 군데군데 꺼진다 = "여기서부터는 잘 안 보여요"가
 # 글이 아니라 화면에서. 표시 안 된 위협은 요원이 직접 봐야 한다 = 역전이 플레이로.
 #
 # 확장 이력: 처음엔 원거리/공중(저격수·드론·폭격기)만 마킹했으나 "있는지조차 모르겠다"는 피드백으로
@@ -15,7 +15,7 @@ extends Control
 var player: Node2D = null
 var degraded: bool = false  # ACT3 — 마커가 흐려지고 꺼짐
 
-const DETECT_RADIUS: float = 2200.0           # 이 안의 위협을 VEIL이 본다 (≈ 화면 한 칸 반 너머)
+const DETECT_RADIUS: float = 1400.0           # 이 안의 위협을 VEIL이 본다 (≈ 화면 한 칸 — 사용자: 범위 축소)
 const CALM: Color = Color(0.42, 0.86, 1.0)    # 평시 — VEIL 시안 (자막 색과 통일감)
 const WARN: Color = Color(1.0, 0.55, 0.22)    # 공격 임박 — 경고 주황
 const EDGE_MARGIN: float = 48.0               # 화면 밖 화살표가 가장자리에서 떨어지는 여백
