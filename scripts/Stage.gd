@@ -138,7 +138,9 @@ func _setup_veil_mistakes() -> void:
 			entry = str(r.get("entry_comment", ""))
 			break
 	if entry != "":
-		_show_veil_subtitle(entry, 3.6)
+		# 맵 진입 첫 멘트 — 빠른 fade-in(0.12s) + 긴 표시(4.5s)로 진입 직후 바로/오래 인지되게
+		# (사용자: 맵 들어갔을 때 첫 멘트가 늦게 뜨는 느낌).
+		_show_veil_subtitle(entry, 4.5, false, true)
 	# ACT3 시야 역전 최고조 — 플레이 *중* 결정론적으로 한 번 더 박는다 (v3 §4 ★).
 	_arm_act3_vision_subtitle()
 
@@ -805,7 +807,7 @@ func _ensure_subtitle_stack() -> void:
 	_subtitle_stack_box.add_theme_constant_override("separation", 6)
 	holder.add_child(_subtitle_stack_box)
 
-func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = false) -> void:
+func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = false, fast_in: bool = false) -> void:
 	SfxPlayer.play("veil_subtitle_in")
 	_ensure_subtitle_stack()
 	var l := Label.new()
@@ -830,7 +832,7 @@ func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = 
 	l.modulate.a = 0.0
 	_subtitle_stack_box.add_child(l)
 	var tw := l.create_tween()
-	tw.tween_property(l, "modulate:a", 1.0, 0.3)
+	tw.tween_property(l, "modulate:a", 1.0, 0.12 if fast_in else 0.3)
 	tw.tween_interval(duration)
 	tw.tween_property(l, "modulate:a", 0.0, 0.5)
 	tw.tween_callback(func() -> void:
