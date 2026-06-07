@@ -266,7 +266,7 @@ func _act3_vision_line(stage: int) -> String:
 		return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
 	if stage >= GameState.effective_total_stages() - 1:
 		return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
-	return "제 눈이 여기서 멈춰요. 이제 요원 거예요."
+	return "여기서부터는 잘 안 보여요. 이제 요원이 봐줘요."
 
 # ─── VEIL 시야 마킹 셋업 (시야=신뢰 파일럿) ───────────────────────
 # VEIL이 원거리/공중 위협을 HUD로 짚어준다. ACT3에선 그 마킹이 흐려지고 꺼진다 = 역전을 플레이로.
@@ -2966,9 +2966,61 @@ func _on_clear_levelup_picked(_picked_id: String) -> void:
 
 func _transition_after_clear() -> void:
 	if GameState.is_final_stage_done():
-		get_tree().change_scene_to_file(SceneRouter.ENDING)
+		# 일반 모드 전투 마무리(보스/데이터센터)는 바로 엔딩으로 끊지 않고 짧은 에필로그로
+		# 보람·여운을 준다(사용자 보고: 전환이 너무 갑작스러움). ???(hidden)은 자체 엔딩 시퀀스가
+		# 있어 제외. 스토리 모드는 탈출 단계가 마무리를 겸하므로 현행 유지.
+		if not GameState.story_mode and GameState.current_route_id != "route_hidden":
+			_play_final_epilogue()
+		else:
+			get_tree().change_scene_to_file(SceneRouter.ENDING)
 	else:
 		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+
+# 최종 보스/스테이지 클리어 → 엔딩 사이의 짧은 에필로그. 검은 화면 위 VEIL의 마무리 한숨으로
+# "해냈다"는 보람과 여운을 주고 엔딩으로 넘긴다. 엔딩 본문(2축 분기)은 ENDING 씬이 담당하므로
+# 여기선 감정적으로 중립적·따뜻한 마무리만. 텍스트는 추후 작가가 다듬을 수 있음.
+func _play_final_epilogue() -> void:
+	GameState.restrict_combat_input = true
+	var ep_layer := CanvasLayer.new()
+	ep_layer.layer = 40
+	add_child(ep_layer)
+	var bg := ColorRect.new()
+	bg.color = Color(0.02, 0.02, 0.03, 1.0)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg.modulate.a = 0.0
+	ep_layer.add_child(bg)
+	var label := Label.new()
+	label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", 22)
+	label.add_theme_color_override("font_color", Color(0.80, 0.92, 1.0))
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	label.add_theme_constant_override("outline_size", 4)
+	label.modulate.a = 0.0
+	ep_layer.add_child(label)
+	# 검은 화면으로 가라앉히기
+	var ft := bg.create_tween()
+	ft.tween_property(bg, "modulate:a", 1.0, 1.0)
+	await ft.finished
+	await get_tree().create_timer(0.6).timeout
+	var lines: Array[String] = [
+		"...끝났어요, 요원.",
+		"데이터, 회수했어요. 임무 완수예요.",
+		"수고했어요. ...정말로.",
+	]
+	for ln in lines:
+		label.text = ln
+		var lt := label.create_tween()
+		lt.tween_property(label, "modulate:a", 1.0, 0.6)
+		lt.tween_interval(1.9)
+		lt.tween_property(label, "modulate:a", 0.0, 0.7)
+		await lt.finished
+		await get_tree().create_timer(0.35).timeout
+	await get_tree().create_timer(0.6).timeout
+	get_tree().change_scene_to_file(SceneRouter.ENDING)
 
 func _show_playground_clear_msg() -> void:
 	# PlaygroundOverlay(layer 30) 위로 띄우기 위해 별도 CanvasLayer 사용
