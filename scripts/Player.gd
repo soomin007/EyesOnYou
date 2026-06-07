@@ -30,6 +30,9 @@ const EXPLOSION_RADIUS: float = 180.0
 # 너프: 3→2. 방패병(HP3)을 한 방에 못 죽이게 해 "모든 적 올킬 만능"을 깬다. 단 방패 무시 AoE라
 # 정면 못 뚫는 방패병에 여전히 유효(2뎀×2) + patrol·sniper·drone·bomber는 한 방 유지 → 군집/방패 상성 보존.
 const EXPLOSION_DAMAGE: int = 2
+# 1회 폭발이 타격하는 최대 적 수 — 뭉친 적을 한 방에 몰살하는 문제(사용자: 감시탑 발판에서 전멸)
+# 방지. 가장 가까운 적부터 이 수만큼만. 군집 처리는 되되 "올킬"은 막는다.
+const MAX_EXPLOSION_HITS: int = 3
 
 var facing: int = 1
 var attack_cd: float = 0.0
@@ -387,14 +390,24 @@ func _spawn_explosion() -> void:
 	var radius: float = EXPLOSION_RADIUS
 	if GameState.get_skill_tier("explosive") >= 2:
 		radius *= 1.3
-	# 데미지: 반경 안 모든 적
+	# 데미지: 반경 안 적을 거리순으로 최대 MAX_EXPLOSION_HITS체만 (몰살 방지).
+	var in_range: Array = []
 	for n in get_tree().get_nodes_in_group("enemy"):
 		if not (n is Node2D):
 			continue
 		var enemy := n as Node2D
-		if enemy.global_position.distance_to(center) <= radius:
-			if enemy.has_method("take_damage"):
-				enemy.take_damage(EXPLOSION_DAMAGE)
+		var d: float = enemy.global_position.distance_to(center)
+		if d <= radius and enemy.has_method("take_damage"):
+			in_range.append({"e": enemy, "d": d})
+	in_range.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["d"]) < float(b["d"]))
+	var hits: int = 0
+	for item in in_range:
+		if hits >= MAX_EXPLOSION_HITS:
+			break
+		var it: Dictionary = item
+		var e: Node2D = it["e"]
+		e.take_damage(EXPLOSION_DAMAGE)
+		hits += 1
 	# 시각: 확장하며 페이드되는 원
 	var blast := Polygon2D.new()
 	blast.color = Color(1.0, 0.55, 0.30, 0.85)
