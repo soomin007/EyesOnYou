@@ -274,13 +274,37 @@ static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 	# 둘 다 없으면 모든 stage 등장 (안전 폴백).
 	return true
 
-# VEIL 추천. 플레이어의 실제 수행(GameState.competence_tier — 최근 피격·죽음)에 반응:
-#   - struggling(고전) → 안전 우선 (가장 낮은 risk, 동점이면 reward 큰 쪽).
-#   - skilled(능숙)    → 보상 우선 (가장 높은 reward, 동점이면 더 도전적인 위험 쪽).
-#   - steady(무난·기본) → 진짜 균형 = 순가치(reward-risk) 최대, 동점이면 안전(risk 낮은) 쪽.
-# hidden / challenge 루트는 항상 제외. "균형"이 실제로 안전을 선호하도록 공식을 바로잡음
-# (이전 reward*2-risk는 이름과 달리 고위험을 밀었음 — 위험2보상2 < 위험3보상3).
-# 호출자가 reasoning 라벨을 표시할 수 있도록 choose_veil_recommendation_with_reason도 제공.
+# VEIL 추천. 플레이어의 실제 수행(GameState.competence_tier — 최근 피격·죽음)에 반응해
+# 맵을 고르고, 사유는 짧은 대사(REC_REASON)로 돌려준다. 표시 측(RouteMap)은 ★ 옆엔
+# "베일 추천"만 두고 이 사유 대사를 VEIL 멘트로 보여준다 — 라벨로 수식을 설명하지 않음.
+#   - first(첫 스테이지) / struggling(고전) → 안전 (가장 낮은 risk, 동점이면 reward 큰 쪽).
+#   - skilled(능숙)                          → 보상 (가장 높은 reward, 동점이면 더 도전적 위험).
+#   - steady(무난)                           → 순가치(reward-risk) 최대, 동점이면 저위험.
+# hidden / challenge 루트는 항상 제외.
+# 사유 대사는 한 대사 안에서 종결어미가 단조롭지 않게(특히 "~게요" 연발 회피) 변형을 섞음.
+const REC_REASON: Dictionary = {
+	"first": [
+		"처음이니 무난한 길로 가요.",
+		"첫 길은 안전한 쪽이 좋아요.",
+		"초반이라 수월한 데로 권해요.",
+	],
+	"struggling": [
+		"방금 고전했죠. 이번엔 수월한 길이에요.",
+		"좀 지쳤을 거예요. 안전하게 가요.",
+		"한숨 돌릴 만한 쪽을 골랐어요.",
+	],
+	"skilled": [
+		"잘 버티고 있어요. 위험해도 크게 버는 길이에요.",
+		"솜씨가 좋네요. 욕심내 봐도 괜찮아요.",
+		"이 정도면 거친 길도 문제없죠. 보상이 커요.",
+	],
+	"steady": [
+		"이쪽이 좋아 보여요.",
+		"여기가 적당해요.",
+		"이 길을 권해요.",
+	],
+}
+
 static func choose_veil_recommendation(pool: Array) -> String:
 	var pair: Dictionary = choose_veil_recommendation_with_reason(pool)
 	return str(pair.get("id", ""))
@@ -298,35 +322,40 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 		if pool.size() > 0:
 			return {"id": pool[0].get("id", ""), "reason": ""}
 		return {"id": "", "reason": ""}
-	var tier: String = GameState.competence_tier()
+	# 모드 — 데이터 없으면 first(첫 스테이지), 아니면 실력 tier.
+	var mode: String = GameState.competence_tier()
+	if GameState.recent_stage_hits.is_empty():
+		mode = "first"
 	var best: Dictionary = candidates[0]
 	var best_score: float = -INF
-	var reason: String = ""
-	if tier == "struggling":
-		reason = "방금 좀 고전하셨죠 — 안전한 길로 가요"
+	if mode == "first" or mode == "struggling":
+		# 안전 — 위험 낮은 쪽 우선, 동점이면 보상 큰 쪽.
 		for c in candidates:
-			# 위험 낮은 쪽 우선, 동점이면 보상 큰 쪽.
 			var s: float = -float(c.get("risk", 0)) * 2.0 + float(c.get("reward", 0)) * 0.5
 			if s > best_score:
 				best_score = s
 				best = c
-	elif tier == "skilled":
-		reason = "잘 피하고 계세요 — 위험해도 보상 큰 길"
+	elif mode == "skilled":
+		# 보상·도전 — 보상 높은 쪽 우선, 동점이면 위험 큰 쪽.
 		for c in candidates:
-			# 보상 높은 쪽 우선, 동점이면 위험 큰 쪽(더 큰 도전).
 			var s: float = float(c.get("reward", 0)) * 2.0 + float(c.get("risk", 0)) * 0.1
 			if s > best_score:
 				best_score = s
 				best = c
 	else:
-		reason = "위험 대비 보상이 맞는 길"
+		# steady — 순가치(보상-위험) 최대, 동점이면 저위험.
 		for c in candidates:
-			# 진짜 균형 = 순가치(보상-위험) 최대, 동점이면 위험 낮은 쪽(안전)을 약하게 선호.
 			var s: float = (float(c.get("reward", 0)) - float(c.get("risk", 0))) * 10.0 - float(c.get("risk", 0))
 			if s > best_score:
 				best_score = s
 				best = c
-	return {"id": best.get("id", ""), "reason": reason}
+	return {"id": best.get("id", ""), "reason": _pick_rec_reason(mode)}
+
+static func _pick_rec_reason(mode: String) -> String:
+	var arr: Array = REC_REASON.get(mode, [])
+	if arr.is_empty():
+		return ""
+	return str(arr[randi() % arr.size()])
 
 # id로 ALL_ROUTES에서 맵 정보를 찾는다. 진행 시각화(RouteMap 노드맵)에서 지나온 경로 표시에 사용.
 static func get_route_by_id(rid: String) -> Dictionary:

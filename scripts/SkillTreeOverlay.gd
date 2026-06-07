@@ -88,8 +88,9 @@ func _build() -> void:
 	desc_label.fit_content = true
 	desc_label.scroll_active = false
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.custom_minimum_size = Vector2(760, 120)
+	desc_label.custom_minimum_size = Vector2(760, 132)
 	desc_label.add_theme_font_size_override("normal_font_size", 15)
+	desc_label.add_theme_constant_override("line_separation", 9)  # T1~T3 줄 간격 — 빽빽하지 않게
 	desc_label.text = "[color=#8a909a]계열에 마우스를 올리거나 방향키로 옮겨 보세요. T1~T3가 한눈에 보여요.[/color]"
 	desc_panel.add_child(desc_label)
 

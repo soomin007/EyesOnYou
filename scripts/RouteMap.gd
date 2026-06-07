@@ -237,11 +237,15 @@ func _update_veil_comment() -> void:
 	var msg: String = ""
 	# description은 카드에서 제거 — veil_comment와 같은 위협을 중복 서술해 군더더기였음
 	# (사용자 피드백 2026-06-06: "설명 부분과 밑 VEIL 코멘트가 너무 겹친다").
-	# VEIL이 직접 안내하는 한 목소리만 남긴다. 추천 사유는 멘트 위 한 줄.
+	# VEIL이 직접 안내하는 한 목소리만 남긴다.
+	# 추천 맵: ★ 옆엔 "베일 추천"만, 추천 사유는 라벨이 아니라 VEIL이 직접 말로(멘트 자리에).
+	# 비추천 맵: 그 맵 고유 veil_comment.
 	var is_recommended: bool = (route.get("id", "") == recommended_id and recommended_reason != "")
 	if is_recommended:
-		msg += "★ " + recommended_reason + "\n"
-	msg += "VEIL  —  " + str(route.get("veil_comment", ""))
+		msg += "★ 베일 추천\n"
+		msg += "VEIL  —  " + recommended_reason
+	else:
+		msg += "VEIL  —  " + str(route.get("veil_comment", ""))
 	veil_text.text = msg
 	# 고위험/고보상 경고는 별도 우측 패널로 — 본 멘트와 시각 분리.
 	_update_risk_reward_panel(route)
