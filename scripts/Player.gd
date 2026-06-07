@@ -309,11 +309,15 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	b.pierce = fb_tier >= 3
 	# multishot T3 — 약한 추적
 	b.tracking = GameState.get_skill_tier("multishot") >= 3
-	# glide T3 — 활강 중(점프 홀드 낙하) 사격은 관통 + 데미지 +1. 공중에 떠서 드론/저격과 같은
-	# 높이로 교전하며 강한 탄을 날리는 "공중 제압" 정체성(상성: 저격수·드론). 죽은 no-op 티어 실효화.
-	if GameState.get_skill_tier("glide") >= 3 and not is_on_floor() and velocity.y > 0.0 and Input.is_action_pressed("jump"):
+	# glide — 활강 중(점프 홀드 낙하) 공중 제압. T2=관통+데미지, T3=유도(저격·드론 자동 추적).
+	var gl_tier: int = GameState.get_skill_tier("glide")
+	if gl_tier >= 2 and not is_on_floor() and velocity.y > 0.0 and Input.is_action_pressed("jump"):
 		b.pierce = true
 		b.damage += 1
+		if gl_tier >= 3:
+			b.tracking = true
+			b.tracking_blend = 0.12      # 약한 추적(0.03)보다 강하게 — "완전 유도" 체감
+			b.tracking_max_angle = 0.42  # ~24도. 공중 활강 중 + 글라이드 전용이라 보스 밸런스 영향 적음
 	# 부채꼴 — 가운데를 0으로 양 끝으로 10°씩 벌림.
 	# T1(3발): -10°/0/+10°. T2(5발): -20/-10/0/+10/+20.
 	if total > 1:
@@ -413,14 +417,14 @@ func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
 		return
 	velocity.y = min(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
-	# 공중 글라이드 — 낙하 중 점프 키 누르고 있으면 천천히 떨어진다.
-	# T2 "낙하 중 가속": 점프 키를 짧게 떼었다 누르면 가속 (간단히 좌우 입력 시 살짝 가속).
-	# T3 공중 사격 보너스: _spawn_bullet에서 활강 중 사격에 관통+데미지 부여 (저격·드론 공중 제압).
+	# 공중 활강 — 낙하 중 점프 키 누르고 있으면 천천히 떨어진다. 좌우 가속·제어는 T1부터
+	# (회피 기동으로 즉시 쓸모 있게). T2=활강 중 사격 관통+데미지, T3=유도 — 효과는 _spawn_bullet.
+	# 공중 제압 라인(상성: 저격수·드론).
 	var glide_tier: int = GameState.get_skill_tier("glide")
 	if glide_tier >= 1 and velocity.y > 0.0 and Input.is_action_pressed("jump"):
 		var fall_speed: float = GLIDE_FALL_SPEED
-		# T2 — 좌우 이동 입력 시 낙하 속도 살짝 ↑ (가속 효과)
-		if glide_tier >= 2 and Input.get_axis("move_left", "move_right") != 0.0:
+		# 좌우 이동 입력 시 낙하 속도 ↑ (활공 거리·속도 제어) — T1부터.
+		if Input.get_axis("move_left", "move_right") != 0.0:
 			fall_speed = GLIDE_FALL_SPEED * 1.6
 		velocity.y = min(velocity.y, fall_speed)
 

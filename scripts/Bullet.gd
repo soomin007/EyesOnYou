@@ -16,10 +16,12 @@ var lifetime: float = BASE_LIFETIME
 var hit_enemies: Array = []
 # 부채꼴 발사용 — 0이면 수평. radian, dir 기준 위/아래로 벌림.
 var angle: float = 0.0
-# multishot T3 — 가장 가까운 적 방향으로 약하게 휨.
+# 추적 — 가장 가까운 적 방향으로 휨. multishot T3=약한 추적(기본값), glide T3=강한 유도(값 상향).
 var tracking: bool = false
 const TRACKING_BLEND: float = 0.03  # 매 프레임 현재 방향과 타깃 방향을 lerp하는 비율
 const TRACKING_MAX_ANGLE: float = 0.21  # ~12도. 이전 25도는 보스전 밸런스 붕괴로 축소.
+var tracking_blend: float = TRACKING_BLEND
+var tracking_max_angle: float = TRACKING_MAX_ANGLE
 
 func _ready() -> void:
 	collision_layer = 0
@@ -76,8 +78,8 @@ func _apply_tracking(_delta: float) -> void:
 	var dy: float = (nearest.global_position.y - 28.0) - global_position.y  # 적 가슴 높이
 	# 새 angle 계산: 진행 방향(+dir 쪽)에서 dy/dx 비율로 기울기.
 	var target_angle: float = atan2(dy, abs(dx))
-	target_angle = clamp(target_angle, -TRACKING_MAX_ANGLE, TRACKING_MAX_ANGLE)
-	angle = lerp(angle, target_angle, TRACKING_BLEND)
+	target_angle = clamp(target_angle, -tracking_max_angle, tracking_max_angle)
+	angle = lerp(angle, target_angle, tracking_blend)
 
 func _find_nearest_enemy() -> Node2D:
 	var nearest: Node2D = null
