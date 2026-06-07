@@ -121,6 +121,7 @@ func _load_world_meta() -> void:
 var veil_mistake_triggered: bool = false
 var ward_foreshadow_triggered: bool = false
 var act3_vision_triggered: bool = false
+var _veil_sight: VeilSight = null
 
 func _setup_veil_mistakes() -> void:
 	if GameState.playground_active:
@@ -256,6 +257,9 @@ func _fire_act3_vision(line: String) -> void:
 	if act3_vision_triggered:
 		return
 	act3_vision_triggered = true
+	# 역전을 한 사건으로 — 자막이 뜨는 바로 그 순간 VEIL의 마커가 무너진다(B).
+	if _veil_sight != null and is_instance_valid(_veil_sight):
+		_veil_sight.begin_degradation()
 	if line != "":
 		_show_veil_subtitle(line, 4.0)
 
@@ -282,10 +286,15 @@ func _setup_veil_sight() -> void:
 	add_child(layer)
 	var sight := VeilSight.new()
 	sight.player = player
-	var stage: int = GameState.current_stage
-	# 역전 baseline → ACT3에 무너짐: 초중반엔 안정적, ACT3(일반 stage5+/스토리 s3+)에 degradation.
-	sight.degraded = (stage >= 3) if GameState.story_mode else (stage >= 5)
+	sight.veil_calls_threat.connect(_on_veil_calls_threat)
 	layer.add_child(sight)
+	_veil_sight = sight
+	# degradation은 ACT3 자막 트리거(_fire_act3_vision)에 동기화한다 — 같은 맵 안에서
+	# 안정→붕괴 대비를 만들어 역전을 체감시키기 위해(B). 여기선 baseline(안정)으로만 시작.
+
+func _on_veil_calls_threat(text: String) -> void:
+	# VEIL이 화면 밖 위협을 말로 짚는다 — 마커를 "레이더"가 아닌 "누군가의 봄"으로 만드는 채널(A).
+	_show_veil_subtitle(text, 2.4)
 
 func _build_hidden_archive() -> void:
 	# 격리 서버실 — 적/가시/골 없음, 단말기 2개 시퀀스 후 자동 ENDING 전환

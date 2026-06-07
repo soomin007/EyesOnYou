@@ -1,35 +1,119 @@
 class_name VeilSight
 extends Control
 
-# ─── VEIL 시야 마킹 (시야=신뢰 파일럿, v3 §2 보류분) ───────────────────────
-# "VEIL이 요원 대신 본다"를 *플레이로 실연*하는 시스템. VEIL이 요원 주변의 모든 위협을 HUD로 짚어준다:
-#   - 화면 안 위협 → 시안색 다이아몬드 reticle (요원도 보니 은은하게)
-#   - 화면 밖 위협 → 화면 가장자리 화살표 ("네가 못 보는 걸 내가 본다") ← 핵심 가치
-#   - 공격 임박(조준/돌진/폭탄) → 경고색 주황으로 펄스 ("VEIL이 위험을 미리 짚어준다")
-# ACT3(degraded=true)에선 마커가 staggered하게 깜빡이고 군데군데 꺼진다 = "여기서부터는 잘 안 보여요"가
-# 글이 아니라 화면에서. 표시 안 된 위협은 요원이 직접 봐야 한다 = 역전이 플레이로.
+# ─── VEIL 시야 마킹 (시야=신뢰 파일럿, v3 §2) ───────────────────────
+# "VEIL이 요원 대신 본다"를 *플레이로 실연*한다. 핵심은 레이더가 아니라
+# "누군가 너를 위해 짚어준다"로 읽히게 하는 것:
+#   - 마커는 등장 시 페이드인(+수축) → "방금 VEIL이 짚었다"는 인상
+#   - 새 화면 밖 위협은 VEIL이 *말로 방향을 짚는다*(veil_calls_threat) → 시스템 표시가 아닌 누군가의 봄
+#   - ACT3 진입(begin_degradation)에 마커가 일제히 흔들리고 일부는 영영 꺼진다 → 역전이 화면에서
+# 화면 안 = 은은한 시안 다이아몬드(요원도 봄), 화면 밖 = 또렷한 가장자리 화살표(VEIL만 봄 ← 핵심 가치).
+# 공격 임박(조준/돌진/폭탄)은 경고 주황으로 펄스.
 #
-# 확장 이력: 처음엔 원거리/공중(저격수·드론·폭격기)만 마킹했으나 "있는지조차 모르겠다"는 피드백으로
-# 전 적 마킹 + 공격 경고 펄스 + 탐지 범위 확대(VEIL의 권한 강화). 길 제시는 다음 확장 후보.
+# 확장 이력: 저격수·공중만 → 전 적 마킹 + 공격 경고 펄스. 그러나 "레이더로 읽힌다 / ACT3 역전을
+# 모르겠다"는 피드백으로 (A) 작가성 입히기(페이드인·말걸기) + (B) degradation을 자막 트리거에
+# 동기화해 같은 맵 안에서 안정→붕괴 대비를 만든다.
+
+signal veil_calls_threat(text: String)
 
 var player: Node2D = null
-var degraded: bool = false  # ACT3 — 마커가 흐려지고 꺼짐
 
-const DETECT_RADIUS: float = 1400.0           # 이 안의 위협을 VEIL이 본다 (≈ 화면 한 칸 — 사용자: 범위 축소)
+const DETECT_RADIUS: float = 1400.0           # 이 안의 위협을 VEIL이 본다 (≈ 화면 한 칸)
 const CALM: Color = Color(0.42, 0.86, 1.0)    # 평시 — VEIL 시안 (자막 색과 통일감)
 const WARN: Color = Color(1.0, 0.55, 0.22)    # 공격 임박 — 경고 주황
 const EDGE_MARGIN: float = 48.0               # 화면 밖 화살표가 가장자리에서 떨어지는 여백
 const RETICLE_R: float = 17.0
+const FADE_IN: float = 0.35                    # 마커가 "짚어지는" 등장 시간
+const CALL_COOLDOWN: float = 18.0             # VEIL이 말로 짚는 최소 간격 (노이즈 방지)
+const MIN_CALL_TIME: float = 7.0             # 맵 진입 멘트 보호 — 이 전엔 말 안 함
+const GLITCH_DUR: float = 1.2                # 역전 순간 일제 붕괴 연출 길이
+const BLIND_PCT: int = 35                    # degradation 중 VEIL이 영영 못 보는 위협 비율(%)
 
 var _t: float = 0.0
+var _seen: Dictionary = {}                    # instance_id → 처음 본 _t (페이드인용)
+var _degrade_t: float = -1.0                  # >=0 이면 ACT3 degradation 진행 중 (시작 시각)
+var _intro_called: bool = false               # "표시해 둘게요" 메타 소개 1회
+var _last_call_t: float = -999.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
+# ACT3 자막("여기서부터는 잘 안 보여요")과 동기 호출 — 그 순간 마커가 무너진다.
+func begin_degradation() -> void:
+	if _degrade_t >= 0.0:
+		return
+	_degrade_t = _t
+
+func _is_degraded() -> bool:
+	return _degrade_t >= 0.0
+
 func _process(delta: float) -> void:
 	_t += delta
+	_scan_for_call()
 	queue_redraw()
+
+# 화면 밖에 새로 나타난 위협을 VEIL이 말로 짚는다(레이더 아님의 핵심). 쿨다운/진입보호로 절제.
+func _scan_for_call() -> void:
+	if player == null or not is_instance_valid(player):
+		return
+	if _t < MIN_CALL_TIME or (_t - _last_call_t) < CALL_COOLDOWN:
+		return
+	var xform: Transform2D = get_viewport().get_canvas_transform()
+	var view: Vector2 = get_viewport_rect().size
+	var ppos: Vector2 = player.global_position
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not (e is Node2D):
+			continue
+		var en: Node2D = e as Node2D
+		if not is_instance_valid(en) or bool(en.get("dead")):
+			continue
+		var wpos: Vector2 = en.global_position
+		if ppos.distance_to(wpos) > DETECT_RADIUS:
+			continue
+		var id: int = en.get_instance_id()
+		if _seen.has(id):
+			continue   # 이미 본 위협 — 새로 짚을 게 없음
+		var spos: Vector2 = xform * wpos
+		var off: bool = spos.x < 0.0 or spos.x > view.x or spos.y < 0.0 or spos.y > view.y
+		if off:
+			_call_threat(spos, view * 0.5)
+			return   # 한 번에 하나만 — _seen 등록은 _draw가 한다
+
+func _call_threat(spos: Vector2, center: Vector2) -> void:
+	_last_call_t = _t
+	var dir_txt: String = _direction_word(spos - center)
+	var line: String
+	if not _intro_called:
+		_intro_called = true
+		line = "위험은 제가 먼저 볼게요. 화면 끝에 표시해 둘게요."
+	elif _is_degraded():
+		line = dir_txt + "...일 거예요. 잘 안 보여요, 요원이 확인해줘요."
+	else:
+		line = dir_txt + ", 보여요? 제가 짚어둘게요."
+	veil_calls_threat.emit(line)
+
+# 화면 중심 대비 위협 방향 → 8방위 한국어 (화면 좌표: y 아래가 +)
+func _direction_word(d: Vector2) -> String:
+	if d.length() < 1.0:
+		return "가까이"
+	var deg: float = rad_to_deg(atan2(d.y, d.x))
+	if deg >= -22.5 and deg < 22.5:
+		return "오른쪽"
+	elif deg >= 22.5 and deg < 67.5:
+		return "오른쪽 아래"
+	elif deg >= 67.5 and deg < 112.5:
+		return "아래쪽"
+	elif deg >= 112.5 and deg < 157.5:
+		return "왼쪽 아래"
+	elif deg >= 157.5 or deg < -157.5:
+		return "왼쪽"
+	elif deg >= -157.5 and deg < -112.5:
+		return "왼쪽 위"
+	elif deg >= -112.5 and deg < -67.5:
+		return "위쪽"
+	else:
+		return "오른쪽 위"
 
 func _draw() -> void:
 	if player == null or not is_instance_valid(player):
@@ -38,44 +122,70 @@ func _draw() -> void:
 	var view: Vector2 = get_viewport_rect().size
 	var center: Vector2 = view * 0.5
 	var ppos: Vector2 = player.global_position
+	var degraded: bool = _is_degraded()
+	# 역전 순간 일제 붕괴 — 전환 직후 잠깐 전체 마커가 강하게 흔들리고 흐려진다.
+	var glitch: float = 0.0
+	if degraded:
+		var since: float = _t - _degrade_t
+		if since < GLITCH_DUR:
+			glitch = 1.0 - (since / GLITCH_DUR)
+	var alive: Dictionary = {}
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not (e is Node2D):
 			continue
 		var en: Node2D = e as Node2D
-		if not is_instance_valid(en):
-			continue
-		if bool(en.get("dead")):
+		if not is_instance_valid(en) or bool(en.get("dead")):
 			continue
 		var wpos: Vector2 = en.global_position
 		if ppos.distance_to(wpos) > DETECT_RADIUS:
 			continue
-		# 공격 임박 여부 — 경고색 + 빠른 펄스.
+		var id: int = en.get_instance_id()
+		alive[id] = true
+		if not _seen.has(id):
+			_seen[id] = _t
+		# degradation 중 일부 위협은 VEIL이 영영 못 본다 = 요원이 직접 봐야 함 (역전의 실물)
+		if degraded and (id % 100) < BLIND_PCT:
+			continue
 		var danger: bool = en.has_method("veil_is_telegraphing") and en.veil_is_telegraphing()
 		var col: Color = WARN if danger else CALM
-		var alpha_mul: float = 1.0
-		# ACT3 degradation — 위협별 staggered 깜빡임 + 암점.
+		# 등장 페이드인 — "방금 짚어진" 느낌
+		var appear: float = clamp((_t - float(_seen[id])) / FADE_IN, 0.0, 1.0)
+		var alpha_mul: float = appear
 		if degraded:
-			var phase: float = float(en.get_instance_id() % 997) * 0.0131
-			if fmod(_t * 0.9 + phase, 1.0) < 0.34:   # 주기의 1/3은 VEIL이 못 봄 → 마커 꺼짐
+			var phase: float = float(id % 997) * 0.0131
+			# 주기의 ~45%는 VEIL이 못 봄 → 마커 꺼짐 (평시 대비 확실히 더 자주)
+			if fmod(_t * 0.9 + phase, 1.0) < 0.45:
 				continue
-			alpha_mul = clamp(0.5 + 0.3 * sin(_t * 6.0 + phase), 0.22, 0.8)  # 남은 동안도 불안정
+			alpha_mul *= clamp(0.45 + 0.3 * sin(_t * 6.0 + phase), 0.18, 0.72)
+		if glitch > 0.0:
+			alpha_mul *= 1.0 - 0.6 * glitch * (0.5 + 0.5 * sin(_t * 40.0 + float(id)))
 		if danger:
-			alpha_mul *= 0.7 + 0.3 * sin(_t * 11.0)  # 경고 펄스
-		var spos: Vector2 = xform * wpos
+			alpha_mul *= 0.7 + 0.3 * sin(_t * 11.0)
+		var jitter: Vector2 = Vector2.ZERO
+		if glitch > 0.0:
+			jitter = Vector2(sin(_t * 37.0 + float(id)), cos(_t * 41.0 + float(id))) * 6.0 * glitch
+		var spos: Vector2 = xform * wpos + jitter
 		var on_screen: bool = spos.x >= 0.0 and spos.x <= view.x and spos.y >= 0.0 and spos.y <= view.y
 		if on_screen:
-			# 화면 안 — 요원도 볼 수 있으니 평시엔 은은하게, 위험할 땐 또렷하게.
+			# 화면 안 — 요원도 볼 수 있으니 평시엔 은은, 위험할 땐 또렷.
 			var rc: Color = col
-			rc.a *= (0.92 if danger else 0.5) * alpha_mul
-			_draw_reticle(spos, rc, danger)
+			rc.a *= (0.92 if danger else 0.62) * alpha_mul
+			_draw_reticle(spos, rc, danger, appear)
 		else:
 			# 화면 밖 — VEIL의 봄이 빛나는 곳. 또렷하게.
 			var ec: Color = col
 			ec.a *= alpha_mul
 			_draw_edge_arrow(spos, center, view, ec)
+	# 사라진 적 정리 (메모리 — _seen 무한 증가 방지)
+	if _seen.size() > alive.size():
+		for k in _seen.keys():
+			if not alive.has(k):
+				_seen.erase(k)
 
-func _draw_reticle(pos: Vector2, col: Color, danger: bool) -> void:
-	var r: float = RETICLE_R + (4.0 if danger else 0.0)
+func _draw_reticle(pos: Vector2, col: Color, danger: bool, appear: float) -> void:
+	# 등장 시 살짝 크게 시작해 수축 — 짚어지는 동작감.
+	var grow: float = 1.0 + (1.0 - appear) * 0.35
+	var r: float = (RETICLE_R + (4.0 if danger else 0.0)) * grow
 	var pts: PackedVector2Array = PackedVector2Array([
 		pos + Vector2(0.0, -r),
 		pos + Vector2(r, 0.0),
