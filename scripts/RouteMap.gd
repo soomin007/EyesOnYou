@@ -33,6 +33,7 @@ func _ready() -> void:
 	veil_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	veil_text.custom_minimum_size = Vector2(560, 0)
 	_setup_trust_gauge()
+	_build_progress_strip()
 	_build_risk_reward_panel()
 	_build_node_buttons()
 	_update_veil_comment()
@@ -99,6 +100,93 @@ func _setup_trust_gauge() -> void:
 	gauge.add_theme_font_size_override("font_size", 14)
 	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
 	header.add_child(gauge)
+
+# 진행 노드맵 — 헤더와 루트 카드 사이 가로 띠로 "지나온 경로 / 지금 / 남은 단계"를 표시.
+# 데이터는 이미 존재(route_history·current_stage·effective_total_stages) — 시각화만 추가.
+# 불변식: RouteMap이 뜬 시점에 route_history.size() == current_stage (i단계 선택 = history[i]).
+const PROG_DONE_DOT: Color = Color(0.45, 0.80, 0.62)    # 클리어한 단계 (차분한 초록)
+const PROG_DONE_TEXT: Color = Color(0.58, 0.66, 0.62)
+const PROG_DONE_LINE: Color = Color(0.34, 0.50, 0.44)
+const PROG_FUTURE: Color = Color(0.40, 0.43, 0.50)      # 미상 단계 (흐릿)
+const PROG_FUTURE_LINE: Color = Color(0.24, 0.26, 0.32)
+
+func _build_progress_strip() -> void:
+	var total: int = GameState.effective_total_stages()
+	var cur: int = GameState.current_stage
+	var strip := CenterContainer.new()
+	strip.name = "ProgressStrip"
+	strip.anchor_left = 0.0
+	strip.anchor_top = 0.175
+	strip.anchor_right = 1.0
+	strip.anchor_bottom = 0.245
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(strip)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 0)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	strip.add_child(row)
+	for i in total:
+		if i > 0:
+			# i단계로 들어가는 연결선 — 그 단계에 도달했으면(i <= cur) "지나온" 색.
+			row.add_child(_make_progress_connector(i <= cur))
+		row.add_child(_make_progress_node(i, cur))
+
+func _make_progress_node(i: int, cur: int) -> Control:
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(88, 0)
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 2)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var dot := Label.new()
+	dot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dot.add_theme_font_size_override("font_size", 16)
+	var name_l := Label.new()
+	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_l.add_theme_font_size_override("font_size", 11)
+	name_l.clip_text = true
+	if i < cur:
+		# 지나온 단계 — 선택했던 맵 이름 표시.
+		var rid: String = str(GameState.route_history[i]) if i < GameState.route_history.size() else ""
+		dot.text = "●"
+		dot.add_theme_color_override("font_color", PROG_DONE_DOT)
+		name_l.text = RouteData.name_for_id(rid)
+		name_l.add_theme_color_override("font_color", PROG_DONE_TEXT)
+	elif i == cur:
+		# 지금 고르는 단계 — VEIL 신뢰 톤색으로 강조.
+		var tone: Color = GameState.veil_tone_color()
+		dot.text = "◆"
+		dot.add_theme_color_override("font_color", tone)
+		name_l.text = "지금"
+		name_l.add_theme_color_override("font_color", tone)
+	else:
+		# 아직 모르는 앞 단계.
+		dot.text = "○"
+		dot.add_theme_color_override("font_color", PROG_FUTURE)
+		name_l.text = "?"
+		name_l.add_theme_color_override("font_color", PROG_FUTURE)
+	box.add_child(dot)
+	box.add_child(name_l)
+	return box
+
+func _make_progress_connector(done: bool) -> Control:
+	# 노드와 같은 2단 구조(선 / 빈칸)로 만들어 점·이름 행 높이를 맞춘다.
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(24, 0)
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 2)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var line := Label.new()
+	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	line.add_theme_font_size_override("font_size", 16)
+	line.text = "──"
+	line.add_theme_color_override("font_color", PROG_DONE_LINE if done else PROG_FUTURE_LINE)
+	var spacer := Label.new()
+	spacer.add_theme_font_size_override("font_size", 11)
+	spacer.text = " "
+	box.add_child(line)
+	box.add_child(spacer)
+	return box
 
 func _build_node_buttons() -> void:
 	for child in nodes_container.get_children():

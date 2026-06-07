@@ -329,3 +329,20 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 				best_score = s
 				best = c
 	return {"id": best.get("id", ""), "reason": reason}
+
+# id로 ALL_ROUTES에서 맵 정보를 찾는다. 진행 시각화(RouteMap 노드맵)에서 지나온 경로 표시에 사용.
+static func get_route_by_id(rid: String) -> Dictionary:
+	for r in ALL_ROUTES:
+		var route: Dictionary = r
+		if str(route.get("id", "")) == rid:
+			return route
+	return {}
+
+# id → 표시용 맵 이름. 스토리 모드면 override 명칭(예: route_escape="최종 탈출")을 반영한다.
+static func name_for_id(rid: String) -> String:
+	var route: Dictionary = get_route_by_id(rid)
+	if route.is_empty():
+		return "?"
+	if GameState.story_mode:
+		route = _apply_story_overrides(route)
+	return str(route.get("name", "?"))
