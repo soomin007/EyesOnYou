@@ -180,6 +180,20 @@ func _snap_to_floor() -> void:
 
 # Risk 3 루트에서는 적이 더 빨리 반응한다.
 # 수치는 보수적으로 잡았으니 플레이테스트 후 조정 필요 (상의 항목).
+# VEIL 시야 마킹용 — 이 적이 지금 공격을 텔레그래프 중인가(조준/돌진 준비/폭탄 무장).
+# VeilSight가 이 값으로 마커를 경고색으로 펄스시킨다("VEIL이 위험을 미리 짚어준다").
+func veil_is_telegraphing() -> bool:
+	if dead:
+		return false
+	if aim_line != null:  # sniper/patrol 원거리 조준 중
+		return true
+	match enemy_type:
+		EnemyType.PATROL:
+			return patrol_state == PatrolState.TELEGRAPH or patrol_state == PatrolState.CHARGING
+		EnemyType.BOMBER:
+			return bomber_state == BomberState.ARMING
+	return false
+
 func _telegraph_time() -> float:
 	return PATROL_TELEGRAPH * (0.6 if GameState.is_high_risk() else 1.0)
 
