@@ -90,6 +90,48 @@ const BASELINE: Dictionary = {
 	"double_jump": {"name": "이중점프", "desc": "공중에서 한 번 더 점프", "family": FAMILY_MOBILITY, "active": false},
 }
 
+# ─── 스킬-적 상성 (밸런스) ──────────────────────────────────
+# 각 적 타입의 약점 스킬. 위협 우선순위 순(방패병=정면 막아 답답 → 저격=원거리 위험 → 드론 → 폭격).
+# B(레벨업 추천 ★)와 C(출현 가중)가 공유해 "이 적엔 이 스킬"을 가르친다.
+const MATCHUP: Array = [
+	{"enemy": "shield", "skill": "explosive"},   # 방향 무시 AoE로 방패 관통
+	{"enemy": "sniper", "skill": "glide"},       # 공중 체류로 저격 제압
+	{"enemy": "drone",  "skill": "multishot"},   # 부채꼴 다중으로 공중 처리
+	{"enemy": "bomber", "skill": "fire_boost"},  # 붙기 전에 빠른 처치
+]
+
+# 현재 맵에 등장하는 적 중, 플레이어가 카운터 스킬을 아직 안 가진 최우선 약점 스킬 id.
+# 없으면 빈 문자열. route_id가 비었거나 맵 데이터가 없으면 빈 문자열.
+static func matchup_skill_for_route(route_id: String, player_skills: Dictionary) -> String:
+	if route_id == "":
+		return ""
+	var counts: Dictionary = _route_enemy_counts(route_id)
+	for m in MATCHUP:
+		var entry: Dictionary = m
+		var etype: String = str(entry.get("enemy", ""))
+		var sk: String = str(entry.get("skill", ""))
+		if int(counts.get(etype, 0)) > 0 and not player_skills.has(sk):
+			return sk
+	return ""
+
+# 맵의 적 타입별 개체 수. enemies(고정 배치) + waves(ARENA) 합산.
+static func _route_enemy_counts(route_id: String) -> Dictionary:
+	var out: Dictionary = {}
+	var layout: Dictionary = MapData.get_layout(route_id)
+	if layout.is_empty():
+		return out
+	var enemies: Dictionary = layout.get("enemies", {})
+	for etype in enemies.keys():
+		var arr: Array = enemies[etype]
+		out[str(etype)] = arr.size()
+	for w in layout.get("waves", []):
+		var wd: Dictionary = w
+		var wen: Dictionary = wd.get("enemies", {})
+		for etype in wen.keys():
+			var warr: Array = wen[etype]
+			out[str(etype)] = int(out.get(str(etype), 0)) + warr.size()
+	return out
+
 static func find_line(line_id: String) -> Dictionary:
 	for line in LINES:
 		var l: Dictionary = line

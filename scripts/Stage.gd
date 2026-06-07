@@ -2956,7 +2956,7 @@ func _begin_clear_sequence() -> void:
 	if leveled:
 		pending_levelup = true
 		get_tree().paused = true
-		var advice: Dictionary = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags)
+		var advice: Dictionary = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags, GameState.current_route_id)
 		levelup_overlay = LevelUpOverlay.show(self, advice, _on_clear_levelup_picked)
 	else:
 		_transition_after_clear()
@@ -3513,7 +3513,7 @@ func _on_xp_collected(leveled_up: bool) -> void:
 
 func _show_levelup() -> void:
 	get_tree().paused = true
-	var advice: Dictionary = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags)
+	var advice: Dictionary = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags, GameState.current_route_id)
 	levelup_overlay = LevelUpOverlay.show(self, advice, _on_levelup_picked)
 
 func _on_levelup_picked(_picked_id: String) -> void:

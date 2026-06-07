@@ -173,28 +173,43 @@ static func get_intro_system_text() -> String:
 static func get_intro_veil_lines() -> Array[String]:
 	return INTRO_VEIL
 
-static func get_levelup_advice(player_skills: Dictionary, route_tags: Array) -> Dictionary:
-	# 멘트와 추천 family를 함께 반환 → LevelUpOverlay가 일치하는 카드에 ★ 표시.
+static func get_levelup_advice(player_skills: Dictionary, route_tags: Array, route_id: String = "") -> Dictionary:
+	# 멘트 + 추천 family + (있으면) 콕 집은 skill_id를 반환 → LevelUpOverlay가 일치 카드에 ★.
 	# 트리 라인 보유 여부는 player_skills.has(id)로 체크 (티어 무관).
+	# 1순위: 현재 맵 적 구성에 따른 스킬-적 상성 — 미보유 약점 스킬을 콕 집어 추천.
+	var mskill: String = SkillTreeData.matchup_skill_for_route(route_id, player_skills)
+	if mskill != "":
+		var fam: String = str(SkillTreeData.find_line(mskill).get("family", ""))
+		return {"line": _matchup_line(mskill), "family": fam, "skill_id": mskill}
+	# 2순위(폴백): 기존 route_tags 기반 family 추천.
 	var has_ranged_buff: bool = player_skills.has("fire_boost") or player_skills.has("multishot") or player_skills.has("explosive")
 	var has_mobility_buff: bool = player_skills.has("dash_boost") or player_skills.has("glide")
 	var has_survival: bool = player_skills.has("hp") or player_skills.has("shield") or player_skills.has("barrier")
 	if "근접전" in route_tags and not has_ranged_buff:
-		return {"line": "근접전이 많아요. 화력이 있으면 좋겠어요.", "family": SkillTreeData.FAMILY_COMBAT}
+		return {"line": "근접전이 많아요. 화력이 있으면 좋겠어요.", "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
 	if "함정" in route_tags and not has_mobility_buff:
-		return {"line": "함정 구간이에요. 대시 강화나 글라이드가 도움돼요.", "family": SkillTreeData.FAMILY_MOBILITY}
+		return {"line": "함정 구간이에요. 대시 강화나 글라이드가 도움돼요.", "family": SkillTreeData.FAMILY_MOBILITY, "skill_id": ""}
 	if "드론" in route_tags and not has_ranged_buff:
-		return {"line": "드론은 위에서 와요. 원거리가 있으면 더 안전해요.", "family": SkillTreeData.FAMILY_COMBAT}
+		return {"line": "드론은 위에서 와요. 원거리가 있으면 더 안전해요.", "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
 	if "노출" in route_tags and not has_survival:
-		return {"line": "이 구간은 숨을 데가 없어요. 생존 쪽이 안심돼요.", "family": SkillTreeData.FAMILY_SURVIVAL}
+		return {"line": "이 구간은 숨을 데가 없어요. 생존 쪽이 안심돼요.", "family": SkillTreeData.FAMILY_SURVIVAL, "skill_id": ""}
 	if "수직" in route_tags and not has_mobility_buff:
-		return {"line": "위로 가는 길이에요. 이동 능력이 있으면 편해요.", "family": SkillTreeData.FAMILY_MOBILITY}
+		return {"line": "위로 가는 길이에요. 이동 능력이 있으면 편해요.", "family": SkillTreeData.FAMILY_MOBILITY, "skill_id": ""}
 	if "도전" in route_tags and not has_survival:
-		return {"line": "여기 위험해요. 생존 능력 한 줄 챙겨두는 게 어때요.", "family": SkillTreeData.FAMILY_SURVIVAL}
+		return {"line": "여기 위험해요. 생존 능력 한 줄 챙겨두는 게 어때요.", "family": SkillTreeData.FAMILY_SURVIVAL, "skill_id": ""}
 	if "전투" in route_tags and not has_ranged_buff:
-		return {"line": "정면 교전이에요. 화력이 부족하면 길어져요.", "family": SkillTreeData.FAMILY_COMBAT}
+		return {"line": "정면 교전이에요. 화력이 부족하면 길어져요.", "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
 	var idx: int = randi() % SKILL_GENERIC_COMMENTS.size()
-	return {"line": SKILL_GENERIC_COMMENTS[idx], "family": ""}
+	return {"line": SKILL_GENERIC_COMMENTS[idx], "family": "", "skill_id": ""}
+
+# 스킬-적 상성 추천 멘트 — 어느 적에 왜 그 스킬인지 콕 짚어 가르친다.
+static func _matchup_line(skill_id: String) -> String:
+	match skill_id:
+		"explosive": return "방패병이 정면을 막아요. 폭발물이면 방패째 뚫어요."
+		"glide":     return "저격수가 노려요. 글라이드로 떠서 사선을 흔들어요."
+		"multishot": return "드론이 위에서 와요. 연사로 쓸어내요."
+		"fire_boost": return "폭격기가 붙기 전에. 화력을 올려두는 게 좋아요."
+	return "이 구역에 맞는 한 수가 있어요."
 
 static func get_death_briefing(death_count: int, followed_advice: bool) -> String:
 	# stage 진행도로 ACT 판별 (current_stage는 사망 시점의 진행 stage).

@@ -10,9 +10,11 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	# forced_picks: 비어있지 않으면 roll_choices 대신 이 카드 배열 사용 (튜토리얼 강제 픽).
 	var advice_line: String = ""
 	var advice_family: String = ""
+	var advice_skill_id: String = ""
 	if advice is Dictionary:
 		advice_line = str((advice as Dictionary).get("line", ""))
 		advice_family = str((advice as Dictionary).get("family", ""))
+		advice_skill_id = str((advice as Dictionary).get("skill_id", ""))
 	elif advice is String:
 		advice_line = advice as String
 	SfxPlayer.play("levelup")
@@ -86,7 +88,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	if forced_picks.size() > 0:
 		picks = forced_picks
 	else:
-		picks = SkillSystem.roll_choices(GameState.skills, 3)
+		picks = SkillSystem.roll_choices(GameState.skills, 3, GameState.current_route_id)
 	if picks.size() == 0:
 		host.add_child(layer)
 		_finish(layer, "", on_picked)
@@ -102,6 +104,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		var skill: Dictionary = p
 		var btn := Button.new()
 		btn.custom_minimum_size = Vector2(220, 170)
+		var sid: String = str(skill.get("id", ""))
 		var family: String = str(skill.get("family", ""))
 		var tier: int = int(skill.get("tier", 1))
 		var tier_tag: String = "T%d" % tier
@@ -111,7 +114,12 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		else:
 			header = "[%s]" % tier_tag
 		var body_text: String = "%s  %s\n\n%s" % [str(skill.get("name", "")), header, str(skill.get("desc", ""))]
-		var is_recommended: bool = family != "" and family in recommended_families
+		# 상성 추천(skill_id 지정)이면 그 스킬만 ★ — family 폴백이면 해당 계열 전체.
+		var is_recommended: bool
+		if advice_skill_id != "":
+			is_recommended = (sid == advice_skill_id)
+		else:
+			is_recommended = family != "" and family in recommended_families
 		if is_recommended:
 			body_text += "\n\n★ VEIL 추천"
 		btn.text = body_text
@@ -121,7 +129,6 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 			btn.add_theme_color_override("font_focus_color", Color(1.0, 0.92, 0.55))
 			btn.add_theme_color_override("font_hover_color", Color(1.0, 0.92, 0.55))
 		btn.process_mode = Node.PROCESS_MODE_ALWAYS
-		var sid: String = str(skill.get("id", ""))
 		btn.pressed.connect(func() -> void: _finish(layer, sid, on_picked))
 		btn.focus_entered.connect(SfxPlayer.play.bind("ui_focus", 0.0))
 		hb.add_child(btn)
