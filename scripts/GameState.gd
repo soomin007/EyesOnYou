@@ -19,6 +19,18 @@ var current_stage: int = 0
 var death_count: int = 0
 var score: int = 0
 
+# --- 실력 추적 (VEIL 적응형 맵 추천) ---
+# 피격·죽음을 스테이지 단위로 모아 "고전했나/잘했나"를 읽고 추천 톤을 정한다.
+# baseline은 record_route_choice(스테이지 진입 직전)에서, 마감은 on_stage_clear에서.
+# 죽음 재시도는 같은 baseline..clear 창에 누적돼 자연히 "고전" 신호가 된다.
+var hits_taken: int = 0              # 누적 피격 수 (take_hit이 invuln 통과 시 +1)
+var _stage_hits_base: int = 0        # 현재 스테이지 진입 시점 hits_taken 스냅샷
+var _stage_deaths_base: int = 0      # 현재 스테이지 진입 시점 death_count 스냅샷
+var _stage_start_msec: int = 0       # 현재 스테이지 진입 시각
+var recent_stage_hits: Array = []    # 최근 스테이지별 피격 수 (최대 2)
+var recent_stage_deaths: Array = []  # 최근 스테이지별 죽음 수 (최대 2)
+var last_stage_secs: float = 0.0     # 직전 스테이지 소요 시간 (참고용)
+
 var trust_score: int = 0
 var aggression_score: int = 0
 var route_history: Array = []
@@ -134,6 +146,7 @@ func reset() -> void:
 	player_xp = 0
 	player_level = 1
 	story_mode = false
+	_reset_perf_metrics()
 
 # 튜토리얼 종료 후 본편 시작 시 호출. 진행/스킬/XP 모두 초기화 — 튜토리얼은
 # 연습용이라 본편에 영향 없음. VEIL이 "잠깐 빌려드려요" 멘트로 명시.
@@ -156,6 +169,16 @@ func start_main_game() -> void:
 	player_xp = 0
 	player_level = 1
 	skills = STARTING_SKILLS.duplicate()
+	_reset_perf_metrics()
+
+func _reset_perf_metrics() -> void:
+	hits_taken = 0
+	_stage_hits_base = 0
+	_stage_deaths_base = 0
+	_stage_start_msec = 0
+	recent_stage_hits = []
+	recent_stage_deaths = []
+	last_stage_secs = 0.0
 
 func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	var rid: String = route.get("id", "")
@@ -177,6 +200,48 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 		aggression_score += 1
 	if route.get("hidden", false):
 		trust_score -= 1
+	# 실력 추적 baseline — 이 스테이지에 들어가기 직전 스냅샷. 죽음 재시도엔 재호출되지
+	# 않으므로 baseline..on_stage_clear 한 창에 재시도의 피격·죽음이 모두 누적된다.
+	_stage_hits_base = hits_taken
+	_stage_deaths_base = death_count
+	_stage_start_msec = Time.get_ticks_msec()
+
+# 피격 1회 등록 — Player.take_hit이 invuln을 통과한 실제 타격마다 호출.
+# (스토리 모드 체력 무제한이어도 타격 자체는 카운트 → 모드 무관 실력 신호.)
+func register_hit() -> void:
+	hits_taken += 1
+
+# 방금 깬 스테이지의 실력 지표를 최근 기록에 적재 (on_stage_clear에서 호출).
+func _finalize_stage_metrics() -> void:
+	var hits: int = max(0, hits_taken - _stage_hits_base)
+	var deaths: int = max(0, death_count - _stage_deaths_base)
+	last_stage_secs = float(Time.get_ticks_msec() - _stage_start_msec) / 1000.0
+	recent_stage_hits.append(hits)
+	recent_stage_deaths.append(deaths)
+	if recent_stage_hits.size() > 2:
+		recent_stage_hits.pop_front()
+	if recent_stage_deaths.size() > 2:
+		recent_stage_deaths.pop_front()
+
+# 최근 스테이지 수행으로 능숙도 판정. 데이터 없으면(첫 선택) "steady".
+# 죽음이 있었거나 평균 피격이 잦으면 "struggling", 거의 안 맞았으면 "skilled".
+const PERF_SKILLED_HITS_MAX: float = 1.0   # 평균 이 이하 피격 = 능숙
+const PERF_STRUGGLE_HITS_MIN: float = 4.0  # 평균 이 이상 피격 = 고전
+func competence_tier() -> String:
+	if recent_stage_hits.is_empty():
+		return "steady"
+	var hit_sum: int = 0
+	for h in recent_stage_hits:
+		hit_sum += int(h)
+	var avg_hits: float = float(hit_sum) / float(recent_stage_hits.size())
+	var death_sum: int = 0
+	for d in recent_stage_deaths:
+		death_sum += int(d)
+	if death_sum >= 1 or avg_hits >= PERF_STRUGGLE_HITS_MIN:
+		return "struggling"
+	if death_sum == 0 and avg_hits <= PERF_SKILLED_HITS_MAX:
+		return "skilled"
+	return "steady"
 
 # 신뢰도 단계 — UI 톤/멘트 prefix 결정.
 # trust - aggression 기준. 양수면 VEIL을 따르는 플레이어, 음수면 거리감.
@@ -297,6 +362,8 @@ func register_death() -> void:
 func on_stage_clear() -> bool:
 	# 반환: 보너스 XP로 인한 레벨업이 발생했는지. 호출자가 LevelUpOverlay를
 	# 띄울지 판단할 수 있게 해 보너스 레벨업이 누락되지 않도록.
+	# 방금 깬 스테이지의 실력 지표를 먼저 마감 (current_stage 증가 전).
+	_finalize_stage_metrics()
 	current_stage += 1
 	score += 100 * current_stage
 	var leveled: bool = false

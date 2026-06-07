@@ -444,6 +444,9 @@ func _apply_gravity(delta: float) -> void:
 func take_hit(amount: int) -> void:
 	if invuln > 0.0:
 		return
+	# 실력 추적 — invuln을 통과한 실제 타격마다 1회 카운트(barrier 흡수·스토리 무피해 포함).
+	# i-frame 동안의 연타는 1회로 묶여 "맞은 횟수"로 읽힘. VEIL 적응형 추천이 사용.
+	GameState.register_hit()
 	# barrier 충전 완료 상태면 1회 무효화 + 충전 리셋. T3는 후속 무적.
 	if GameState.has_skill("barrier") and barrier_ready:
 		barrier_ready = false

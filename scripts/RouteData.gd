@@ -274,11 +274,12 @@ static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 	# 둘 다 없으면 모든 stage 등장 (안전 폴백).
 	return true
 
-# VEIL 추천. 컨텍스트(HP/레벨)에 반응해 직관적인 결정을 내림:
-#   - HP가 절반 이하 → 안전 우선 (가장 낮은 risk).
-#   - 레벨 3 이상 → 보상 우선 (가장 높은 reward).
-#   - 그 외 → 균형 (reward * 2 - risk 가장 큰 것).
-# 동점이면 risk 낮은 쪽이 우선. hidden / challenge 루트는 항상 제외.
+# VEIL 추천. 플레이어의 실제 수행(GameState.competence_tier — 최근 피격·죽음)에 반응:
+#   - struggling(고전) → 안전 우선 (가장 낮은 risk, 동점이면 reward 큰 쪽).
+#   - skilled(능숙)    → 보상 우선 (가장 높은 reward, 동점이면 더 도전적인 위험 쪽).
+#   - steady(무난·기본) → 진짜 균형 = 순가치(reward-risk) 최대, 동점이면 안전(risk 낮은) 쪽.
+# hidden / challenge 루트는 항상 제외. "균형"이 실제로 안전을 선호하도록 공식을 바로잡음
+# (이전 reward*2-risk는 이름과 달리 고위험을 밀었음 — 위험2보상2 < 위험3보상3).
 # 호출자가 reasoning 라벨을 표시할 수 있도록 choose_veil_recommendation_with_reason도 제공.
 static func choose_veil_recommendation(pool: Array) -> String:
 	var pair: Dictionary = choose_veil_recommendation_with_reason(pool)
@@ -297,34 +298,31 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 		if pool.size() > 0:
 			return {"id": pool[0].get("id", ""), "reason": ""}
 		return {"id": "", "reason": ""}
-	var hp: int = GameState.player_hp
-	var max_hp: int = GameState.player_max_hp
-	var level: int = GameState.player_level
-	var hurt: bool = (max_hp > 0 and float(hp) / float(max_hp) <= 0.5)
-	var strong: bool = (level >= 3)
+	var tier: String = GameState.competence_tier()
 	var best: Dictionary = candidates[0]
 	var best_score: float = -INF
 	var reason: String = ""
-	if hurt:
-		reason = "지금은 안전이 우선"
+	if tier == "struggling":
+		reason = "방금 좀 고전하셨죠 — 안전한 길로 가요"
 		for c in candidates:
-			# 낮은 risk 우선, 동점이면 reward 큰 쪽.
+			# 위험 낮은 쪽 우선, 동점이면 보상 큰 쪽.
 			var s: float = -float(c.get("risk", 0)) * 2.0 + float(c.get("reward", 0)) * 0.5
 			if s > best_score:
 				best_score = s
 				best = c
-	elif strong:
-		reason = "지금은 보상 챙길 만해요"
+	elif tier == "skilled":
+		reason = "잘 피하고 계세요 — 위험해도 보상 큰 길"
 		for c in candidates:
-			# 높은 reward 우선, 동점이면 risk 낮은 쪽.
-			var s: float = float(c.get("reward", 0)) * 2.0 - float(c.get("risk", 0)) * 0.5
+			# 보상 높은 쪽 우선, 동점이면 위험 큰 쪽(더 큰 도전).
+			var s: float = float(c.get("reward", 0)) * 2.0 + float(c.get("risk", 0)) * 0.1
 			if s > best_score:
 				best_score = s
 				best = c
 	else:
-		reason = "위험 대비 보상 균형"
+		reason = "위험 대비 보상이 맞는 길"
 		for c in candidates:
-			var s: float = float(c.get("reward", 0)) * 2.0 - float(c.get("risk", 0))
+			# 진짜 균형 = 순가치(보상-위험) 최대, 동점이면 위험 낮은 쪽(안전)을 약하게 선호.
+			var s: float = (float(c.get("reward", 0)) - float(c.get("risk", 0))) * 10.0 - float(c.get("risk", 0))
 			if s > best_score:
 				best_score = s
 				best = c
