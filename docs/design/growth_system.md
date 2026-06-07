@@ -36,21 +36,29 @@ T1 삼연사            (3발 부채꼴)
 T2 오연사            (5발)
 T3 오연사+추적        (5발 + 약한 추적)
 
-T1 폭발물            (3s 쿨다운)
-T2 폭발물+           (반경 +30%, 쿨다운 2.5s)
+T1 폭발물            (주위 적 광역 처치, 3.5s 쿨다운)
+T2 폭발물+           (반경 +30%, 쿨다운 3.0s)
 T3 이중 충전          (2회 충전)
 ```
+> **폭발물 너프 (2026-06)**: `EXPLOSION_DAMAGE` 3→2, T1 쿨다운 3.0→3.5s, T2/T3 쿨다운 2.5→3.0s.
+> 방패병(HP3)을 한 방에 못 죽이게 해 "모든 적 올킬 만능"을 깬다. 단 **방패 무시 광역은 유지** —
+> 정면 못 뚫는 방패병에 여전히 유효(2뎀×2 타격), patrol/sniper/drone/bomber는 한 방 유지.
+> → **방패병·군집 상성은 보존, 올킬 만능만 제거**. (코드: `Player.gd` `EXPLOSION_DAMAGE`/`SKILL_COOLDOWN`/`get_skill_cd_max`.)
 
 ### 이동 계열
 ```
-T1 글라이드          (천천히 낙하)
-T2 글라이드+         (낙하 중 가속)
-T3 공중 사격 패널티 제거
+T1 공중 활강          (점프 홀드 시 천천히 낙하 + 좌우로 가속·제어)
+T2 관통 사격          (활강 중 사격이 적 관통 + 데미지 +1)
+T3 유도 사격          (활강 중 사격이 적 추적 — 강한 유도)
 
 T1 대시 강화         (쿨다운 -20%)
 T2 대시 거리+        (+30%)
 T3 대시 후 0.3s 무적
 ```
+> **글라이드 라인 재설계 (2026-06)**: 기존 T1 글라이드/T2 글라이드+/T3 공중사격 패널티 제거(no-op)는
+> "T3까지 가야 빛나는 왕귀 구조"가 문제였다. T1부터 회피 기동(좌우 가속·제어)으로 즉시 쓸모 있게 하고,
+> T2/T3는 활강 중 사격에 관통·유도를 얹어 **공중 제압 라인(저격수·드론 상성)**으로 재정의.
+> 활강 발동 조건: 공중에서 낙하 중(`velocity.y > 0`) 점프 키 홀드. T2/T3 사격 효과도 이 조건 하에서만.
 
 ### 생존 계열
 ```
@@ -121,6 +129,32 @@ T3 방어막 재충전형    (30s 후 재무장)
 - 잠금 없음. 추천 무시 가능.
 - 임계값: 7스테이지 기준 4 (5스테이지의 3에서 비례 상향)
 
+### 4.1 스킬-적 상성 (2026-06 신규)
+
+trust/aggression 추천과 별개로, **현재 맵의 적 구성**을 보고 약점 스킬을 가르치는 상성 축을 추가.
+"이 적엔 이 스킬"을 플레이 안에서 자연 학습시키는 것이 목적.
+
+**상성 표** (`SkillTreeData.MATCHUP`, 위협 우선순위 순):
+
+| 적 타입 | 약점 스킬(line id) | 이유 |
+|---------|-------------------|------|
+| `shield`(방패병) | `explosive` | 방향 무시 AoE로 정면 방패 관통 |
+| `sniper`(저격) | `glide` | 공중 활강 체류로 원거리 제압 |
+| `drone`(드론) | `multishot` | 부채꼴 다중탄으로 공중 처리 |
+| `bomber`(폭격) | `fire_boost` | 붙기 전에 빠른 처치 |
+
+**두 갈래로 작동** (같은 표 공유):
+- **B — 레벨업 추천 ★**: 현재 맵에 등장하는 적 중 플레이어가 **아직 카운터 스킬을 안 가진** 최우선
+  약점 스킬을 `skill_id` 단위로 강조 (line 단위 추천, 티어 무관).
+- **C — 출현 가중**: `SkillSystem.roll_choices`가 그 약점 스킬이 후보 풀에 있으면 셔플 후
+  **첫 슬롯으로 끌어와** 픽 등장을 보장 (강제 잠금 아님, 출현 확률만 ↑).
+
+**공통 헬퍼**: `SkillTreeData.matchup_skill_for_route(route_id, player_skills) -> String`
+- 현재 맵(`MapData.get_layout`)의 적 타입별 개체 수 = 고정 배치(`enemies`) + ARENA 웨이브(`waves`) 합산.
+- `MATCHUP` 우선순위 순으로, 등장 수 > 0 이고 플레이어 미보유인 첫 스킬 id 반환. 없으면 빈 문자열.
+- `route_id`가 비었거나 맵 데이터가 없으면 빈 문자열 → 추천/가중 모두 비활성.
+- 호출처: 추천 표시(B), `SkillSystem.roll_choices`의 route 가중(C).
+
 ---
 
 ## 5. XP 곡선
@@ -180,6 +214,12 @@ T3 방어막 재충전형    (30s 후 재무장)
 - [x] `scripts/LevelUpOverlay.gd` — 카드 [family · T#] 헤더 + VEIL 추천 표시
 - [x] `scripts/GameState.gd` — high-risk 루트 적 처치 XP +50%, XP_PER_LEVEL 8
 
+**B-3 밸런스 패스 (2026-06)** ✅ 완료
+- [x] `scripts/SkillTreeData.gd` / `scripts/Player.gd` — 글라이드 라인 재설계 (활강 T1 / 관통 사격 T2 / 유도 사격 T3)
+- [x] `scripts/Bullet.gd` — `tracking_blend`/`tracking_max_angle` 분리 (multishot 약한 추적 vs glide T3 강한 유도)
+- [x] `scripts/Player.gd` / `scripts/SkillTreeData.gd` — 폭발물 너프 (EXPLOSION_DAMAGE 2, 쿨다운 3.5/3.0s, desc 동기화)
+- [x] `scripts/SkillTreeData.gd` `MATCHUP` + `matchup_skill_for_route` / `scripts/SkillSystem.gd` — 스킬-적 상성 (추천 ★ + 출현 가중)
+
 ### Phase C — 맵 + 스테이지 확장
 
 **C-1 데이터/규칙** ✅ 완료 (commit da74ea4)
@@ -201,8 +241,12 @@ T3 방어막 재충전형    (30s 후 재무장)
 - [ ] 새 빌드 평균 레벨업 횟수 측정 (XP_PER_LEVEL=8이 너무 빡빡한지)
 - [ ] 7스테이지 완주 시간이 8~15분 안에 들어오는지
 - [ ] 격리 병동 복선 → ??? 맵 발견 흐름이 "아, 그거였구나" 연결되는지
-- [ ] explosive T3 (2회 충전), glide T3 (사격 패널티 제거), shield T3 (재충전), hp T3 (슬로모) 미구현분
-- [ ] multishot T3 추적 미구현
+- [x] glide T3 — 폐기된 "사격 패널티 제거"(no-op) 대신 **유도 사격**으로 재구현 (`Player._spawn_bullet` 활강 분기 + `Bullet.tracking`)
+- [x] explosive T3 (2회 충전) — `Player.skill_charges`/`_refresh_skill_charges`로 구현
+- [x] hp T3 (피격 슬로모) — `Player._trigger_hit_slowmo` 구현 (실시간 타이머로 슬로모 내 정확 해제)
+- [x] multishot T3 (약한 추적) — `Bullet.tracking` 기본값으로 구현
+- [ ] shield T3 (방어막 재충전) — **미구현**. 현재 발동 시 라인을 erase (`Player.take_hit`의 "T3 재충전은 미구현" 주석)
+- [ ] barrier 라인(에너지 방어막) T1~T3는 구현됨 — 트리 desc/효과 대조 확인은 후속
 
 ---
 

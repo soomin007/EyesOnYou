@@ -163,6 +163,18 @@
 - 5 XP마다 레벨업 → `LevelUpOverlay`에서 스킬 3중 1 선택
 - **클리어 시 보너스 XP**: 루트의 reward 값만큼 누적. 보너스로 레벨업 시 다음 scene 가기 전에 LevelUpOverlay 띄움 (Stage._on_clear_levelup_picked)
 
+### VEIL 시야 마킹 (시야=신뢰 파일럿, `scripts/VeilSight.gd` + `Stage._setup_veil_sight`)
+"VEIL이 요원 대신 본다"를 *플레이로 실연*하는 HUD 시스템. 레이더가 아니라 "누군가 너를 위해 짚어준다"로 읽히게 하는 게 핵심.
+
+- **마커 2종** (`DETECT_RADIUS` 1400px 안의 살아있는 적, group "enemy"):
+  - 화면 안 → 은은한 **시안 다이아몬드 reticle** (요원도 봄, 평시 alpha 낮음)
+  - 화면 밖 → 또렷한 **가장자리 화살표** (VEIL만 봄 ← 핵심 가치)
+  - 공격 임박(적 `veil_is_telegraphing()` true = 조준/돌진/폭탄) → **경고 주황으로 펄스**
+- **등장 페이드인**: 마커가 처음 잡힐 때 살짝 크게 시작해 수축하며 페이드인(`FADE_IN` 0.35s) → "방금 짚어진" 인상.
+- **VEIL이 말로 방향을 짚음**: 화면 밖에 새로 나타난 위협을 8방위 한국어로 호명(`_scan_for_call` → `veil_calls_threat` 시그널 → `Stage._on_veil_calls_threat` → 자막 2.4s). 쿨다운 `CALL_COOLDOWN` 18s + 진입 보호 `MIN_CALL_TIME` 7s로 절제. 첫 호출은 메타 소개("화면 끝에 표시해 둘게요") 1회.
+- **ACT3 시야 역전** (`begin_degradation`): `Stage._fire_act3_vision`(ACT3 자막 트리거)에 동기화 — 자막이 뜨는 바로 그 순간 마커가 무너진다. 전환 직후 일제 글리치(`GLITCH_DUR` 1.2s 흔들림+흐려짐), 이후 마커가 주기적으로 꺼지고(암점) 위협의 `BLIND_PCT` 35%는 VEIL이 영영 못 봄 → 요원이 직접 봐야 함. 같은 맵 안에서 안정→붕괴 대비를 만들어 역전을 체감시킴.
+- **CanvasLayer 18** (자막 20 아래, 게임 위). `route_blackout`(교신 차단 도전)은 컨셉상 VEIL이 못 도우므로 마커 없음.
+
 ### 맵 구성 (절차적 빌드)
 모든 스테이지가 `scenes/stage.tscn` 단일 씬을 사용. `Stage.gd._ready()`에서 `current_route_id` / `current_route_tags`를 보고 빌드:
 
@@ -198,7 +210,7 @@
 |----|------|------|------|
 | dash | 대시 | 짧은 무적 이동 (베이스라인) | 이동 |
 | double_jump | 이중점프 | 공중에서 한 번 더 점프 (베이스라인) | 이동 |
-| glide | 공중 글라이드 | 공중에서 점프 키 홀드 시 천천히 낙하 | 이동 |
+| glide | 공중 글라이드 | T1 공중 활강(천천히 낙하 + 좌우 가속·제어) / T2 관통 사격 / T3 유도 사격 (§6.2) | 이동 |
 | roll | 구르기 | 구르기로 피격 회피 | 이동 |
 | ranged | 원거리 강화 | 사격 속도/속도/사거리 ↑ | 전투 |
 | melee_boost | 근접 강화 | 근접 데미지 +50% | 전투 |
@@ -207,6 +219,32 @@
 | explosive | 폭발물 | 쿨다운 있는 광역 공격 (액티브) | 전투 |
 | regen | 회복 | 스테이지 클리어 시 HP +1, max_hp +1 | 생존 |
 | shield | 방어막 | 치명타 1회 무효화 | 생존 |
+
+> 실제 스킬 정의는 `scripts/SkillTreeData.gd`의 티어 트리(`LINES`: fire_boost / multishot / explosive / glide / dash_boost / hp / shield / barrier, 각 3티어)에 있다. 위 표는 효과의 개념 요약.
+
+### 6.1 스킬-적 상성 시스템 (신규)
+맵 적 구성을 분석해 그 적의 **약점 스킬**을 레벨업에서 콕 집어 가르친다. "이 적엔 이 스킬"을 학습시키는 채널.
+
+- **상성 테이블** (`SkillTreeData.MATCHUP`, 위협 우선순위 순):
+
+  | 적 | 약점 스킬 | 이유 |
+  |---|---|---|
+  | shield | explosive | 방향 무시 AoE로 방패 관통 |
+  | sniper | glide | 공중 활강으로 사선 흔들어 저격 제압 |
+  | drone | multishot | 부채꼴 다중으로 공중 처리 |
+  | bomber | fire_boost | 붙기 전에 빠른 처치 |
+
+- **맵 적 구성 분석** (`matchup_skill_for_route`): `MapData.get_layout`의 `enemies`(고정 배치) + `waves`(ARENA) 적 수를 합산. 등장하는 적 중 플레이어가 카운터를 아직 안 가진 최우선 약점 스킬 id를 반환.
+- **레벨업 추천 ★** (`VeilDialogue.get_levelup_advice` → `LevelUpOverlay`): 상성 스킬을 1순위로, **skill_id 단위로 콕 집어** ★ 표시 + 전용 멘트(`_matchup_line`, 예 "방패병이 정면을 막아요. 폭발물이면 방패째 뚫어요."). 상성이 없으면 기존 route_tags 기반 family 추천으로 폴백.
+- **출현 가중** (`SkillSystem.roll_choices(owned, count, route_id)`): 상성 스킬이 레벨업 후보 풀에 있으면 셔플 후 첫 슬롯으로 끌어와 픽에 보장.
+
+### 6.2 글라이드 라인 재설계 + 폭발물 너프 (밸런스)
+- **글라이드** (`Player.gd` `_spawn_bullet` / 낙하 처리, `GLIDE_FALL_SPEED` 130):
+  - **T1 공중 활강** — 점프 키 홀드 + 낙하 중 천천히 떨어짐. 좌우 입력 시 낙하 속도 ×1.6로 활공 거리·속도 제어.
+  - **T2 관통 사격** — 활강 중(홀드+낙하) 사격이 적을 관통 + 데미지 +1.
+  - **T3 유도 사격** — 활강 중 사격이 적을 추적. `Bullet.tracking_blend=0.12`, `tracking_max_angle=0.42`(~24°)로 강한 유도.
+- **폭발물 너프** (`Player.gd`): `EXPLOSION_DAMAGE` 3→2(방패병 한 방 차단, patrol/sniper/drone/bomber는 한 방 유지), `SKILL_COOLDOWN` 3.0→3.5, T2/T3 쿨다운 2.5→3.0. 방패 무시 광역(AoE)은 유지.
+- **Bullet 추적 인스턴스 변수화** (`Bullet.gd`): `tracking_blend` / `tracking_max_angle`를 인스턴스 변수로 분리. 기본값(multishot T3)은 약한 추적(0.03 / ~12°), glide T3은 값 상향(0.12 / ~24°)으로 강한 유도. 보스전 밸런스 영향은 글라이드 활강 한정이라 제한적.
 
 ---
 
@@ -403,6 +441,7 @@ res://
 │   ├── SceneRouter.gd
 │   ├── RouteData.gd           # 루트 풀 + available_stages 필터링
 │   ├── VeilDialogue.gd
+│   ├── VeilSight.gd            # VEIL 시야 마킹 HUD (화면 안 reticle / 화면 밖 화살표 + ACT3 역전)
 │   ├── SkillSystem.gd
 │   ├── EndingResolver.gd
 │   ├── Player.gd              # 이동/점프/대시/사격/플랫폼드롭/액티브

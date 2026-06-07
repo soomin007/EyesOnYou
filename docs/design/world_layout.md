@@ -606,6 +606,43 @@ camera:       가로 follow
 
 ---
 
+### 2.12 스킬-적 상성 참고 (맵 주력 적 → 유리한 스킬)
+
+> **이건 추천/출현 로직(코드)이지 적 배치 변경이 아니다.** 위 §2의 맵 좌표·적 spawn은
+> 그대로다. 아래는 "이 맵에 어떤 적이 많으니 이 스킬을 권한다"를 한눈에 보는 참고표.
+> 단일 진실은 `SkillTreeData.MATCHUP` (코드) — 표가 어긋나면 코드를 따른다.
+
+적별 약점 스킬 (`SkillTreeData.MATCHUP`):
+
+| 적 타입 | 약점 스킬 | 이유 |
+|--------|----------|------|
+| shield (방패병) | explosive (폭발물) | 방향 무시 AoE로 정면 방패 관통 |
+| sniper (저격수) | glide (공중 활강) | 공중 체류로 저격선 흔들어 제압 |
+| drone (드론) | multishot (다중 사격) | 부채꼴 다발로 공중 표적 처리 |
+| bomber (폭격병) | fire_boost (사격 강화) | 붙기 전에 빠른 화력으로 처치 |
+
+맵별 주력 적 → 권장 스킬 (§2 spawn 기준):
+
+| 맵 | 주력 적 | 권장 스킬 |
+|----|--------|----------|
+| back_alley | patrol | (기본기 — 특화 없음) |
+| rooftops | patrol, **sniper** | glide |
+| sewers | patrol, **bomber** | fire_boost |
+| subway | patrol, **sniper, shield** | glide / explosive |
+| cooling | patrol, sniper, **drone** | multishot (+glide) |
+| watchtower | patrol, **sniper** | glide |
+| ward | patrol, **bomber, shield** | fire_boost / explosive |
+| datacenter (ARENA) | 전 종류 웨이브 | 상황별 — sniper엔 glide, drone엔 multishot, shield엔 explosive |
+| escape | patrol | (숨 고르기 — 특화 없음) |
+| lab (보스) | SENTINEL 단독 | 보스 전용 (상성 표 비적용) |
+| blackout (도전) | patrol, bomber, **drone** | (1 hit fail — 회피 위주) |
+
+> 동작 방식: 레벨업 카드(추천 ★)와 출현 가중이 `matchup_skill_for_route()`를 공유한다.
+> 현재 맵에 등장하는 적 중 **플레이어가 아직 카운터 스킬을 안 가진** 최우선 약점 스킬을
+> 골라 가르친다 (위협 우선순위 shield → sniper → drone → bomber). 적 배치는 손대지 않는다.
+
+---
+
 ## 3. 특수 방 컨셉 시트
 
 ### 3.1 이스터에그 방 — "ARCTURUS 아카이브"
