@@ -14,7 +14,8 @@ signal self_destruct_disarmed
 const HP_MAX: int = 24
 const HP_PHASE2: int = 16  # 이 값 이하 들어오면 P2
 const HP_PHASE3: int = 8   # 이 값 이하 들어오면 P3
-const HP_SELF_DESTRUCT: int = 1  # 이 값 이하 시 자폭 카운트다운 시작
+const HP_SELF_DESTRUCT: int = 5  # 이 값 이하 시 자폭 카운트다운 시작 (버퍼 — 잔탄에 즉사 방지, 자폭 시퀀스 보장)
+const HP_SELF_DESTRUCT_STORY: int = 2  # 스토리 보스(HP 8)는 더 낮게 — 충분히 싸운 뒤 자폭
 # 스토리 모드 — P2/P3 스킵, 자폭 트리거까지 짧게.
 const HP_MAX_STORY: int = 8
 const PHASE_FREEZE_DURATION: float = 1.2  # 페이즈 전환 시 정지 + 무적 시간
@@ -298,20 +299,27 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 	# 페이즈 전환 동안은 무적 — 플레이어가 페이즈 연출을 인지할 시간 보장.
 	if phase_freeze_t > 0.0:
 		return
+	# 자폭 카운트다운 중에는 무적 — 이미 날아오던 총알/연사에 즉사시키지 않고 자폭 시퀀스를
+	# 끝까지 보여준다. (이전엔 자폭 진입 직후 잔탄에 맞아 카운트다운이 안 보이고 바로 처치되던
+	# 문제 — 사용자 보고. 처치는 카운트다운 종료 → _detonate → _die로만 일어남.)
+	if self_destruct_active:
+		return
 	hp = max(0, hp - amount)
 	_flash_hit()
 	if hp > 0:
 		SfxPlayer.play_at("boss_hurt", global_position)
 	# 페이즈 전환 검사 — 자폭 진입 후에는 페이즈 재전환 안 함.
-	if not story_simplified and not self_destruct_active:
+	if not story_simplified:
 		if phase < 2 and hp <= HP_PHASE2:
 			_transition_to(2)
 		elif phase < 3 and hp <= HP_PHASE3:
 			_transition_to(3)
-	# 자폭 트리거 (HP 1 이하) — 이미 진행 중이면 재진입 안 함.
-	if not self_destruct_active and hp <= HP_SELF_DESTRUCT:
+	# 자폭 트리거 — HP 임계 이하로 떨어지면 카운트다운 시작. 버퍼(HP_SELF_DESTRUCT)를 둬
+	# 트리거와 동시에 hp가 0이 되어 즉사하는 걸 방지. 진입하면 위 무적으로 항상 끝까지 자폭한다.
+	var sd_threshold: int = HP_SELF_DESTRUCT_STORY if story_simplified else HP_SELF_DESTRUCT
+	if hp <= sd_threshold:
 		_arm_self_destruct()
-	# 자폭 중 마지막 hp 깎이면 disarm 처치 — _die가 self_destruct_t < SELF_DESTRUCT_TIME 보고 알아서 분기.
+		return
 	if hp <= 0:
 		_die()
 
@@ -459,16 +467,13 @@ func _detonate() -> void:
 	# 자폭으로 사망 처리
 	_die()
 
-# 플레이어가 자폭 카운트다운 안에 보스를 처치하면 _die가 호출되며 정상 클리어.
+# 자폭 진입 후에는 보스가 무적(take_damage 무시)이라, 처치는 카운트다운 종료 → _detonate → _die로만
+# 일어난다. 즉 _die 도달 시 항상 자폭 폭발이 끝난 상태. (이전엔 카운트다운 중 처치로 disarm되는
+# 경로가 있었으나, 잔탄에 자폭이 안 보이고 즉사하던 문제로 제거 — 사용자 보고.)
 func _die() -> void:
 	if dead:
 		return
 	dead = true
-	# 자폭 카운트다운 중에 처치 → 알람 해제 사운드. 자폭 폭발 후 _die면 disarm 부적절.
-	# self_destruct_t == 0이면 _arm 직후 즉사한 케이스, t < SELF_DESTRUCT_TIME이면 카운트다운 중.
-	# _detonate에서 _die가 호출되는 경우엔 t >= SELF_DESTRUCT_TIME이라 자동으로 분기됨.
-	if self_destruct_active and self_destruct_t < SELF_DESTRUCT_TIME:
-		SfxPlayer.play_at("boss_self_destruct_disarm", global_position)
 	SfxPlayer.play_at("boss_death", global_position)
 	# 보스가 죽으면 소환된 잔당도 함께 정리 — ARENA에 잔존 적이 남아 클리어 흐름이 어색해지는 것 방지.
 	for m in summoned_minions:

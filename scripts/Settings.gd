@@ -628,6 +628,13 @@ func _process(delta: float) -> void:
 	# 위/아래 hold 연속 이동 — Godot 기본 ui_up/down은 echo로 자동 반복되지 않음.
 	if capturing_action != "":
 		return
+	# 포커스 가드 — 포커스가 설정창 밖(뒤 메뉴 버튼 등)으로 새면 즉시 현재 탭으로 회수.
+	# (사용자 보고: 설정창이 떠 있는데 뒤 메뉴가 선택되던 누수.) focus가 null인 경우는
+	# 진입 직후 arm_focus_with_delay의 1초 락아웃이라 건드리지 않는다.
+	var fo: Control = get_viewport().gui_get_focus_owner()
+	if fo != null and not is_ancestor_of(fo):
+		_focus_first_in_current_tab()
+		return
 	var new_dir: int = 0
 	if Input.is_action_pressed("ui_up"):
 		new_dir = -1
@@ -656,6 +663,29 @@ func _step_focus_vertical(dir: int) -> void:
 	if nb != null:
 		nb.grab_focus()
 
+# 현재 탭의 첫 조작 가능한 컨트롤로 포커스를 옮긴다. 탭 전환(Q/E) 직후 호출 — 안 그러면
+# 포커스가 이전 탭(숨겨진 키바인드 버튼 등)에 남아 키보드 네비가 안 되고 뒤 메뉴로 새어나간다.
+func _focus_first_in_current_tab() -> void:
+	if tabs == null:
+		return
+	var content: Control = tabs.get_current_tab_control()
+	if content == null:
+		return
+	var target: Control = _first_focusable(content)
+	if target != null:
+		target.grab_focus()
+
+func _first_focusable(node: Node) -> Control:
+	if node is Control:
+		var c: Control = node as Control
+		if c.visible and c.focus_mode != Control.FOCUS_NONE and not (c is Button and (c as Button).disabled):
+			return c
+	for child in node.get_children():
+		var found: Control = _first_focusable(child)
+		if found != null:
+			return found
+	return null
+
 func _input(event: InputEvent) -> void:
 	# 캡쳐 중엔 아래 분기만. 그 외엔 Q/E or LB/RB로 탭 전환 가능.
 	if capturing_action == "":
@@ -678,6 +708,8 @@ func _input(event: InputEvent) -> void:
 			var n: int = tabs.get_tab_count()
 			if n > 0:
 				tabs.current_tab = (tabs.current_tab + tab_dir + n) % n
+				# 새 탭의 첫 컨트롤로 포커스 이동 — 모든 탭에서 키보드 네비가 되고 포커스가 안 샌다.
+				_focus_first_in_current_tab()
 			get_viewport().set_input_as_handled()
 			return
 	if capturing_action == "":

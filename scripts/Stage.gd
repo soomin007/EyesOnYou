@@ -755,16 +755,18 @@ func _ensure_subtitle_stack() -> void:
 	_subtitle_stack_layer = CanvasLayer.new()
 	_subtitle_stack_layer.layer = 20
 	add_child(_subtitle_stack_layer)
-	# 화면 폭 전체에 걸쳐 가운데 정렬 — 보스/wide 화면에서 좌측 치우침 방지.
+	# 화면 하단 중앙 — 플레이어가 캐릭터(화면 중앙~하단)를 보는 시선 가까이로. 상단에 두면
+	# 조작 중 인지가 안 된다는 사용자 피드백. 하단 쿨다운 게이지(좌하단) 위쪽 band에 배치.
 	var holder := Control.new()
-	holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	holder.offset_top = 96.0
-	holder.offset_bottom = 360.0
+	holder.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	holder.offset_top = -320.0
+	holder.offset_bottom = -112.0
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_subtitle_stack_layer.add_child(holder)
 	_subtitle_stack_box = VBoxContainer.new()
 	_subtitle_stack_box.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_subtitle_stack_box.alignment = BoxContainer.ALIGNMENT_BEGIN
+	# END — 새 대사가 band 하단(시선 가까이)에 붙고 기존 줄은 위로 밀려 쌓인다.
+	_subtitle_stack_box.alignment = BoxContainer.ALIGNMENT_END
 	_subtitle_stack_box.add_theme_constant_override("separation", 6)
 	holder.add_child(_subtitle_stack_box)
 
@@ -774,13 +776,22 @@ func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = 
 	var l := Label.new()
 	# plain_prefix=true: VEIL-1/VEIL-2 시퀀스(??? 방 등) 끝에 현재 VEIL이 이어 말할 때 시각 일관성용 — em dash 제거.
 	l.text = ("VEIL\n" if plain_prefix else "VEIL  —  ") + message
-	l.add_theme_font_size_override("font_size", 18)
-	l.add_theme_color_override("font_color", Color(0.7, 0.9, 1.0))
+	l.add_theme_font_size_override("font_size", 20)
+	l.add_theme_color_override("font_color", Color(0.80, 0.92, 1.0))
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	l.add_theme_constant_override("outline_size", 4)
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# 어두운 반투명 pill 배경 — 게임 화면 위에서 또렷하게(사용자: 대사 인지 안 됨).
+	# 내용 폭만큼만 감싸고 가운데 정렬 (SHRINK_CENTER).
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.03, 0.05, 0.09, 0.82)
+	sb.set_corner_radius_all(7)
+	sb.content_margin_left = 18.0
+	sb.content_margin_right = 18.0
+	sb.content_margin_top = 8.0
+	sb.content_margin_bottom = 8.0
+	l.add_theme_stylebox_override("normal", sb)
+	l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.modulate.a = 0.0
 	_subtitle_stack_box.add_child(l)
 	var tw := l.create_tween()
