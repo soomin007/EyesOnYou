@@ -261,6 +261,7 @@ func _build_debug_tab() -> Control:
 	var ending_row := HBoxContainer.new()
 	ending_row.add_theme_constant_override("separation", 10)
 	v.add_child(ending_row)
+	var ending_btns: Array = []
 	for entry in [
 		{"id": "A", "label": "엔딩 A — 완벽한 도구"},
 		{"id": "B", "label": "엔딩 B — 혼자였던 사람"},
@@ -274,6 +275,15 @@ func _build_debug_tab() -> Control:
 		btn.add_theme_font_size_override("font_size", 12)
 		btn.pressed.connect(_on_ending_preview_pressed.bind(str(d["id"])))
 		ending_row.add_child(btn)
+		ending_btns.append(btn)
+	# 세로 포커스 연결 — 연습장 버튼 ↕ 엔딩 행. (HBox 내부 좌우는 Godot 자동.) 명시 안 하면
+	# 키보드로 엔딩 버튼에 도달 못 하던 문제(사용자 보고). 좌우는 기본 geometry로 충분.
+	if ending_btns.size() > 0:
+		var first_ending: Button = ending_btns[0] as Button
+		enter_btn.focus_neighbor_bottom = enter_btn.get_path_to(first_ending)
+		for b in ending_btns:
+			var eb: Button = b as Button
+			eb.focus_neighbor_top = eb.get_path_to(enter_btn)
 
 	return outer
 

@@ -1911,7 +1911,9 @@ func _build_camera() -> void:
 			camera.limit_left = 0
 			camera.limit_right = int(_world_size.x)
 			camera.limit_top = -200
-			camera.limit_bottom = int(_world_size.y + 200.0)
+			# 바닥(GROUND_Y) 살짝 아래까지만 — 이전 world_size.y+200은 floor_visual(GROUND_Y+300)
+			# 너머라 맨 밑에 void가 비쳤음(사용자: "바닥 아래 뚫려보임").
+			camera.limit_bottom = int(GROUND_Y + 120.0)
 			player.add_child(camera)
 		"FIXED":
 			# ARENA — 카메라 고정. zoom으로 월드 전체가 보이도록.

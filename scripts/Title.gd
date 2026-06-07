@@ -109,6 +109,13 @@ func _process(delta: float) -> void:
 			hint_label.modulate.a = 0.5 + 0.5 * sin(blink_t * 3.0)
 		else:
 			hint_label.modulate.a = 1.0
+	# 포커스 가드 — 메뉴에서 포커스가 사라지면(예: snu 입력 중 's'(이동 매핑)가 포커스를 이탈시킴)
+	# 첫 버튼으로 회수. 설정창 떠 있을 땐 설정창이 포커스를 가지므로 건드리지 않는다.
+	if settings_overlay == null and buttons_box != null and buttons_box.get_child_count() > 0:
+		if get_viewport().gui_get_focus_owner() == null:
+			var first: Control = buttons_box.get_child(0) as Control
+			if first != null:
+				first.grab_focus()
 
 func _set_state(new_state: int) -> void:
 	state = new_state
