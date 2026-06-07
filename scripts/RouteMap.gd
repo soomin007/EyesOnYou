@@ -177,6 +177,13 @@ func _update_risk_reward_panel(route: Dictionary) -> void:
 	risk_reward_label.text = "\n\n".join(lines)
 	risk_reward_panel.visible = true
 
+func _input(event: InputEvent) -> void:
+	# 스페이스(점프 키)로는 맵 확정 금지 — 플레이 중 점프 습관 탓에 맵이 뜨자마자 의도치 않게
+	# 카드가 선택돼버리는 것 방지(사용자). _input은 GUI·_unhandled_input보다 먼저 처리되므로
+	# 여기서 소비하면 버튼 ui_accept와 아래 jump 분기 양쪽 다 막힌다. Enter·W·클릭으로는 정상 확정.
+	if event is InputEventKey and event.pressed and (event as InputEventKey).physical_keycode == KEY_SPACE:
+		get_viewport().set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
 		_on_button_pressed(hovered_idx)

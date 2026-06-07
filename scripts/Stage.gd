@@ -210,7 +210,10 @@ func _on_veil_mistake_zone(body: Node, area: Area2D) -> void:
 # 진입 멘트가 가신 뒤 지연 자막으로. ACT3에서만(일반 stage5+/스토리 s3), 회당 1회.
 func _arm_act3_vision_subtitle() -> void:
 	var stage: int = GameState.current_stage
-	var is_act3: bool = (stage == 3) if GameState.story_mode else (stage >= 5)
+	# 스토리 ACT3 = 보스 직전(ward/sewers, stage 2) + 보스(lab, stage 3). escape(4)는 탈출이라 제외.
+	# 보스전(stage 3)은 ARENA라 마킹할 잡몹이 없어 시야 역전이 실연되지 않음 → stage 2에서 먼저
+	# degradation을 보여준다(사용자: "보스전이라 마커가 무의미, 하나 더 전부터 시작").
+	var is_act3: bool = (stage == 2 or stage == 3) if GameState.story_mode else (stage >= 5)
 	if not is_act3:
 		return
 	var line: String = _act3_vision_line(stage)
@@ -267,7 +270,10 @@ func _fire_act3_vision(line: String) -> void:
 # 일반 모드는 첫 ACT3(stage 5) 핵심부 진입 → 최종 stage 서버 접근으로 점증.
 func _act3_vision_line(stage: int) -> String:
 	if GameState.story_mode:
-		return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
+		# 보스 직전(stage 2)은 역전의 시작, 보스(stage 3)는 클라이맥스로 점증.
+		if stage >= 3:
+			return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
+		return "여기서부터는 잘 안 보여요. 이제 요원이 봐줘요."
 	if stage >= GameState.effective_total_stages() - 1:
 		return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
 	return "여기서부터는 잘 안 보여요. 이제 요원이 봐줘요."
@@ -2812,6 +2818,9 @@ func _build_back_alley_secret() -> void:
 		]
 		for p in spots:
 			_spawn_orb(p, true)
+		# 첫 레버 튜토리얼: 레버↔해치가 1000px 떨어져 인과가 한 화면에 안 보임 → VEIL이
+		# 무엇을/어디를 열었는지 방향까지 짚어준다(사용자: "뭘 여는 건지 알려주는 기능이 모자람").
+		_show_veil_subtitle("잠긴 칸을 열었어요.\n오른쪽 앞, 천장 쪽에 길이 생겼어요.", 3.4)
 	)
 
 # ── rooftops 비밀칸 ───────────────────────────────────────────
