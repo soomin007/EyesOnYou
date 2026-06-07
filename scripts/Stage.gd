@@ -119,6 +119,7 @@ func _load_world_meta() -> void:
 
 var veil_mistake_triggered: bool = false
 var ward_foreshadow_triggered: bool = false
+var act3_vision_triggered: bool = false
 
 func _setup_veil_mistakes() -> void:
 	if GameState.playground_active:
@@ -136,6 +137,8 @@ func _setup_veil_mistakes() -> void:
 			break
 	if entry != "":
 		_show_veil_subtitle(entry, 3.6)
+	# ACT3 시야 역전 최고조 — 플레이 *중* 결정론적으로 한 번 더 박는다 (v3 §4 ★).
+	_arm_act3_vision_subtitle()
 
 func _arm_ward_foreshadow_at(trigger_x: float) -> void:
 	var area := Area2D.new()
@@ -197,6 +200,72 @@ func _on_veil_mistake_zone(body: Node, area: Area2D) -> void:
 		_show_veil_subtitle(after_line, 3.0)
 	else:
 		_show_veil_subtitle(before_line + "\n" + after_line, 3.4)
+
+# ─── ACT3 인게임 시야 역전 자막 (v3 §4 ★) ─────────────────────
+# 최고조 비트("이제 요원이 VEIL 대신 본다")를 *플레이 중* 한 번 띄운다. 브리핑(ENTER로 스킵 가능)에만
+# 싣지 않고 플레이필드 자막으로 한 번 더 박아 스킵 불가하게 — §1-2(단일 채널 의존) 해결.
+# POSITION 골 맵은 진행 ~62% 지점을 가로지르는 트리거 밴드로, 트래버스가 없는 ARENA(보스/datacenter)는
+# 진입 멘트가 가신 뒤 지연 자막으로. ACT3에서만(일반 stage5+/스토리 s3), 회당 1회.
+func _arm_act3_vision_subtitle() -> void:
+	var stage: int = GameState.current_stage
+	var is_act3: bool = (stage == 3) if GameState.story_mode else (stage >= 5)
+	if not is_act3:
+		return
+	var line: String = _act3_vision_line(stage)
+	if line == "":
+		return
+	# 트래버스가 없는 ARENA(FIXED 카메라) — 위치 트리거가 무의미하니 진입 멘트(수명 ~4.4s) 뒤 지연 자막으로.
+	if _goal_type != "POSITION":
+		var tw := create_tween()
+		tw.tween_interval(4.8)
+		tw.tween_callback(_fire_act3_vision.bind(line))
+		return
+	# 진행 방향(시작 → 골)의 ~62% 지점에 진행 축을 가로지르는 트리거 밴드.
+	# 세로 맵은 폭 전체를, 가로 맵은 높이 전체를 덮어 어느 발판/높이로 지나도 통과하게.
+	var approach: Vector2 = PLAYER_START.lerp(_goal_pos, 0.62)
+	var box: Vector2
+	if _world_size.y > _world_size.x:
+		box = Vector2(_world_size.x, 260.0)
+		approach.x = _world_size.x * 0.5
+	else:
+		box = Vector2(220.0, _world_size.y)
+		approach.y = _world_size.y * 0.5
+	var area := Area2D.new()
+	area.name = "Act3VisionTrigger"
+	area.collision_layer = 0
+	area.collision_mask = 2
+	area.position = approach
+	area.set_meta("line", line)
+	add_child(area)
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = box
+	col.shape = shape
+	area.add_child(col)
+	area.body_entered.connect(_on_act3_vision_zone.bind(area))
+
+func _on_act3_vision_zone(body: Node, area: Area2D) -> void:
+	if act3_vision_triggered:
+		return
+	if not (body is CharacterBody2D and body == player):
+		return
+	_fire_act3_vision(str(area.get_meta("line", "")))
+
+func _fire_act3_vision(line: String) -> void:
+	if act3_vision_triggered:
+		return
+	act3_vision_triggered = true
+	if line != "":
+		_show_veil_subtitle(line, 4.0)
+
+# 시야 역전 최고조 한 줄 (v3 §4). 스토리 s3 = 최고조(서버 접근 톤),
+# 일반 모드는 첫 ACT3(stage 5) 핵심부 진입 → 최종 stage 서버 접근으로 점증.
+func _act3_vision_line(stage: int) -> String:
+	if GameState.story_mode:
+		return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
+	if stage >= GameState.effective_total_stages() - 1:
+		return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
+	return "제 눈이 여기서 멈춰요. 이제 요원 거예요."
 
 func _build_hidden_archive() -> void:
 	# 격리 서버실 — 적/가시/골 없음, 단말기 2개 시퀀스 후 자동 ENDING 전환
@@ -2412,10 +2481,12 @@ func _on_boss_killed(at_position: Vector2) -> void:
 			tw.tween_callback(boss_hp_bar_layer.queue_free)
 	# DESIGN §2.10 보스 처치 대사. 한 호흡(처치 직후 몰아쉬는 한 마디)으로 보이게 multi-line으로.
 	# 스토리 모드는 escape 단계가 있어 "서버실 앞" 멘트가 어울리지 않음 → 별도 분기.
+	# 끝줄 "끝까지 같이 가요. 제가 보는 한." = 풀에서 뺀 안심 줄의 새 집(v3 §4). 엔딩에서
+	# 시야가 완전히 끊기며 이 다짐("제가 보는 한")이 회수된다.
 	if GameState.story_mode:
-		_show_veil_subtitle("처리됐어요, 요원.\n이제 빠져나가요. 거의 다 왔어요.", 3.0)
+		_show_veil_subtitle("처리됐어요, 요원.\n이제 빠져나가요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
 	else:
-		_show_veil_subtitle("처리됐어요, 요원.\n이게 마지막 관문이었어요. 서버실이 바로 앞이에요.", 3.0)
+		_show_veil_subtitle("처리됐어요, 요원.\n서버실이 바로 앞이에요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
 
 func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var e := CharacterBody2D.new()
