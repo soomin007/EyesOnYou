@@ -69,6 +69,7 @@ func _ready() -> void:
 	_build_rewards()
 	_build_goal()
 	_setup_veil_mistakes()
+	_setup_veil_sight()
 	_setup_challenge_mode()
 	_build_lever_puzzles()
 	if GameState.playground_active:
@@ -266,6 +267,25 @@ func _act3_vision_line(stage: int) -> String:
 	if stage >= GameState.effective_total_stages() - 1:
 		return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
 	return "제 눈이 여기서 멈춰요. 이제 요원 거예요."
+
+# ─── VEIL 시야 마킹 셋업 (시야=신뢰 파일럿) ───────────────────────
+# VEIL이 원거리/공중 위협을 HUD로 짚어준다. ACT3에선 그 마킹이 흐려지고 꺼진다 = 역전을 플레이로.
+func _setup_veil_sight() -> void:
+	# 교신 차단 도전(blackout)은 VEIL이 못 도와주는 게 컨셉 → 마커 없음(엔트리 멘트와도 일관).
+	if GameState.current_route_id == "route_blackout":
+		return
+	if player == null:
+		return
+	var layer := CanvasLayer.new()
+	layer.name = "VeilSightLayer"
+	layer.layer = 18  # 자막(20) 아래, 게임 위
+	add_child(layer)
+	var sight := VeilSight.new()
+	sight.player = player
+	var stage: int = GameState.current_stage
+	# 역전 baseline → ACT3에 무너짐: 초중반엔 안정적, ACT3(일반 stage5+/스토리 s3+)에 degradation.
+	sight.degraded = (stage >= 3) if GameState.story_mode else (stage >= 5)
+	layer.add_child(sight)
 
 func _build_hidden_archive() -> void:
 	# 격리 서버실 — 적/가시/골 없음, 단말기 2개 시퀀스 후 자동 ENDING 전환
