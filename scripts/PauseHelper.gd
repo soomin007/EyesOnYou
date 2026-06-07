@@ -32,6 +32,12 @@ static func build(_owner: Node, on_resume: Callable, on_settings: Callable, on_t
 	btn_resume.pressed.connect(on_resume)
 	v.add_child(btn_resume)
 
+	# 스킬 트리 열람 — 전체 트리(라인 점증)를 일시정지 중 확인. 자체 완결 오버레이라
+	# 콜백 불필요(layer 위에 직접 얹고 스스로 닫힘). paused는 건드리지 않음.
+	var btn_tree := _make_button("스킬 트리")
+	btn_tree.pressed.connect(func() -> void: SkillTreeOverlay.open(layer))
+	v.add_child(btn_tree)
+
 	var btn_settings := _make_button("설정")
 	btn_settings.pressed.connect(on_settings)
 	v.add_child(btn_settings)

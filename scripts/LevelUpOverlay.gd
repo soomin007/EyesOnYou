@@ -132,6 +132,16 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		btn.pressed.connect(func() -> void: _finish(layer, sid, on_picked))
 		btn.focus_entered.connect(SfxPlayer.play.bind("ui_focus", 0.0))
 		hb.add_child(btn)
+	# 전체 스킬 트리 보기 — 픽 3장만으론 안 보이는 라인 점증(T2·T3)을 확인하고 결정.
+	# 자체 완결 오버레이를 layer 위에 얹고 스스로 닫힘. paused 유지.
+	var tree_btn := Button.new()
+	tree_btn.text = "전체 스킬 트리 보기"
+	tree_btn.custom_minimum_size = Vector2(0, 34)
+	tree_btn.add_theme_font_size_override("font_size", 14)
+	tree_btn.process_mode = Node.PROCESS_MODE_ALWAYS
+	tree_btn.pressed.connect(func() -> void: SkillTreeOverlay.open(layer))
+	v.add_child(tree_btn)
+
 	host.add_child(layer)
 	# 카드 버튼은 ui_confirm + skill_pick 중복 방지를 위해 wire_sfx=false.
 	# focus_entered만 별도로 ui_focus에 연결됨 (위 loop 안).
