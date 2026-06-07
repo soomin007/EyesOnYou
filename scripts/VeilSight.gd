@@ -27,17 +27,68 @@ const FADE_IN: float = 0.35                    # 마커가 "짚어지는" 등장
 const CALL_COOLDOWN: float = 18.0             # VEIL이 말로 짚는 최소 간격 (노이즈 방지)
 const MIN_CALL_TIME: float = 7.0             # 맵 진입 멘트 보호 — 이 전엔 말 안 함
 const GLITCH_DUR: float = 1.2                # 역전 순간 일제 붕괴 연출 길이
-const BLIND_PCT: int = 35                    # degradation 중 VEIL이 영영 못 보는 위협 비율(%)
+const BLIND_PCT: int = 50                    # degradation 중 VEIL이 영영 못 보는 위협 비율(%) — 페널티 강화
+
+# 화면 비네트 — 적 수가 적어 마커만으론 약하니 화면 전체로 "VEIL의 봄/안 봄"을 항상 체감시킨다.
+# 기본: 테두리에 은은한 VEIL 시안(함께 본다). degradation: 어둡게 + 안쪽으로 좁아짐(시야 축소 = 페널티).
+const VIG_FAR: Vector2 = Vector2(0.5, 0.04)   # 기본 — radial 반경 큼(얇은 가장자리 테두리)
+const VIG_NEAR: Vector2 = Vector2(0.5, 0.30)  # degradation — 반경 작음(중앙만 보이는 시야 축소)
+const VIG_CALM_A: float = 0.20                # 기본 시안 테두리 알파
+const VIG_DARK_A: float = 0.66                # degradation 검정 비네트 알파
 
 var _t: float = 0.0
 var _seen: Dictionary = {}                    # instance_id → 처음 본 _t (페이드인용)
 var _degrade_t: float = -1.0                  # >=0 이면 ACT3 degradation 진행 중 (시작 시각)
 var _intro_called: bool = false               # "표시해 둘게요" 메타 소개 1회
 var _last_call_t: float = -999.0
+var _vignette: TextureRect = null             # 테두리 시안 / 시야 축소 비네트
+var _vig: float = 0.0                          # 0=기본(시안 테두리) → 1=degradation(검정 축소)
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_build_vignette()
+
+# 화면 비네트 — 라디얼 그라데이션(중앙 투명→가장자리 불투명) 흰 텍스처를 modulate 색으로 물들인다.
+# 기본=시안 테두리(VEIL이 함께 본다), degradation=검정 + 반경 축소(시야 좁아짐). _update_vignette가 전환.
+func _build_vignette() -> void:
+	_vignette = TextureRect.new()
+	_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	var grad := Gradient.new()
+	grad.offsets = PackedFloat32Array([0.0, 1.0])
+	grad.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 1)])
+	var gt := GradientTexture2D.new()
+	gt.gradient = grad
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = VIG_FAR
+	gt.width = 320
+	gt.height = 200
+	_vignette.texture = gt
+	_vignette.modulate = Color(CALM.r, CALM.g, CALM.b, VIG_CALM_A)
+	add_child(_vignette)
+
+func _update_vignette(delta: float) -> void:
+	if _vignette == null:
+		return
+	var target: float = 1.0 if _is_degraded() else 0.0
+	_vig = move_toward(_vig, target, delta * 1.4)
+	# 기본 시안 테두리 → degradation 검정. 알파도 함께 lerp.
+	var base: Color = Color(CALM.r, CALM.g, CALM.b, VIG_CALM_A)
+	var dark: Color = Color(0.0, 0.0, 0.02, VIG_DARK_A)
+	var col: Color = base.lerp(dark, _vig)
+	# degradation 중엔 약한 펄스로 불안정함.
+	if _is_degraded():
+		col.a *= 1.0 + 0.08 * sin(_t * 4.0)
+	_vignette.modulate = col
+	# 반경: 기본 가장자리(얇은 테두리) → degradation 안쪽(시야 축소).
+	var gt: GradientTexture2D = _vignette.texture as GradientTexture2D
+	if gt != null:
+		var ft: Vector2 = VIG_FAR.lerp(VIG_NEAR, _vig)
+		if not ft.is_equal_approx(gt.fill_to):
+			gt.fill_to = ft
 
 # ACT3 자막("여기서부터는 잘 안 보여요")과 동기 호출 — 그 순간 마커가 무너진다.
 func begin_degradation() -> void:
@@ -51,6 +102,7 @@ func _is_degraded() -> bool:
 func _process(delta: float) -> void:
 	_t += delta
 	_scan_for_call()
+	_update_vignette(delta)
 	queue_redraw()
 
 # 화면 밖에 새로 나타난 위협을 VEIL이 말로 짚는다(레이더 아님의 핵심). 쿨다운/진입보호로 절제.

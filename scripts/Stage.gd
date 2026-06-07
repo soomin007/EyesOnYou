@@ -221,15 +221,16 @@ func _arm_act3_vision_subtitle() -> void:
 	var line: String = _act3_vision_line(stage)
 	if line == "":
 		return
-	# 트래버스가 없는 ARENA(FIXED 카메라) — 위치 트리거가 무의미하니 진입 멘트(수명 ~4.4s) 뒤 지연 자막으로.
+	# 트래버스가 없는 ARENA(FIXED 카메라) — 위치 트리거가 무의미하니 진입 멘트 뒤 지연 자막으로.
+	# 사용자: "안 보인다 시점이 너무 늦다" → 4.8→3.0s로 앞당김.
 	if _goal_type != "POSITION":
 		var tw := create_tween()
-		tw.tween_interval(4.8)
+		tw.tween_interval(3.0)
 		tw.tween_callback(_fire_act3_vision.bind(line))
 		return
-	# 진행 방향(시작 → 골)의 ~62% 지점에 진행 축을 가로지르는 트리거 밴드.
+	# 진행 방향(시작 → 골)의 ~48% 지점에 진행 축을 가로지르는 트리거 밴드(사용자: 역전이 너무 늦음 → 62%→48%).
 	# 세로 맵은 폭 전체를, 가로 맵은 높이 전체를 덮어 어느 발판/높이로 지나도 통과하게.
-	var approach: Vector2 = PLAYER_START.lerp(_goal_pos, 0.62)
+	var approach: Vector2 = PLAYER_START.lerp(_goal_pos, 0.48)
 	var box: Vector2
 	if _world_size.y > _world_size.x:
 		box = Vector2(_world_size.x, 260.0)
