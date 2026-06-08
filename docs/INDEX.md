@@ -30,6 +30,11 @@
   단일 진실은 `SkillTreeData.MATCHUP`, 맵별 정리는 `design/world_layout.md` §2.12.
 - **글라이드 라인 재설계·폭발물 너프**: 활강을 공중 제압축으로 재설계(저격 카운터),
   폭발물은 광역 답답함 해소를 위해 너프. (글라이드 특화 신규/개조 맵은 설계 협의 중 — 미확정)
+- **UI 시각화(텍스트→그래픽)**: 맵 진행 노드맵(`RouteMap`), 전체 스킬 트리 오버레이(`SkillTreeOverlay`,
+  라인별 스킬 아이콘), 레벨업 카드 스킬 아이콘(`SkillIcon.gd`), 오프닝 VEIL 감시 눈(`BriefingVisual.gd`)
+  + 미션 목표물 아이콘(`MissionObjective.gd`). 설정에 해상도/창모드. 텍스트 검정 아웃라인으로 선명도.
+- **VEIL 적응형 추천**: 최근 스테이지 피격/죽음으로 실력 판정(`GameState.competence_tier`) → 맵을
+  안전/가성비/고보상으로 추천, 사유를 VEIL 대사로(`RouteData`). 시야 붕괴(degradation)는 맵 간 지속.
 
 ## 단일 진실의 원칙
 
