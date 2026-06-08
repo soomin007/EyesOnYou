@@ -52,6 +52,11 @@ func _ready() -> void:
 	_fit_to_viewport()
 	get_viewport().size_changed.connect(_fit_to_viewport)
 	_build_vignette()
+	# 이전 맵에서 이미 시야가 붕괴했다면 이 맵도 처음부터 어두운 상태로(전환 애니 없이 즉시).
+	if GameState.veil_degraded:
+		_degrade_t = _t
+		_vig = 1.0
+		_update_vignette(0.0)
 
 func _fit_to_viewport() -> void:
 	position = Vector2.ZERO
@@ -72,8 +77,9 @@ func _build_vignette() -> void:
 	gt.fill = GradientTexture2D.FILL_RADIAL
 	gt.fill_from = Vector2(0.5, 0.5)
 	gt.fill_to = VIG_FAR
-	gt.width = 320
-	gt.height = 200
+	# 해상도를 키워 단계 경계(밴딩)를 완화 — 작은 텍스처를 풀스크린으로 늘리면 동심원 띠가 보였음.
+	gt.width = 1024
+	gt.height = 576
 	_vignette.texture = gt
 	_vignette.modulate = Color(CALM.r, CALM.g, CALM.b, VIG_CALM_A)
 	add_child(_vignette)
@@ -103,6 +109,8 @@ func begin_degradation() -> void:
 	if _degrade_t >= 0.0:
 		return
 	_degrade_t = _t
+	# 한 번 붕괴하면 이후 맵에서도 어두운 상태로 시작(사용자 피드백: 다음 맵 가도 어두운 채로).
+	GameState.veil_degraded = true
 
 func _is_degraded() -> bool:
 	return _degrade_t >= 0.0

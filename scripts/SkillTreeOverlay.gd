@@ -91,6 +91,9 @@ func _build() -> void:
 	desc_label.custom_minimum_size = Vector2(760, 150)
 	desc_label.add_theme_font_size_override("normal_font_size", 18)
 	desc_label.add_theme_font_size_override("bold_font_size", 18)
+	# 얇은 검정 아웃라인 — faux-bold([b])는 너무 두꺼웠으니, Regular + 외곽선으로 "중간 굵기 + 또렷한 가장자리".
+	desc_label.add_theme_constant_override("outline_size", 4)
+	desc_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	desc_label.add_theme_constant_override("line_separation", 8)  # T1~T3 줄 간격 — 빽빽하지 않게
 	desc_label.text = "[color=#8a909a]계열에 마우스를 올리거나 방향키로 옮겨 보세요. T1~T3가 한눈에 보여요.[/color]"
 	desc_panel.add_child(desc_label)
@@ -115,6 +118,8 @@ func _build_column(fam: String) -> VBoxContainer:
 	head.add_theme_font_size_override("font_size", 20)
 	var hc: Color = FAMILY_COLORS.get(fam, Color.WHITE)
 	head.add_theme_color_override("font_color", hc)
+	head.add_theme_constant_override("outline_size", 4)
+	head.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(head)
 	for line in SkillTreeData.LINES:
@@ -132,6 +137,7 @@ func _make_line_button(line_id: String, fam: String) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(248, 48)
 	b.add_theme_font_size_override("font_size", 17)
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT  # 텍스트 왼쪽 — 오른쪽에 스킬 아이콘 자리
 	var t1: Dictionary = SkillTreeData.find_tier(line_id, 1)
 	b.text = "%s   %s" % [_tier_dots(owned), str(t1.get("name", line_id))]
 	var tint: Color = FAMILY_COLORS.get(fam, Color.WHITE)
@@ -140,6 +146,8 @@ func _make_line_button(line_id: String, fam: String) -> Button:
 	b.add_theme_color_override("font_color", tint)
 	b.add_theme_color_override("font_focus_color", tint.lightened(0.2))
 	b.add_theme_color_override("font_hover_color", tint.lightened(0.2))
+	_style_tree_button(b)
+	_attach_skill_icon(b, line_id, fam)
 	b.focus_entered.connect(_show_line_desc.bind(line_id, fam, false))
 	b.mouse_entered.connect(_show_line_desc.bind(line_id, fam, false))
 	return b
@@ -149,14 +157,38 @@ func _make_baseline_button(bid: String, fam: String) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(248, 48)
 	b.add_theme_font_size_override("font_size", 17)
-	b.text = "●        %s  (기본)" % str(base.get("name", bid))
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.text = "●     %s  (기본)" % str(base.get("name", bid))
 	var tint: Color = FAMILY_COLORS.get(fam, Color.WHITE)
 	b.add_theme_color_override("font_color", tint)
 	b.add_theme_color_override("font_focus_color", tint.lightened(0.2))
 	b.add_theme_color_override("font_hover_color", tint.lightened(0.2))
+	_style_tree_button(b)
+	_attach_skill_icon(b, bid, fam)
 	b.focus_entered.connect(_show_line_desc.bind(bid, fam, true))
 	b.mouse_entered.connect(_show_line_desc.bind(bid, fam, true))
 	return b
+
+# 트리 버튼 공통 — 얇은 검정 아웃라인으로 가독성/중간 굵기.
+func _style_tree_button(b: Button) -> void:
+	b.add_theme_constant_override("outline_size", 4)
+	b.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+
+# 라인 이름 옆(버튼 오른쪽)에 작은 스킬 아이콘. mouse IGNORE라 버튼 클릭/포커스는 그대로.
+func _attach_skill_icon(b: Button, sid: String, fam: String) -> void:
+	var icon := SkillIcon.new()
+	icon.skill_id = sid
+	icon.family = fam
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.anchor_left = 1.0
+	icon.anchor_right = 1.0
+	icon.anchor_top = 0.5
+	icon.anchor_bottom = 0.5
+	icon.offset_left = -40.0
+	icon.offset_right = -10.0
+	icon.offset_top = -15.0
+	icon.offset_bottom = 15.0
+	b.add_child(icon)
 
 func _tier_dots(owned: int) -> String:
 	var s: String = ""
@@ -199,9 +231,9 @@ func _show_line_desc(line_id: String, fam: String, is_baseline: bool) -> void:
 		var ds: String = str(td.get("desc", ""))
 		var note: String = _active_note(td)
 		if t <= owned:
-			txt += "[b][color=#%s]✓ T%d  %s[/color][/b][color=#%s] — %s[/color]%s\n" % [fam_hex, t, nm, fam_hex, ds, note]
+			txt += "[color=#%s]✓ T%d  %s — %s[/color]%s\n" % [fam_hex, t, nm, ds, note]
 		elif t == owned + 1:
-			txt += "[b][color=#%s]▶ T%d  %s — %s  (다음 선택 가능)[/color][/b]%s\n" % [next_hex, t, nm, ds, note]
+			txt += "[color=#%s]▶ T%d  %s — %s  (다음 선택 가능)[/color]%s\n" % [next_hex, t, nm, ds, note]
 		else:
 			txt += "[color=#%s]· T%d  %s — %s  (잠김)[/color]%s\n" % [lock_hex, t, nm, ds, note]
 	desc_label.text = txt

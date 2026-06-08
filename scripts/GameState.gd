@@ -37,6 +37,10 @@ var route_history: Array = []
 var last_veil_recommended_route: String = ""
 var followed_veil_last_choice: bool = false
 
+# VEIL 시야 붕괴(ACT3 degradation)가 한 번 시작되면 이후 맵에서도 계속 어두운 상태 유지.
+# VeilSight.begin_degradation()에서 켜고, VeilSight._ready가 이 값을 보고 시작부터 degraded.
+var veil_degraded: bool = false
+
 var skills: Dictionary = {}
 var current_route_id: String = ""
 var current_route_tags: Array = []
@@ -156,6 +160,7 @@ func reset() -> void:
 	player_xp = 0
 	player_level = 1
 	story_mode = false
+	veil_degraded = false
 	_reset_perf_metrics()
 
 # 튜토리얼 종료 후 본편 시작 시 호출. 진행/스킬/XP 모두 초기화 — 튜토리얼은
@@ -179,6 +184,7 @@ func start_main_game() -> void:
 	player_xp = 0
 	player_level = 1
 	skills = STARTING_SKILLS.duplicate()
+	veil_degraded = false
 	_reset_perf_metrics()
 
 func _reset_perf_metrics() -> void:
