@@ -71,6 +71,11 @@
 
 ## 렌더링 / 레이아웃
 
+- **`--headless`로 Stage 진입 시 `_build_camera`(Stage.gd) backtrace는 무해한 헤드리스 quirk.**
+  헤드리스엔 실제 윈도우/뷰포트가 없어 카메라 셋업 일부가 에러를 찍지만 게임 로직엔 영향 없음.
+  창 모드(`--windowed`) 실행에선 안 남. 검증 하니스가 Stage를 헤드리스로 띄울 땐 이 backtrace 무시.
+  (런타임 로직 검증은 `--headless`로 충분하나, Stage 렌더가 필요하면 `--windowed`로.)
+
 - **CanvasLayer의 Control 자식은 anchor로 화면 크기를 못 받는다.**
   CanvasLayer는 Control이 아니라 자식에게 rect를 전파하지 않는다. 그 아래 Control에 `PRESET_FULL_RECT`를
   걸어도 self.size=0이 된다. full-rect로 깐 손자 노드(예: 비네트 TextureRect, STRETCH_SCALE)는 늘어날
