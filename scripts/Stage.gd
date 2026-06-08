@@ -1983,9 +1983,14 @@ func _build_hud() -> void:
 	for l in [stage_label, map_label, hp_label, xp_label, trust_label]:
 		l.add_theme_font_size_override("font_size", 18)
 		l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+		# 검정 아웃라인 — 밝은 플랫폼 위에서도 또렷하게(가독성/선명도).
+		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+		l.add_theme_constant_override("outline_size", 4)
 		hb.add_child(l)
 	skill_label.add_theme_font_size_override("font_size", 14)
 	skill_label.add_theme_color_override("font_color", Color(0.65, 0.72, 0.82))
+	skill_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+	skill_label.add_theme_constant_override("outline_size", 3)
 	hb2.add_child(skill_label)
 	_refresh_hud()
 
@@ -2032,6 +2037,8 @@ func _build_hud() -> void:
 	keys.text = _keys_hint_text()
 	keys.add_theme_font_size_override("font_size", 13)
 	keys.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
+	keys.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	keys.add_theme_constant_override("outline_size", 3)
 	bottom_v.add_child(keys)
 	GameState.input_kind_changed.connect(func(_k: String) -> void:
 		if is_instance_valid(keys):

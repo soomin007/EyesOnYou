@@ -72,6 +72,15 @@
   연결해 해상도 변경에도 갱신. (2026-06-08: VeilSight 시안 테두리 비네트가 좌상단 320×200 blob으로만
   떴던 버그 — 이 패턴이 원인. `VeilSight._fit_to_viewport`로 해결.)
 
+- **"해상도 흐릿함"은 엔진 stretch가 아니라 에디터 임베드/OS 스케일링.**
+  `window/stretch/mode="canvas_items"`는 Godot 4에서 **창의 네이티브 해상도로 2D를 렌더**한다(폰트도
+  그 해상도로 래스터 → 선명). standalone `--windowed --resolution 1920x1080` 렌더의 뷰포트 텍스처가
+  1886×1061(=창 크기)로 나오고 한글 텍스트가 또렷함을 확인. 따라서 "작은 화면을 디지털 줌한 듯 흐릿"은
+  ① 에디터가 게임을 **임베드/플로팅 창**으로 띄워 스케일하거나 ② **Windows HiDPI(125/150%) OS 업스케일**
+  때문. → 진짜 환경은 **내보낸 빌드**로 확인. `allow_hidpi`는 4.x 기본 true라 명시 불필요.
+  체감 선명도는 **텍스트 검정 아웃라인**(outline_size)으로 더 끌어올림(faux-bold보다 가볍고 또렷).
+  (2026-06-08 플레이테스트.)
+
 ## 런타임 (상세: 메모리 project-runtime-safety)
 
 - **paused / Engine.time_scale carry로 인한 freeze.**
