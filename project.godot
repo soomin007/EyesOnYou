@@ -31,7 +31,7 @@ window/stretch/mode="canvas_items"
 
 [gui]
 
-theme/custom_font="res://assets/fonts/Pretendard-Regular.otf"
+theme/custom="res://assets/theme/default_theme.tres"
 
 [input]
 
