@@ -60,6 +60,13 @@
 - **AskUserQuestion `questions` 누락이 또 재발(2026-06-08 세션 4).** 빈 호출로 1회 실패 — 위 작업
   프로세스 항목 재확인. 호출 직전 `questions` 배열 채웠는지 항상 점검.
 
+- **기본 입력 보강은 `load_settings()` *뒤에* 둘 것.**
+  project.godot 기본 attack에 마우스 좌클릭이 없어 Main이 런타임에 `_ensure_mouse_event`로 추가한다.
+  이 보강을 load_settings보다 *먼저* 호출하면, load_settings가 `action_erase_events`+재로드로 attack을
+  cfg값(마우스 빠진 상태)으로 덮어써 좌클릭 사격이 사라진다. 게다가 한 번 마우스 빠진 cfg가 저장되면
+  계속 전파됨(자기 영속). → 순서: load_settings → _bind_default_mouse_inputs/_bind_wasd_to_ui.
+  좌=사격/우=스킬은 핵심 조작이라 cfg가 잃어도 항상 보강되게. (2026-06-08 사용자 보고 → fix 27852ae.)
+
 ---
 
 ## 렌더링 / 레이아웃
