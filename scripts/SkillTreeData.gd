@@ -9,6 +9,13 @@ const FAMILY_COMBAT: String = "전투"
 const FAMILY_MOBILITY: String = "이동"
 const FAMILY_SURVIVAL: String = "생존"
 
+# 계열 색 — 단일 소스. 스킬 트리 텍스트·아이콘·카드가 모두 이 값을 참조해 한 계열은 한 색으로 보인다.
+const FAMILY_COLORS: Dictionary = {
+	FAMILY_COMBAT: Color(0.97, 0.58, 0.48),
+	FAMILY_MOBILITY: Color(0.55, 0.82, 0.97),
+	FAMILY_SURVIVAL: Color(0.58, 0.92, 0.68),
+}
+
 const TIER_MAX: int = 3
 
 # 각 라인은 id + family + tiers(1~3 효과 정의).

@@ -7,11 +7,8 @@ extends CanvasLayer
 # paused 상태는 건드리지 않는다 — 밑에 깔린 pause/levelup 오버레이가 계속 paused를 원함.
 # 라인 포커스/호버 시 하단 패널에 그 계열 T1~T3 전체를 보유/다음/잠김으로 표시.
 
-const FAMILY_COLORS: Dictionary = {
-	"전투": Color(0.95, 0.55, 0.45),
-	"이동": Color(0.52, 0.80, 0.95),
-	"생존": Color(0.55, 0.90, 0.66),
-}
+# 계열 색은 단일 소스(SkillTreeData)에서 — 트리 텍스트와 아이콘이 같은 색으로 보이게.
+const FAMILY_COLORS: Dictionary = SkillTreeData.FAMILY_COLORS
 const COL_NEXT: Color = Color(0.98, 0.85, 0.45)    # 다음 선택 가능 티어
 const COL_LOCKED: Color = Color(0.45, 0.48, 0.55)  # 잠긴 티어
 

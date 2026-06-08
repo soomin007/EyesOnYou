@@ -5,11 +5,8 @@ extends Control
 # 색은 계열(전투 빨강 / 이동 시안 / 생존 초록)로 통일해 아이콘만 봐도 계열이 읽히게.
 # skill_id로 모양을 고르고, 모르는 id는 일반 글리프로 폴백.
 
-const FAMILY_COLORS: Dictionary = {
-	"전투": Color(0.97, 0.58, 0.48),
-	"이동": Color(0.55, 0.82, 0.97),
-	"생존": Color(0.58, 0.92, 0.68),
-}
+# 계열 색은 단일 소스(SkillTreeData) 참조 — 트리/카드 어디서나 같은 색.
+const FAMILY_COLORS: Dictionary = SkillTreeData.FAMILY_COLORS
 
 var skill_id: String = ""
 var family: String = ""
