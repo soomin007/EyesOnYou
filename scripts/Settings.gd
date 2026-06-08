@@ -336,8 +336,7 @@ func _build_av_tab() -> Control:
 	v.add_theme_constant_override("separation", 22)
 	outer.add_child(v)
 
-	var section_a := _make_section("화면", "1280 × 720 고정 — Web Export 기준")
-	v.add_child(section_a)
+	v.add_child(_make_display_section())
 
 	var section_b := VBoxContainer.new()
 	section_b.add_theme_constant_override("separation", 10)
@@ -346,6 +345,92 @@ func _build_av_tab() -> Control:
 	section_b.add_child(_make_volume_row("배경음 볼륨", "bgm"))
 	section_b.add_child(_make_volume_row("효과음 볼륨", "sfx"))
 	return outer
+
+# 화면 섹션 — 전체화면 토글 + 창 크기 프리셋. 값은 GameState에 영속, apply_display_settings로 즉시 반영.
+# 웹에선 창 크기를 브라우저가 정하므로 전체화면 토글과 안내만 노출.
+var _fullscreen_toggle: CheckButton
+var _size_buttons: Array = []
+
+func _make_display_section() -> Control:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	v.add_child(_make_section_header("화면"))
+
+	var fs_row := HBoxContainer.new()
+	fs_row.add_theme_constant_override("separation", 14)
+	var fs_l := Label.new()
+	fs_l.text = "전체화면"
+	fs_l.custom_minimum_size = Vector2(140, 28)
+	fs_l.add_theme_font_size_override("font_size", 14)
+	fs_l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	fs_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	fs_row.add_child(fs_l)
+	_fullscreen_toggle = CheckButton.new()
+	_fullscreen_toggle.button_pressed = GameState.fullscreen
+	_fullscreen_toggle.text = "켜짐" if GameState.fullscreen else "꺼짐"
+	_fullscreen_toggle.add_theme_font_size_override("font_size", 14)
+	_fullscreen_toggle.toggled.connect(_on_fullscreen_toggled)
+	fs_row.add_child(_fullscreen_toggle)
+	v.add_child(fs_row)
+
+	# 웹: 창 크기는 브라우저 캔버스가 정함 → 프리셋 버튼 없이 안내만.
+	if OS.has_feature("web"):
+		var web_note := Label.new()
+		web_note.text = "창 크기는 브라우저 창에 맞춰져요. 전체화면은 위 토글로 전환하세요."
+		web_note.add_theme_font_size_override("font_size", 13)
+		web_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+		web_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(web_note)
+		return v
+
+	var size_l := Label.new()
+	size_l.text = "창 크기"
+	size_l.add_theme_font_size_override("font_size", 14)
+	size_l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	v.add_child(size_l)
+	var size_row := HBoxContainer.new()
+	size_row.add_theme_constant_override("separation", 10)
+	v.add_child(size_row)
+	_size_buttons.clear()
+	for i in GameState.WINDOW_SIZES.size():
+		var btn := Button.new()
+		btn.custom_minimum_size = Vector2(140, 36)
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.pressed.connect(_on_window_size_pressed.bind(i))
+		size_row.add_child(btn)
+		_size_buttons.append(btn)
+	_refresh_size_buttons()
+	return v
+
+# 창 크기 버튼 라벨·색·활성 상태 갱신. 선택=● 강조, 전체화면이면 전체 비활성(창 크기 무의미).
+func _refresh_size_buttons() -> void:
+	var fs: bool = GameState.fullscreen
+	for i in _size_buttons.size():
+		var btn: Button = _size_buttons[i] as Button
+		if btn == null:
+			continue
+		var sz: Vector2i = GameState.WINDOW_SIZES[i]
+		var selected: bool = (i == GameState.window_size_index)
+		btn.text = "%s  %d × %d" % ["●" if selected else "○", sz.x, sz.y]
+		btn.disabled = fs
+		var col: Color = Color(0.5, 0.55, 0.62) if fs else (Color(0.96, 0.92, 0.55) if selected else Color(0.85, 0.88, 0.92))
+		btn.add_theme_color_override("font_color", col)
+
+func _on_fullscreen_toggled(pressed: bool) -> void:
+	GameState.fullscreen = pressed
+	if _fullscreen_toggle != null:
+		_fullscreen_toggle.text = "켜짐" if pressed else "꺼짐"
+	GameState.apply_display_settings()
+	GameState.save_settings()
+	SfxPlayer.play("ui_slider_tick")
+	_refresh_size_buttons()
+
+func _on_window_size_pressed(index: int) -> void:
+	GameState.window_size_index = index
+	GameState.apply_display_settings()
+	GameState.save_settings()
+	SfxPlayer.play("ui_slider_tick")
+	_refresh_size_buttons()
 
 # 접근성 탭 — 화면 밝기 + 효과음 자막. 값은 GameState에 영속, Accessibility 오버레이가 반영.
 func _build_accessibility_tab() -> Control:
@@ -499,17 +584,6 @@ func _make_section_header(text: String) -> Label:
 	l.add_theme_font_size_override("font_size", 16)
 	l.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95))
 	return l
-
-func _make_section(header: String, body: String) -> Control:
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 6)
-	v.add_child(_make_section_header(header))
-	var b := Label.new()
-	b.text = body
-	b.add_theme_font_size_override("font_size", 14)
-	b.add_theme_color_override("font_color", Color(0.78, 0.80, 0.84))
-	v.add_child(b)
-	return v
 
 func _make_volume_row(label_text: String, kind: String) -> Control:
 	var hb := HBoxContainer.new()

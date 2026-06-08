@@ -57,6 +57,16 @@ var sfx_volume: float = 1.0
 var screen_brightness: float = 1.0   # 0.5~1.5 (1.0=기본). Accessibility 오버레이가 반영.
 var sfx_captions: bool = false       # 효과음 자막 (무음 플레이 대응)
 
+# 디스플레이 — settings.cfg에 영속. 환경 설정이라 reset()에서 안 지움.
+# 웹에선 창 크기는 브라우저 캔버스가 정하므로 무의미 → 전체화면 토글만 적용.
+var fullscreen: bool = false
+var window_size_index: int = 0       # WINDOW_SIZES 인덱스 (창모드일 때만)
+const WINDOW_SIZES: Array[Vector2i] = [
+	Vector2i(1280, 720),
+	Vector2i(1600, 900),
+	Vector2i(1920, 1080),
+]
+
 # 스토리 모드 — 키보드/패드 조작이 어려운 사람을 위한 간략화 모드.
 # 체력 무제한 / 드론 배제 / 보스 P1만 / 스테이지·맵 수 축소.
 # Title의 "스토리 모드" 버튼으로만 켜지고, ending에서 reset() 시 꺼진다.
@@ -410,6 +420,8 @@ func load_settings() -> void:
 	visited_arcturus = bool(cf.get_value("flags", "visited_arcturus", false))
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
+	fullscreen = bool(cf.get_value("display", "fullscreen", false))
+	window_size_index = clampi(int(cf.get_value("display", "window_size_index", 0)), 0, WINDOW_SIZES.size() - 1)
 	if version < SETTINGS_VERSION:
 		# 구 스키마 — 키바인드 폐기, project.godot + Main.gd 기본값 유지
 		return
@@ -452,6 +464,8 @@ func save_settings() -> void:
 	cf.set_value("flags", "visited_arcturus", visited_arcturus)
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
+	cf.set_value("display", "fullscreen", fullscreen)
+	cf.set_value("display", "window_size_index", window_size_index)
 	cf.set_value("audio", "bgm", bgm_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
 	for action in KEYBIND_ACTIONS:
@@ -473,3 +487,22 @@ func save_settings() -> void:
 				entries.append({"type": "joy_motion", "axis": int(jm.axis), "value": float(jm.axis_value)})
 		cf.set_value("input", action, entries)
 	cf.save(SETTINGS_PATH)
+
+# 디스플레이 설정(전체화면/창 크기)을 DisplayServer에 즉시 반영.
+# Main.gd가 load_settings 직후 호출, Settings에서 값 바꿀 때도 호출.
+# 웹: 창 크기는 브라우저 캔버스가 정하므로 무시 — 전체화면만 적용(버튼 입력=사용자 제스처라 허용됨).
+func apply_display_settings() -> void:
+	if fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		return
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	if OS.has_feature("web"):
+		return
+	var idx: int = clampi(window_size_index, 0, WINDOW_SIZES.size() - 1)
+	var sz: Vector2i = WINDOW_SIZES[idx]
+	DisplayServer.window_set_size(sz)
+	# 창 크기 변경 후 현재 모니터 중앙으로 재배치 (안 하면 좌상단으로 튐).
+	var screen_idx: int = DisplayServer.window_get_current_screen()
+	var screen_pos: Vector2i = DisplayServer.screen_get_position(screen_idx)
+	var screen_size: Vector2i = DisplayServer.screen_get_size(screen_idx)
+	DisplayServer.window_set_position(screen_pos + (screen_size - sz) / 2)
