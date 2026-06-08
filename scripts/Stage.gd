@@ -661,6 +661,7 @@ func _build_world() -> void:
 	_build_decorations()
 	_build_route_ambience()
 	_build_hazards()
+	_build_traps()
 	_build_locked_door()
 	_build_wall(-50.0)
 	_build_wall(STAGE_LENGTH + 50.0)
@@ -1112,6 +1113,24 @@ func _build_hazards() -> void:
 		var base_x: float = lerp(900.0, STAGE_LENGTH - 600.0, float(i + 1) / float(count + 1))
 		var x: float = base_x + rng.randf_range(-80.0, 80.0)
 		_build_spike(x, 90.0, GROUND_Y - 6.0)
+
+# 발사 함정 — MapData 레이아웃의 "traps" 배열에서 생성. 각 항목:
+#   {x, y, dir("left"/"right"/"up"/"down"), interval, phase, telegraph(선택), dmg(선택)}
+func _build_traps() -> void:
+	var traps: Array = _map_data.get("traps", [])
+	for entry in traps:
+		var d: Dictionary = entry
+		var dir: Vector2 = Vector2.LEFT
+		match str(d.get("dir", "left")):
+			"right": dir = Vector2.RIGHT
+			"up":    dir = Vector2.UP
+			"down":  dir = Vector2.DOWN
+			_:       dir = Vector2.LEFT
+		var trap := BulletTrap.new()
+		trap.position = Vector2(float(d.get("x", 0.0)), float(d.get("y", 0.0)))
+		trap.damage = int(d.get("dmg", 1))
+		add_child(trap)
+		trap.setup(dir, float(d.get("interval", 1.6)), float(d.get("phase", 0.0)), float(d.get("telegraph", 0.5)))
 
 func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1) -> void:
 	# base_y는 가시 베이스의 y. 가시는 base_y 위로 20px 솟음.

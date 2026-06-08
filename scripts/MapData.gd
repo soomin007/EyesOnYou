@@ -264,6 +264,14 @@ static func _subway() -> Dictionary:
 			"hp_pickups": [],
 		},
 		"spikes": [],
+		# 발사 함정 프로토타입 — 열차 지붕 아래에서 통로로 내리쏘는 3기 + 골 직전 가로 1기.
+		# 텔레그래프 후 발사라 타이밍/대시/글라이드로 라인 통과. 위상차로 리듬 형성.
+		"traps": [
+			{"x": 1120, "y": 250.0, "dir": "down", "interval": 1.6, "phase": 0.0},
+			{"x": 2280, "y": 250.0, "dir": "down", "interval": 1.6, "phase": 0.55},
+			{"x": 3420, "y": 250.0, "dir": "down", "interval": 1.6, "phase": 1.1},
+			{"x": 5180, "y": 392.0, "dir": "left", "interval": 1.8, "phase": 0.3},
+		],
 	}
 
 # ─── 5. 냉각 시설 (VERTICAL_UP, 지그재그 파이프 + 비밀 스팟) ──
