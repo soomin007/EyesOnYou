@@ -195,13 +195,17 @@ func _build_node_buttons() -> void:
 	for i in pool.size():
 		var route: Dictionary = pool[i]
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(220, 160)
+		b.custom_minimum_size = Vector2(220, 188)
 		b.toggle_mode = false
 		b.text = _format_button_text(route, route.get("id", "") == recommended_id)
 		b.add_theme_font_size_override("font_size", 18)
 		b.pressed.connect(_on_button_pressed.bind(i))
 		b.focus_entered.connect(_on_focus.bind(i))
 		b.mouse_entered.connect(_on_focus.bind(i))
+		# 카드 하단에 등장 적 타입 아이콘 — 본 적은 그림, 미확인은 ?(발견 루프 존중).
+		# hidden(???)/challenge 맵은 적 데이터가 특수하니 생략.
+		if not bool(route.get("hidden", false)) and not bool(route.get("challenge", false)):
+			_attach_enemy_row(b, str(route.get("id", "")))
 		nodes_container.add_child(b)
 		buttons.append(b)
 	if buttons.size() > 0:
@@ -217,6 +221,60 @@ func _format_button_text(route: Dictionary, recommended: bool) -> String:
 	var prefix: String = "[도전]\n" if challenge else ""
 	var rec: String = "  ★" if recommended else ""
 	return "%s%s%s\n\n위험  %s\n보상  %s" % [prefix, route_name, rec, risk_str, reward_str]
+
+# 맵에 등장하는 적 타입(중복 제거, 등장 순서). enemies(고정) + waves(ARENA) 합산.
+func _route_enemy_kinds(route_id: String) -> Array:
+	var layout: Dictionary = MapData.get_layout(route_id)
+	if layout.is_empty():
+		return []
+	var kinds: Array = []
+	var enemies: Dictionary = layout.get("enemies", {})
+	for k in enemies.keys():
+		var arr: Array = enemies[k]
+		if arr.size() > 0 and not (str(k) in kinds):
+			kinds.append(str(k))
+	for w in layout.get("waves", []):
+		var wd: Dictionary = w
+		var wen: Dictionary = wd.get("enemies", {})
+		for k in wen.keys():
+			if int(wen[k]) > 0 and not (str(k) in kinds):
+				kinds.append(str(k))
+	return kinds
+
+# 카드 하단 중앙에 적 타입 아이콘 행. 본 적(seen_enemies)은 EnemyIcon, 미확인은 흐린 "?".
+func _attach_enemy_row(card: Button, route_id: String) -> void:
+	var kinds: Array = _route_enemy_kinds(route_id)
+	if kinds.is_empty():
+		return
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 7)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.anchor_left = 0.0
+	row.anchor_right = 1.0
+	row.anchor_top = 1.0
+	row.anchor_bottom = 1.0
+	row.offset_top = -34.0
+	row.offset_bottom = -8.0
+	card.add_child(row)
+	for k in kinds:
+		var kind: String = str(k)
+		if kind in GameState.seen_enemies:
+			var ic := EnemyIcon.new()
+			ic.enemy_id = kind
+			ic.custom_minimum_size = Vector2(24, 24)
+			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(ic)
+		else:
+			var q := Label.new()
+			q.text = "?"
+			q.custom_minimum_size = Vector2(24, 24)
+			q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			q.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			q.add_theme_font_size_override("font_size", 16)
+			q.add_theme_color_override("font_color", Color(0.5, 0.52, 0.58))
+			q.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(q)
 
 func _dots(n: int) -> String:
 	var s: String = ""
