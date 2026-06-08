@@ -12,6 +12,7 @@
 | 스토리 캐논·인게임 텍스트 | [`STORY.md`](STORY.md) |
 | 스킬 트리·성장 시스템 | [`design/growth_system.md`](design/growth_system.md) |
 | 맵 형태·보스·이스터에그 메커닉 | [`design/world_layout.md`](design/world_layout.md) |
+| 맵 현황 감사·폴리시 우선순위 | [`design/map_audit.md`](design/map_audit.md) |
 | 텍스트 톤·"체험으로 체득" 원칙 | [`design/show_dont_tell.md`](design/show_dont_tell.md) |
 | 환경 퍼즐(레버·발판) 현황 | [`design/puzzle_ideas.md`](design/puzzle_ideas.md) |
 | 효과음 작업 목록 | [`design/sfx_list.md`](design/sfx_list.md) |
