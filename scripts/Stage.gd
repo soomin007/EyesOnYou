@@ -1117,22 +1117,33 @@ func _build_hazards() -> void:
 # 발사 함정 — MapData 레이아웃의 "traps" 배열에서 생성. 각 항목:
 #   {x, y, dir("left"/"right"/"up"/"down"), interval, phase, telegraph(선택), dmg(선택)}
 func _build_traps() -> void:
-	var traps: Array = _map_data.get("traps", [])
-	for entry in traps:
+	for entry in _map_data.get("traps", []):
 		var d: Dictionary = entry
-		var dir: Vector2 = Vector2.LEFT
-		match str(d.get("dir", "left")):
-			"right": dir = Vector2.RIGHT
-			"up":    dir = Vector2.UP
-			"down":  dir = Vector2.DOWN
-			_:       dir = Vector2.LEFT
 		var trap := BulletTrap.new()
 		trap.position = Vector2(float(d.get("x", 0.0)), float(d.get("y", 0.0)))
 		trap.damage = int(d.get("dmg", 1))
 		trap.burst = int(d.get("burst", 3))
 		add_child(trap)
-		trap.setup(dir, float(d.get("interval", 1.6)), float(d.get("phase", 0.0)), float(d.get("telegraph", 0.5)), str(d.get("mode", "periodic")))
+		trap.setup(_dir_from_str(str(d.get("dir", "left"))), float(d.get("interval", 1.6)),
+			float(d.get("phase", 0.0)), float(d.get("telegraph", 0.5)),
+			str(d.get("mode", "periodic")), str(d.get("trigger_id", "")))
 		_traps_present = true
+	# 레이저 탐지선 — 가로지르면 같은 trigger_id 포탑 발동(포탑과 분리 배치).
+	for entry in _map_data.get("tripwires", []):
+		var d: Dictionary = entry
+		var tw := LaserTripwire.new()
+		tw.position = Vector2(float(d.get("x", 0.0)), float(d.get("y", 0.0)))
+		add_child(tw)
+		tw.setup(_dir_from_str(str(d.get("dir", "down"))), float(d.get("len", 240.0)),
+			str(d.get("trigger_id", "")), float(d.get("cooldown", 2.2)))
+		_traps_present = true
+
+func _dir_from_str(s: String) -> Vector2:
+	match s:
+		"right": return Vector2.RIGHT
+		"up":    return Vector2.UP
+		"down":  return Vector2.DOWN
+		_:       return Vector2.LEFT
 
 func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1) -> void:
 	# base_y는 가시 베이스의 y. 가시는 base_y 위로 20px 솟음.
@@ -3178,11 +3189,12 @@ func _process(delta: float) -> void:
 func _tick_trap_warning() -> void:
 	if not _traps_present or _trap_warned or player == null or not is_instance_valid(player):
 		return
-	for t in get_tree().get_nodes_in_group("bullet_trap"):
-		if t is Node2D and player.global_position.distance_to((t as Node2D).global_position) < 320.0:
-			_trap_warned = true
-			_show_veil_subtitle("저 포탑은 못 부숴요. 타이밍 보고 지나가요.", 3.2)
-			return
+	for grp in ["bullet_trap", "laser_tripwire"]:
+		for t in get_tree().get_nodes_in_group(grp):
+			if t is Node2D and player.global_position.distance_to((t as Node2D).global_position) < 320.0:
+				_trap_warned = true
+				_show_veil_subtitle("저 포탑은 못 부숴요. 타이밍 보고 지나가요.", 3.2)
+				return
 
 # ─── 도전 방(블랙아웃 런) — world_layout §3.2 ───
 # 30s 타이머 + 1 hit 실패 + 좁은 시야. 실패해도 stage는 그냥 스킵 (페널티 없음).

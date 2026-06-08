@@ -264,13 +264,18 @@ static func _subway() -> Dictionary:
 			"hp_pickups": [],
 		},
 		"spikes": [],
-		# 발사 함정 프로토타입 — 열차 지붕 밑면에 장착(부유 X)된 하향 포탑 + 바닥 포탑 1기.
-		# 하나는 레이저 트립와이어(가로지르면 버스트). 텔레그래프 후 발사라 타이밍/대시/글라이드로 통과.
+		# 발사 함정 — 지붕 밑면 장착 하향 포탑 + 바닥 포탑. 탐지선(tripwire)은 포탑과 분리 배치:
+		# x1350 레이저를 가로지르면 앞쪽(1550/1780) 포탑이 일제 발사 → 달려들며 회피.
 		"traps": [
 			{"x": 700,  "y": 238.0, "dir": "down", "interval": 1.6, "phase": 0.0},   # 지붕1 밑 (주기)
-			{"x": 1700, "y": 238.0, "dir": "down", "mode": "tripwire", "burst": 3},   # 지붕2 밑 (레이저 트립와이어)
+			{"x": 1550, "y": 238.0, "dir": "down", "mode": "triggered", "trigger_id": "tw1", "burst": 3},
+			{"x": 1780, "y": 238.0, "dir": "down", "mode": "triggered", "trigger_id": "tw1", "burst": 3},
 			{"x": 2800, "y": 238.0, "dir": "down", "interval": 1.6, "phase": 0.6},    # 지붕3 밑 (주기)
 			{"x": 3760, "y": 414.0, "dir": "up",   "interval": 1.8, "phase": 0.3},    # 바닥 포탑 (지붕 진입 발판 견제)
+		],
+		"tripwires": [
+			# 통로 가로지르는 세로 레이저 — 밟으면 앞쪽 triggered 포탑(tw1) 발동.
+			{"x": 1350, "y": 235.0, "dir": "down", "len": 200.0, "trigger_id": "tw1", "cooldown": 2.4},
 		],
 	}
 
@@ -356,6 +361,11 @@ static func _cooling() -> Dictionary:
 			],
 		},
 		"spikes": [],
+		# 우측 파이프 분기 — 오른쪽 벽에 장착, 발판 가로질러 좌측 발사. 오를 때 타이밍 필요.
+		"traps": [
+			{"x": 1180, "y": 1652.0, "dir": "left", "interval": 1.7, "phase": 0.0},
+			{"x": 1180, "y": 1512.0, "dir": "left", "interval": 1.7, "phase": 0.85},
+		],
 	}
 
 # ─── 6. 감시탑 (VERTICAL_UP, 외부/내부 분기 + 비밀 통로) ───────
@@ -481,6 +491,11 @@ static func _ward() -> Dictionary:
 			"hp_pickups": [Vector2(1800, 400.0)],
 		},
 		"spikes": [],
+		# 우회 발판 밑면 장착 하향 포탑 — 아래 통로로 발사. 타이밍 보고 통과.
+		"traps": [
+			{"x": 1380, "y": 442.0, "dir": "down", "interval": 1.7, "phase": 0.0},
+			{"x": 2140, "y": 442.0, "dir": "down", "interval": 1.7, "phase": 0.85},
+		],
 		# 잠긴 문 5초 체류 → 이스터에그 방 진입
 		"easter_egg": {
 			"trigger_x": 2000.0,

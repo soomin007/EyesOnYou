@@ -26,15 +26,15 @@ func _ready() -> void:
 	col.shape = shape
 	add_child(col)
 
-	# 적 톤(주황) — 플레이어 노랑과 시각적으로 구분.
+	# 진행 방향으로 회전 — 아래/위/대각 발사에서도 총알이 나아가는 쪽을 향하게(좌우 전용 그림 버그 수정).
+	if velocity != Vector2.ZERO:
+		rotation = velocity.angle()
+
+	# 적 톤(주황) — 플레이어 노랑과 시각적으로 구분. 로컬 +x = 진행 방향.
 	var trail := ColorRect.new()
 	trail.color = Color(1.0, 0.55, 0.30, 0.55)
 	trail.size = Vector2(16.0, 2.0)
-	var sign_x: float = signf(velocity.x) if velocity.x != 0.0 else 1.0
-	if sign_x > 0:
-		trail.position = Vector2(-16.0, -1.0)
-	else:
-		trail.position = Vector2(0.0, -1.0)
+	trail.position = Vector2(-20.0, -1.0)  # 본체 뒤로(꼬리)
 	add_child(trail)
 
 	var body := ColorRect.new()
