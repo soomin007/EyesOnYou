@@ -20,6 +20,18 @@ const ROUTE_OPTIONS: Array = [
 	{"id": "route_hidden",     "label": "???"},
 ]
 
+# 스킬 라인 — 연습장에서 티어 자유 조정용(짧은 라벨).
+const SKILL_LINES: Array = [
+	{"id": "fire_boost", "label": "사격강화"},
+	{"id": "multishot",  "label": "다중사격"},
+	{"id": "explosive",  "label": "폭발물"},
+	{"id": "glide",      "label": "활강"},
+	{"id": "dash_boost", "label": "대시강화"},
+	{"id": "hp",         "label": "체력"},
+	{"id": "shield",     "label": "부활"},
+	{"id": "barrier",    "label": "방어막"},
+]
+
 var layer: CanvasLayer
 var toggle_button: Button
 var panel: PanelContainer
@@ -68,6 +80,14 @@ func _open_panel() -> void:
 	v.add_child(_build_route_row())
 	v.add_child(_build_int_row("Risk", "current_route_risk", _on_risk_pressed))
 	v.add_child(_build_int_row("Reward", "current_route_reward", _on_reward_pressed))
+
+	v.add_child(HSeparator.new())
+	v.add_child(_make_row_label("스킬 (티어 직접 지정)"))
+	for line in SKILL_LINES:
+		var d: Dictionary = line
+		v.add_child(_build_skill_row(str(d.get("id", "")), str(d.get("label", ""))))
+	v.add_child(_build_baseline_row())
+	v.add_child(_build_skill_quick_row())
 
 	var sep := HSeparator.new()
 	v.add_child(sep)
@@ -133,6 +153,56 @@ func _build_int_row(label_text: String, prop_name: String, cb: Callable) -> HBox
 		hb.add_child(b)
 	return hb
 
+# 스킬 라인 한 줄 — 0/1/2/3 티어 버튼(현재 티어는 disabled로 표시).
+func _build_skill_row(line_id: String, label_text: String) -> HBoxContainer:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 6)
+	hb.add_child(_make_row_label(label_text))
+	var cur: int = GameState.get_skill_tier(line_id)
+	for n in [0, 1, 2, 3]:
+		var b := Button.new()
+		b.text = "%d" % n
+		b.custom_minimum_size = Vector2(30, 26)
+		b.add_theme_font_size_override("font_size", 12)
+		if cur == n:
+			b.disabled = true
+		b.pressed.connect(_on_skill_set.bind(line_id, n))
+		hb.add_child(b)
+	return hb
+
+# 베이스라인(대시·이중점프) on/off.
+func _build_baseline_row() -> HBoxContainer:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 6)
+	hb.add_child(_make_row_label("기본"))
+	for entry in [["dash", "대시"], ["double_jump", "이중점프"]]:
+		var bid: String = str(entry[0])
+		var has: bool = GameState.has_skill(bid)
+		var b := Button.new()
+		b.text = "%s %s" % [str(entry[1]), "켜짐" if has else "꺼짐"]
+		b.custom_minimum_size = Vector2(96, 26)
+		b.add_theme_font_size_override("font_size", 12)
+		b.pressed.connect(_on_skill_set.bind(bid, 0 if has else 1))
+		hb.add_child(b)
+	return hb
+
+# 빠른 전체 조작.
+func _build_skill_quick_row() -> HBoxContainer:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 6)
+	hb.add_child(_make_row_label(""))
+	var b_max := Button.new()
+	b_max.text = "전체 MAX"
+	b_max.add_theme_font_size_override("font_size", 12)
+	b_max.pressed.connect(_on_skill_all.bind(3))
+	hb.add_child(b_max)
+	var b_clr := Button.new()
+	b_clr.text = "전체 해제"
+	b_clr.add_theme_font_size_override("font_size", 12)
+	b_clr.pressed.connect(_on_skill_all.bind(0))
+	hb.add_child(b_clr)
+	return hb
+
 func _make_row_label(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
@@ -165,6 +235,29 @@ func _on_risk_pressed(n: int) -> void:
 
 func _on_reward_pressed(n: int) -> void:
 	GameState.current_route_reward = n
+	_reload()
+
+# 스킬 티어 직접 지정 — 0이면 해제. hp는 add_skill의 max_hp 즉시효과를 재현.
+func _set_skill_tier(id: String, n: int) -> void:
+	if n <= 0:
+		GameState.skills.erase(id)
+	else:
+		GameState.skills[id] = n
+	if id == "hp":
+		# hp: 기본 max 3 + min(tier,2). T3는 max 변화 없음.
+		GameState.player_max_hp = 3 + min(n, 2)
+		GameState.player_hp = GameState.player_max_hp
+
+func _on_skill_set(id: String, n: int) -> void:
+	_set_skill_tier(id, n)
+	_reload()
+
+func _on_skill_all(n: int) -> void:
+	for line in SKILL_LINES:
+		_set_skill_tier(str((line as Dictionary).get("id", "")), n)
+	# 베이스라인은 MAX=켜짐, 해제=꺼짐
+	_set_skill_tier("dash", 1 if n > 0 else 0)
+	_set_skill_tier("double_jump", 1 if n > 0 else 0)
 	_reload()
 
 func _on_exit() -> void:

@@ -1129,8 +1129,10 @@ func _build_traps() -> void:
 		var trap := BulletTrap.new()
 		trap.position = Vector2(float(d.get("x", 0.0)), float(d.get("y", 0.0)))
 		trap.damage = int(d.get("dmg", 1))
+		trap.burst = int(d.get("burst", 3))
 		add_child(trap)
-		trap.setup(dir, float(d.get("interval", 1.6)), float(d.get("phase", 0.0)), float(d.get("telegraph", 0.5)))
+		trap.setup(dir, float(d.get("interval", 1.6)), float(d.get("phase", 0.0)), float(d.get("telegraph", 0.5)), str(d.get("mode", "periodic")))
+		_traps_present = true
 
 func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1) -> void:
 	# base_y는 가시 베이스의 y. 가시는 base_y 위로 20px 솟음.
@@ -3162,11 +3164,25 @@ func _camera_shake(magnitude: float, duration: float) -> void:
 			return
 	camera.offset = origin
 
+var _traps_present: bool = false
+var _trap_warned: bool = false
+
 func _process(delta: float) -> void:
 	_refresh_hud()
 	_tick_boss(delta)
 	_tick_challenge(delta)
 	_tick_escape_transition(delta)
+	_tick_trap_warning()
+
+# 발사 함정에 처음 가까워지면 VEIL이 "파괴 불가, 회피" 1회 안내(못 잡는 함정 명시).
+func _tick_trap_warning() -> void:
+	if not _traps_present or _trap_warned or player == null or not is_instance_valid(player):
+		return
+	for t in get_tree().get_nodes_in_group("bullet_trap"):
+		if t is Node2D and player.global_position.distance_to((t as Node2D).global_position) < 320.0:
+			_trap_warned = true
+			_show_veil_subtitle("저 포탑은 못 부숴요. 타이밍 보고 지나가요.", 3.2)
+			return
 
 # ─── 도전 방(블랙아웃 런) — world_layout §3.2 ───
 # 30s 타이머 + 1 hit 실패 + 좁은 시야. 실패해도 stage는 그냥 스킵 (페널티 없음).
