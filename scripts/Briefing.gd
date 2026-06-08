@@ -6,7 +6,6 @@ extends Control
 @onready var hint_label: Label = $Box/Margin/V/Hint
 @onready var visual: Control = $Visual
 @onready var mission_visual: Control = $MissionVisual
-@onready var box: PanelContainer = $Box
 
 const TYPE_INTERVAL: float = 0.04
 
@@ -27,14 +26,11 @@ func _ready() -> void:
 	# 안전망: 이전 scene에서 paused=true 상태가 carry되어 Briefing이 freeze되는 패턴 차단
 	# (사용자 보고: "stage 6/7만 뜨고 텍스트 없는 멈춤" — 도전방 fail/LevelUpOverlay 등에서 paused 해제 누락).
 	get_tree().paused = false
-	# 인트로 비주얼(VEIL 눈 + 미션 도면)은 첫 진입(OPERATION PALIMPSEST)에서만.
-	# 그 땐 대사 박스를 왼쪽으로 좁혀 오른쪽 도면 자리를 비운다. 그 외 스테이지는 텍스트만(박스 넓게).
+	# 인트로 비주얼(VEIL 눈 + 미션 목표물 아이콘)은 첫 진입(OPERATION PALIMPSEST)에서만.
+	# 박스는 원래 중앙 폭 그대로 두고, 아이콘이 박스의 빈 오른쪽 위에 얹힌다(씬 순서상 Box 뒤).
 	var intro: bool = (GameState.current_stage == 0)
 	visual.visible = intro
 	mission_visual.visible = intro
-	if intro:
-		box.anchor_left = 0.06
-		box.anchor_right = 0.56
 	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	lines = _build_lines()
 	_start_line()

@@ -102,35 +102,71 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 
 	for p in picks:
 		var skill: Dictionary = p
-		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(220, 170)
 		var sid: String = str(skill.get("id", ""))
 		var family: String = str(skill.get("family", ""))
 		var tier: int = int(skill.get("tier", 1))
 		var tier_tag: String = "T%d" % tier
-		var header: String
-		if family != "":
-			header = "[%s · %s]" % [family, tier_tag]
-		else:
-			header = "[%s]" % tier_tag
-		var body_text: String = "%s  %s\n\n%s" % [str(skill.get("name", "")), header, str(skill.get("desc", ""))]
 		# 상성 추천(skill_id 지정)이면 그 스킬만 ★ — family 폴백이면 해당 계열 전체.
 		var is_recommended: bool
 		if advice_skill_id != "":
 			is_recommended = (sid == advice_skill_id)
 		else:
 			is_recommended = family != "" and family in recommended_families
-		if is_recommended:
-			body_text += "\n\n★ VEIL 추천"
-		btn.text = body_text
-		btn.add_theme_font_size_override("font_size", 15)
-		if is_recommended:
-			btn.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
-			btn.add_theme_color_override("font_focus_color", Color(1.0, 0.92, 0.55))
-			btn.add_theme_color_override("font_hover_color", Color(1.0, 0.92, 0.55))
+
+		var btn := Button.new()
+		btn.custom_minimum_size = Vector2(220, 208)
 		btn.process_mode = Node.PROCESS_MODE_ALWAYS
 		btn.pressed.connect(func() -> void: _finish(layer, sid, on_picked))
 		btn.focus_entered.connect(SfxPlayer.play.bind("ui_focus", 0.0))
+
+		# 카드 내용 — 아이콘 + 텍스트를 버튼 위에 얹는다. 자식은 mouse IGNORE라
+		# 클릭·키보드 포커스는 그대로 버튼이 받는다(포커스 네비/SFX 보존).
+		var content := VBoxContainer.new()
+		content.set_anchors_preset(Control.PRESET_FULL_RECT)
+		content.add_theme_constant_override("separation", 7)
+		content.alignment = BoxContainer.ALIGNMENT_CENTER
+		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.process_mode = Node.PROCESS_MODE_ALWAYS
+
+		var icon := SkillIcon.new()
+		icon.skill_id = sid
+		icon.family = family
+		icon.custom_minimum_size = Vector2(52, 52)
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		icon.process_mode = Node.PROCESS_MODE_ALWAYS
+		content.add_child(icon)
+
+		var name_lbl := Label.new()
+		if family != "":
+			name_lbl.text = "%s\n[%s · %s]" % [str(skill.get("name", "")), family, tier_tag]
+		else:
+			name_lbl.text = "%s\n[%s]" % [str(skill.get("name", "")), tier_tag]
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_lbl.add_theme_font_size_override("font_size", 16)
+		name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.add_child(name_lbl)
+
+		var desc_lbl := Label.new()
+		desc_lbl.text = str(skill.get("desc", ""))
+		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_lbl.custom_minimum_size = Vector2(196, 0)
+		desc_lbl.add_theme_font_size_override("font_size", 14)
+		desc_lbl.add_theme_color_override("font_color", Color(0.82, 0.85, 0.9))
+		desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.add_child(desc_lbl)
+
+		if is_recommended:
+			name_lbl.add_theme_color_override("font_color", Color(0.98, 0.9, 0.55))
+			var rec := Label.new()
+			rec.text = "★ VEIL 추천"
+			rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			rec.add_theme_font_size_override("font_size", 14)
+			rec.add_theme_color_override("font_color", Color(0.98, 0.88, 0.5))
+			rec.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			content.add_child(rec)
+
+		btn.add_child(content)
 		hb.add_child(btn)
 	# 전체 스킬 트리 보기 — 픽 3장만으론 안 보이는 라인 점증(T2·T3)을 확인하고 결정.
 	# 자체 완결 오버레이를 layer 위에 얹고 스스로 닫힘. paused 유지.

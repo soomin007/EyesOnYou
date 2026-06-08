@@ -60,7 +60,7 @@ func _build() -> void:
 	legend.custom_minimum_size = Vector2(760, 0)
 	legend.text = "[center]● 보유      [color=#%s]◆ 다음 선택 가능[/color]      [color=#%s]○ 잠김[/color][/center]" % [
 		COL_NEXT.to_html(false), COL_LOCKED.to_html(false)]
-	legend.add_theme_font_size_override("normal_font_size", 13)
+	legend.add_theme_font_size_override("normal_font_size", 15)
 	v.add_child(legend)
 
 	var cols := HBoxContainer.new()
@@ -88,16 +88,17 @@ func _build() -> void:
 	desc_label.fit_content = true
 	desc_label.scroll_active = false
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.custom_minimum_size = Vector2(760, 132)
-	desc_label.add_theme_font_size_override("normal_font_size", 15)
-	desc_label.add_theme_constant_override("line_separation", 9)  # T1~T3 줄 간격 — 빽빽하지 않게
+	desc_label.custom_minimum_size = Vector2(760, 150)
+	desc_label.add_theme_font_size_override("normal_font_size", 18)
+	desc_label.add_theme_font_size_override("bold_font_size", 18)
+	desc_label.add_theme_constant_override("line_separation", 8)  # T1~T3 줄 간격 — 빽빽하지 않게
 	desc_label.text = "[color=#8a909a]계열에 마우스를 올리거나 방향키로 옮겨 보세요. T1~T3가 한눈에 보여요.[/color]"
 	desc_panel.add_child(desc_label)
 
 	var footer := Label.new()
 	footer.text = GameState.hint("[ ←/→/↑/↓ : 둘러보기    ESC : 닫기 ]", "[ 방향 : 둘러보기    B : 닫기 ]")
-	footer.add_theme_font_size_override("font_size", 13)
-	footer.add_theme_color_override("font_color", Color(0.5, 0.5, 0.56))
+	footer.add_theme_font_size_override("font_size", 14)
+	footer.add_theme_color_override("font_color", Color(0.55, 0.55, 0.62))
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(footer)
 
@@ -111,7 +112,7 @@ func _build_column(fam: String) -> VBoxContainer:
 	col.add_theme_constant_override("separation", 7)
 	var head := Label.new()
 	head.text = fam
-	head.add_theme_font_size_override("font_size", 18)
+	head.add_theme_font_size_override("font_size", 20)
 	var hc: Color = FAMILY_COLORS.get(fam, Color.WHITE)
 	head.add_theme_color_override("font_color", hc)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -129,8 +130,8 @@ func _build_column(fam: String) -> VBoxContainer:
 func _make_line_button(line_id: String, fam: String) -> Button:
 	var owned: int = GameState.get_skill_tier(line_id)
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(232, 44)
-	b.add_theme_font_size_override("font_size", 15)
+	b.custom_minimum_size = Vector2(248, 48)
+	b.add_theme_font_size_override("font_size", 17)
 	var t1: Dictionary = SkillTreeData.find_tier(line_id, 1)
 	b.text = "%s   %s" % [_tier_dots(owned), str(t1.get("name", line_id))]
 	var tint: Color = FAMILY_COLORS.get(fam, Color.WHITE)
@@ -146,8 +147,8 @@ func _make_line_button(line_id: String, fam: String) -> Button:
 func _make_baseline_button(bid: String, fam: String) -> Button:
 	var base: Dictionary = SkillTreeData.BASELINE.get(bid, {})
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(232, 44)
-	b.add_theme_font_size_override("font_size", 15)
+	b.custom_minimum_size = Vector2(248, 48)
+	b.add_theme_font_size_override("font_size", 17)
 	b.text = "●        %s  (기본)" % str(base.get("name", bid))
 	var tint: Color = FAMILY_COLORS.get(fam, Color.WHITE)
 	b.add_theme_color_override("font_color", tint)
@@ -198,9 +199,9 @@ func _show_line_desc(line_id: String, fam: String, is_baseline: bool) -> void:
 		var ds: String = str(td.get("desc", ""))
 		var note: String = _active_note(td)
 		if t <= owned:
-			txt += "[color=#%s]✓ T%d  %s — %s[/color]%s\n" % [fam_hex, t, nm, ds, note]
+			txt += "[b][color=#%s]✓ T%d  %s[/color][/b][color=#%s] — %s[/color]%s\n" % [fam_hex, t, nm, fam_hex, ds, note]
 		elif t == owned + 1:
-			txt += "[color=#%s]▶ T%d  %s — %s  (다음 선택 가능)[/color]%s\n" % [next_hex, t, nm, ds, note]
+			txt += "[b][color=#%s]▶ T%d  %s — %s  (다음 선택 가능)[/color][/b]%s\n" % [next_hex, t, nm, ds, note]
 		else:
 			txt += "[color=#%s]· T%d  %s — %s  (잠김)[/color]%s\n" % [lock_hex, t, nm, ds, note]
 	desc_label.text = txt

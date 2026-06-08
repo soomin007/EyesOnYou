@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/Briefing.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/BriefingVisual.gd" id="2"]
-[ext_resource type="Script" path="res://scripts/FacilitySchematic.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/MissionObjective.gd" id="3"]
 
 [node name="Briefing" type="Control"]
 anchors_preset = 15
@@ -17,18 +17,11 @@ anchor_bottom = 1.0
 color = Color(0.04, 0.045, 0.06, 1)
 
 [node name="Visual" type="Control" parent="."]
-anchor_left = 0.07
-anchor_top = 0.05
-anchor_right = 0.27
-anchor_bottom = 0.215
+anchor_left = 0.34
+anchor_top = 0.035
+anchor_right = 0.66
+anchor_bottom = 0.235
 script = ExtResource("2")
-
-[node name="MissionVisual" type="Control" parent="."]
-anchor_left = 0.59
-anchor_top = 0.235
-anchor_right = 0.94
-anchor_bottom = 0.80
-script = ExtResource("3")
 
 [node name="Box" type="PanelContainer" parent="."]
 anchor_left = 0.1
@@ -65,3 +58,10 @@ theme_override_colors/font_color = Color(0.92, 0.92, 0.92, 1)
 text = ""
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.5, 0.5, 0.55, 1)
+
+[node name="MissionVisual" type="Control" parent="."]
+anchor_left = 0.6
+anchor_top = 0.31
+anchor_right = 0.87
+anchor_bottom = 0.7
+script = ExtResource("3")
