@@ -24,5 +24,5 @@
 ## 정리
 
 - [x] **outdated docs** (정리) — `STORY_REDESIGN_v1~v3` + `v1/v2_REVIEW`(5개)를 `docs/archive/`로 이동(하드 삭제 대신, 설계 흐름 이력 보존). `docs/archive/README.md`에 캐논(`STORY.md`/`STORY_HANDOFF.md`) 안내. `INDEX.md`에 아카이브 규칙 한 줄 추가. 활성 문서·코드 참조 없음 확인 후 이동.
-- [ ] **STORY.md §10 스테일분** — Stage 5/6 브리핑·ward 복선 등 이미 구현됐으나 문서에 미반영된 항목(STORY 갱신 에이전트가 범위 밖이라 보류).
+- [x] **STORY.md 인벤토리 스테일분** (정리) — Part II §1(첫 브리핑)·§3(Stage 브리핑 풀)을 라이브 `VeilDialogue` 풀에 재동기화. Stage 5/6 채움(미작성→실제 텍스트), Stage 3에 ward/봉인 복선 반영, v2/v3 시야 역전 재설계로 드리프트된 §1·Stage 0~4·인트로까지 일치. §3 헤더에 "코드 풀의 스냅샷" 명시 + 스토리 모드 별도 풀 안내. (§2 맵 표는 의도된 발췌라 유지.)
 - [x] **barrier 라인 desc/효과 대조** (정리) — T1/T2/T3 desc와 `Player.gd` 구현 일치 확인, 불일치 없음. growth_system.md에 결과 기록. (별개로 shield T3 "방어막 재충전"은 여전히 미구현 — growth_system §8에서 추적 중.)
