@@ -50,7 +50,7 @@ const LINES: Array = [
 	{
 		"id": "glide", "family": FAMILY_MOBILITY,
 		"tiers": [
-			{"name": "공중 활강",   "desc": "점프 홀드 시 천천히 낙하·이동", "active": false},
+			{"name": "공중 활강",   "desc": "낙하 시 자동 활강(천천히) + 공중 점프 1회 추가", "active": false},
 			{"name": "관통 사격",   "desc": "활강 중 사격이 적을 관통 (데미지 +1)",      "active": false},
 			{"name": "유도 사격",   "desc": "활강 중 사격이 적을 추적",                 "active": false},
 		],

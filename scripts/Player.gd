@@ -258,7 +258,12 @@ func _try_drop_through() -> void:
 			return
 
 func _try_jump() -> void:
-	var max_jumps: int = 2 if GameState.has_skill("double_jump") else 1
+	var max_jumps: int = 1
+	if GameState.has_skill("double_jump"):
+		max_jumps += 1
+	# 글라이드 T1 — 공중 점프 1회 추가(높은 곳·숨은 보상 도달). 슬로우낙하와 함께 T1을 즉시 유용하게.
+	if GameState.get_skill_tier("glide") >= 1:
+		max_jumps += 1
 	if is_on_floor():
 		velocity.y = JUMP_VELOCITY
 		jumps_used = 1
@@ -312,9 +317,9 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	b.pierce = fb_tier >= 3
 	# multishot T3 — 약한 추적
 	b.tracking = GameState.get_skill_tier("multishot") >= 3
-	# glide — 활강 중(점프 홀드 낙하) 공중 제압. T2=관통+데미지, T3=유도(저격·드론 자동 추적).
+	# glide — 활강 중(공중 낙하) 공중 제압. 패시브화에 맞춰 점프 홀드 조건 제거. T2=관통+데미지, T3=유도.
 	var gl_tier: int = GameState.get_skill_tier("glide")
-	if gl_tier >= 2 and not is_on_floor() and velocity.y > 0.0 and Input.is_action_pressed("jump"):
+	if gl_tier >= 2 and not is_on_floor() and velocity.y > 0.0:
 		b.pierce = true
 		b.damage += 1
 		if gl_tier >= 3:
@@ -430,13 +435,13 @@ func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
 		return
 	velocity.y = min(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
-	# 공중 활강 — 낙하 중 점프 키 누르고 있으면 천천히 떨어진다. 좌우 가속·제어는 T1부터
-	# (회피 기동으로 즉시 쓸모 있게). T2=활강 중 사격 관통+데미지, T3=유도 — 효과는 _spawn_bullet.
+	# 공중 활강 — T1부터 낙하 시 자동으로 천천히 떨어진다(점프 홀드 불필요 — 사용자 피드백으로 패시브화).
+	# 좌우 입력 시 낙하 가속(제어). T2=활강 중 사격 관통+데미지, T3=유도 — 효과는 _spawn_bullet.
 	# 공중 제압 라인(상성: 저격수·드론).
 	var glide_tier: int = GameState.get_skill_tier("glide")
-	if glide_tier >= 1 and velocity.y > 0.0 and Input.is_action_pressed("jump"):
+	if glide_tier >= 1 and velocity.y > 0.0:
 		var fall_speed: float = GLIDE_FALL_SPEED
-		# 좌우 이동 입력 시 낙하 속도 ↑ (활공 거리·속도 제어) — T1부터.
+		# 좌우 이동 입력 시 낙하 속도 ↑ (활공 거리·속도 제어) — 빠르게 내려가고 싶을 때.
 		if Input.get_axis("move_left", "move_right") != 0.0:
 			fall_speed = GLIDE_FALL_SPEED * 1.6
 		velocity.y = min(velocity.y, fall_speed)
