@@ -46,8 +46,16 @@ var _vig: float = 0.0                          # 0=기본(시안 테두리) → 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# CanvasLayer의 자식이라 anchor가 부모(레이어) 크기를 못 받는다 → 뷰포트 크기로 직접 맞춘다.
+	# (안 하면 self.size=0 → 비네트 TextureRect가 늘어나지 못하고 native 320×200으로 좌상단에만 그려짐.)
+	# 해상도 변경/창 리사이즈에도 size_changed로 다시 맞춘다.
+	_fit_to_viewport()
+	get_viewport().size_changed.connect(_fit_to_viewport)
 	_build_vignette()
+
+func _fit_to_viewport() -> void:
+	position = Vector2.ZERO
+	size = get_viewport_rect().size
 
 # 화면 비네트 — 라디얼 그라데이션(중앙 투명→가장자리 불투명) 흰 텍스처를 modulate 색으로 물들인다.
 # 기본=시안 테두리(VEIL이 함께 본다), degradation=검정 + 반경 축소(시야 좁아짐). _update_vignette가 전환.

@@ -400,6 +400,15 @@ func _make_display_section() -> Control:
 		size_row.add_child(btn)
 		_size_buttons.append(btn)
 	_refresh_size_buttons()
+	# 에디터 임베드 미리보기는 창 리사이즈를 막는다("Embedded window can't be resized").
+	# 내보낸 빌드에선 즉시 적용되므로, 에디터에서 돌릴 때만 안내를 띄운다(최종 빌드엔 안 보임).
+	if OS.has_feature("editor"):
+		var ed_note := Label.new()
+		ed_note.text = "에디터 미리보기는 임베드 창이라 크기가 안 바뀔 수 있어요. 내보낸 빌드에선 바로 적용돼요."
+		ed_note.add_theme_font_size_override("font_size", 12)
+		ed_note.add_theme_color_override("font_color", Color(0.78, 0.7, 0.5))
+		ed_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(ed_note)
 	return v
 
 # 창 크기 버튼 라벨·색·활성 상태 갱신. 선택=● 강조, 전체화면이면 전체 비활성(창 크기 무의미).
