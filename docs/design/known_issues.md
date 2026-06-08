@@ -62,6 +62,16 @@
 
 ---
 
+## 렌더링 / 레이아웃
+
+- **CanvasLayer의 Control 자식은 anchor로 화면 크기를 못 받는다.**
+  CanvasLayer는 Control이 아니라 자식에게 rect를 전파하지 않는다. 그 아래 Control에 `PRESET_FULL_RECT`를
+  걸어도 self.size=0이 된다. full-rect로 깐 손자 노드(예: 비네트 TextureRect, STRETCH_SCALE)는 늘어날
+  대상이 없어 **텍스처 native 크기로 좌상단(0,0)에만** 그려진다.
+  → CanvasLayer 자식 Control은 `size = get_viewport_rect().size`로 직접 맞추고 `get_viewport().size_changed`에
+  연결해 해상도 변경에도 갱신. (2026-06-08: VeilSight 시안 테두리 비네트가 좌상단 320×200 blob으로만
+  떴던 버그 — 이 패턴이 원인. `VeilSight._fit_to_viewport`로 해결.)
+
 ## 런타임 (상세: 메모리 project-runtime-safety)
 
 - **paused / Engine.time_scale carry로 인한 freeze.**
