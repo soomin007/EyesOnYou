@@ -435,13 +435,13 @@ func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
 		return
 	velocity.y = min(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
-	# 공중 활강 — T1부터 낙하 시 자동으로 천천히 떨어진다(점프 홀드 불필요 — 사용자 피드백으로 패시브화).
-	# 좌우 입력 시 낙하 가속(제어). T2=활강 중 사격 관통+데미지, T3=유도 — 효과는 _spawn_bullet.
-	# 공중 제압 라인(상성: 저격수·드론).
+	# 공중 활강 — T1부터 낙하 시 자동으로 천천히 떨어진다(점프 홀드 불필요 — 패시브).
+	# 아래 방향키를 누르면 활강을 끄고 원래 속도로 빠르게 떨어진다(사용자 요청). 좌우 입력은 활강 가속.
+	# T2=활강 중 사격 관통+데미지, T3=유도 — 효과는 _spawn_bullet. 공중 제압 라인(상성: 저격수·드론).
 	var glide_tier: int = GameState.get_skill_tier("glide")
-	if glide_tier >= 1 and velocity.y > 0.0:
+	if glide_tier >= 1 and velocity.y > 0.0 and not Input.is_action_pressed("move_down"):
 		var fall_speed: float = GLIDE_FALL_SPEED
-		# 좌우 이동 입력 시 낙하 속도 ↑ (활공 거리·속도 제어) — 빠르게 내려가고 싶을 때.
+		# 좌우 이동 입력 시 낙하 속도 ↑ (활공 거리·속도 제어).
 		if Input.get_axis("move_left", "move_right") != 0.0:
 			fall_speed = GLIDE_FALL_SPEED * 1.6
 		velocity.y = min(velocity.y, fall_speed)
