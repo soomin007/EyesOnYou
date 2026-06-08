@@ -20,7 +20,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="V" type="VBoxContainer" parent="Center"]
-custom_minimum_size = Vector2(640, 0)
+custom_minimum_size = Vector2(440, 0)
 alignment = 1
 theme_override_constants/separation = 24
 

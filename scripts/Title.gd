@@ -174,6 +174,8 @@ func _make_button(text: String) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(360, 44)
+	# 컨테이너 폭으로 늘어나지 않고 360 고정·가운데 — 박스가 너무 넓어 보이던 문제(사용자 보고).
+	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	b.add_theme_font_size_override("font_size", 18)
 	return b
 
