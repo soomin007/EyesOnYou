@@ -58,6 +58,14 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	header.add_theme_color_override("font_color", Color(0.55, 0.85, 0.95))
 	v.add_child(header)
 
+	# 적 아이콘 — 도감이 전부 텍스트라 그림 한 장 곁들임(텍스트→그래픽).
+	var icon := EnemyIcon.new()
+	icon.enemy_id = enemy_id
+	icon.custom_minimum_size = Vector2(76, 76)
+	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	icon.process_mode = Node.PROCESS_MODE_ALWAYS
+	v.add_child(icon)
+
 	var name_label := Label.new()
 	name_label.text = str(data.get("name", "???"))
 	name_label.add_theme_font_size_override("font_size", 24)
