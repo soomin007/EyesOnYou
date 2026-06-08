@@ -4,6 +4,7 @@ extends Control
 @onready var speaker_label: Label = $Box/Margin/V/Speaker
 @onready var text_label: Label = $Box/Margin/V/Text
 @onready var hint_label: Label = $Box/Margin/V/Hint
+@onready var visual: Control = $Visual
 
 const TYPE_INTERVAL: float = 0.04
 
@@ -24,6 +25,8 @@ func _ready() -> void:
 	# 안전망: 이전 scene에서 paused=true 상태가 carry되어 Briefing이 freeze되는 패턴 차단
 	# (사용자 보고: "stage 6/7만 뜨고 텍스트 없는 멈춤" — 도전방 fail/LevelUpOverlay 등에서 paused 해제 누락).
 	get_tree().paused = false
+	# VEIL 인트로 비주얼은 첫 진입(OPERATION PALIMPSEST)에서만 — 그 외 스테이지 브리핑은 텍스트만.
+	visual.visible = (GameState.current_stage == 0)
 	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	lines = _build_lines()
 	_start_line()
