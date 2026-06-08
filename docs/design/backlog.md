@@ -23,6 +23,6 @@
 
 ## 정리
 
-- [ ] **outdated docs** — `STORY_REDESIGN_v1~v3` + `v1/v2_REVIEW`(5개)는 과거 스토리 재설계 협업 라운드. 현재 캐논은 `STORY.md`·`STORY_HANDOFF.md`에 통합됨. 처리 방향(아카이브 이동 / superseded 헤더 / 삭제) 미정.
+- [x] **outdated docs** (정리) — `STORY_REDESIGN_v1~v3` + `v1/v2_REVIEW`(5개)를 `docs/archive/`로 이동(하드 삭제 대신, 설계 흐름 이력 보존). `docs/archive/README.md`에 캐논(`STORY.md`/`STORY_HANDOFF.md`) 안내. `INDEX.md`에 아카이브 규칙 한 줄 추가. 활성 문서·코드 참조 없음 확인 후 이동.
 - [ ] **STORY.md §10 스테일분** — Stage 5/6 브리핑·ward 복선 등 이미 구현됐으나 문서에 미반영된 항목(STORY 갱신 에이전트가 범위 밖이라 보류).
 - [ ] **barrier 라인 desc/효과 대조** — growth_system 갱신 시 후속으로 남긴 확인 항목.

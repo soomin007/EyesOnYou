@@ -41,5 +41,6 @@
 ## 외부 작업자 인계 시
 
 - 의뢰서·답변 형태(BRIEF_*/DESIGN_*)는 작업 완료 후 본 문서들로 통합·정리하고 의뢰 문서는 폐기한다.
+  - 통합 후에도 설계 흐름을 남길 가치가 있으면 폐기 대신 [`archive/`](archive/)로 이동(이력 보존, 참조 금지).
 - 새 디자인 문서는 `docs/design/<topic>.md`로. 파일명은 `snake_case`.
 - 큰 변경은 commit 단위로 끊고 `session_logs/YYYY-MM-DD.md`에 기록.
