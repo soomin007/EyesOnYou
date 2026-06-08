@@ -10,9 +10,11 @@ const TWO_PI: float = PI * 2.0
 
 var t: float = 0.0        # 누적 시간 — 회전/맥동/스캔라인 구동
 var appear: float = 0.0   # 0→1 등장 이징 (조리개 열림)
+var degraded: bool = false  # ACT3 시야 붕괴 — 눈이 흐려지고 불안정해짐(서사 연결)
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	degraded = GameState.veil_degraded
 
 func _process(delta: float) -> void:
 	t += delta
@@ -27,6 +29,9 @@ func _draw() -> void:
 		return
 	# easeOutCubic — 등장 알파/스케일.
 	var a: float = 1.0 - pow(1.0 - appear, 3.0)
+	# 시야 붕괴 후엔 눈이 흐려지고 불안정하게 깜빡인다(VEIL이 잘 못 봄을 브리핑에서도 체감).
+	if degraded:
+		a *= 0.4 + 0.13 * sin(t * 7.0)
 	if a <= 0.001:
 		return
 

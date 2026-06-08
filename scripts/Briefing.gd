@@ -26,10 +26,10 @@ func _ready() -> void:
 	# 안전망: 이전 scene에서 paused=true 상태가 carry되어 Briefing이 freeze되는 패턴 차단
 	# (사용자 보고: "stage 6/7만 뜨고 텍스트 없는 멈춤" — 도전방 fail/LevelUpOverlay 등에서 paused 해제 누락).
 	get_tree().paused = false
-	# 인트로 비주얼(VEIL 눈 + 미션 목표물 아이콘)은 첫 진입(OPERATION PALIMPSEST)에서만.
-	# 박스는 원래 중앙 폭 그대로 두고, 아이콘이 박스의 빈 오른쪽 위에 얹힌다(씬 순서상 Box 뒤).
+	# VEIL 눈은 모든 브리핑에 — "당신을 본다" 정체성을 매 스테이지 유지.
+	# 미션 목표물 아이콘은 첫 진입(OPERATION PALIMPSEST)에서만. 박스는 중앙 폭 그대로.
 	var intro: bool = (GameState.current_stage == 0)
-	visual.visible = intro
+	visual.visible = true
 	mission_visual.visible = intro
 	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	lines = _build_lines()
