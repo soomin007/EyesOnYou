@@ -1,16 +1,19 @@
 extends Node
 
 func _ready() -> void:
+	# 저장된 키설정을 먼저 적용한 뒤, 핵심 마우스(좌=사격/우=스킬)·WASD-UI 기본을 보강한다.
+	# 순서 중요: load_settings가 attack 이벤트를 cfg값으로 덮어쓰므로(erase+reload), 마우스 보강은
+	# 그 뒤에 둬야 한다. 안 그러면 cfg에 마우스 좌클릭이 빠진 경우 좌클릭 사격이 사라진다(사용자 보고 버그).
+	GameState.load_settings()
 	_bind_default_mouse_inputs()
 	_bind_wasd_to_ui()
-	GameState.load_settings()
 	GameState.apply_display_settings()
 	Accessibility.apply()
 	GameState.reset()
 	get_tree().change_scene_to_file(SceneRouter.TITLE)
 
-# 마우스 좌/우 클릭을 attack/skill의 기본 이벤트로 추가.
-# 사용자가 Settings에서 명시적으로 제거하면(v2 cfg) load_settings에서 덮어쓰므로 무시됨.
+# 마우스 좌/우 클릭을 attack/skill의 기본 이벤트로 보강(이미 있으면 그대로). load_settings 뒤에 호출 —
+# 좌클릭 사격·우클릭 스킬은 핵심 조작이라 cfg가 잃어버려도 항상 살아 있게 한다.
 func _bind_default_mouse_inputs() -> void:
 	_ensure_mouse_event("attack", MOUSE_BUTTON_LEFT)
 	_ensure_mouse_event("skill", MOUSE_BUTTON_RIGHT)
