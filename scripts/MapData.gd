@@ -123,6 +123,8 @@ static func _rooftops() -> Dictionary:
 			{"pos": Vector2(1150, 1240), "w": 64.0},  # 둥지(중상층) — 우측
 			{"pos": Vector2(130, 760),   "w": 64.0},  # 둥지(상층) — 좌측
 		],
+		# 저격수가 전부 측면 단독 둥지(회피 전용) — VEIL "못 잡는 적 안내"(_tick_avoid_warning)가 이 플래그로 발화.
+		"nest_snipers": true,
 		"enemies": {
 			# stage 0~1 등장 — 드론 제거. 저격수는 메인 옥상 발판이 아닌 측면 단독 둥지에서 사선 확보
 			# (사용자 피드백: patrol과 같은 평범한 발판에 섞이지 않게). 엇갈린 좌/우.
@@ -344,6 +346,8 @@ static func _cooling() -> Dictionary:
 			{"pos": Vector2(560, 380),  "w": 280.0},  # 140 (2)
 			{"pos": Vector2(620, 280),  "w": 320.0},  # 100 (1) — 골 직전
 		],
+		# 좌측 가장자리 단독 둥지 저격수(회피 전용) — VEIL "못 잡는 적 안내"(_tick_avoid_warning)가 이 플래그로 발화.
+		"nest_snipers": true,
 		"enemies": {
 			"patrol": [Vector2(540, 2750.0), Vector2(640, 2550.0), Vector2(540, 1890.0)],
 			# 저격수 — 좌측 가장자리 단독 둥지(분기 발판과 분리). 좌측 분기 climber를 사선으로 견제.
@@ -431,6 +435,8 @@ static func _watchtower() -> Dictionary:
 			{"pos": Vector2(120, 1200),  "w": 64.0},  # 둥지(중층) — 좌측
 			{"pos": Vector2(1150, 720),  "w": 64.0},  # 둥지(상층) — 우측
 		],
+		# 저격수가 전부 측면 단독 둥지(회피 전용) — VEIL "못 잡는 적 안내"(_tick_avoid_warning)가 이 플래그로 발화.
+		"nest_snipers": true,
 		"enemies": {
 			# 감시탑 = sniper 컨셉. 저격수는 메인 경로 발판이 아닌 측면 단독 둥지에 배치(사용자 피드백:
 			# patrol과 같은 평범한 발판에 섞이지 않게). 엇갈린 좌/우라 한 번에 한 명씩 사선에 노출.

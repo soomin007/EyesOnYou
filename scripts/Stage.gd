@@ -143,6 +143,8 @@ func _setup_veil_mistakes() -> void:
 		_show_veil_subtitle(entry, 4.5, false, true)
 	# ACT3 시야 역전 최고조 — 플레이 *중* 결정론적으로 한 번 더 박는다 (v3 §4 ★).
 	_arm_act3_vision_subtitle()
+	# 이미 시야가 붕괴한 ACT3 후속 맵 — 함정/매복을 마커로 못 짚어주니 진입 직후 말로 미리 경고.
+	_arm_degraded_hazard_warning()
 
 func _arm_ward_foreshadow_at(trigger_x: float) -> void:
 	var area := Area2D.new()
@@ -280,6 +282,31 @@ func _act3_vision_line(stage: int) -> String:
 	if stage >= GameState.effective_total_stages() - 1:
 		return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
 	return "여기서부터는 잘 안 보여요. 이제 요원이 봐줘요."
+
+# ─── 시야 붕괴 후 위험 미리 경고 (못 잡는 적 안내 §2) ───────────────
+# 이미 시야가 붕괴(GameState.veil_degraded)한 ACT3 후속 맵에 진입하면, VEIL은 함정·매복을
+# 마커로 못 짚어준다. 그래서 마커 대신 "여기는 잘 못 본다, 직접 살펴라"를 진입 직후 말로 경고.
+# 이 맵 안에서 degradation이 막 시작되는 케이스(_fire_act3_vision)는 그 자막이 이미 비트를
+# 잡으므로, 여기선 *처음부터* 붕괴 상태로 들어온 맵에서만 발화(중복 방지).
+func _arm_degraded_hazard_warning() -> void:
+	if not GameState.veil_degraded:
+		return
+	var traps: Array = _map_data.get("traps", [])
+	var tripwires: Array = _map_data.get("tripwires", [])
+	var has_traps: bool = not traps.is_empty() or not tripwires.is_empty()
+	var has_nest: bool = bool(_map_data.get("nest_snipers", false))
+	if not (has_traps or has_nest):
+		return
+	var line: String = "여기, 제가 잘 못 봐요. 함정이 있어도 못 짚어줄 수 있어요 — 직접 살펴요."
+	if has_nest and not has_traps:
+		line = "여기, 제가 잘 못 봐요. 매복이 있어도 못 짚어줄 수 있어요 — 직접 살펴요."
+	# 진입 멘트(4.5s)가 가신 뒤 한 박자 늦게 — 겹쳐서 줄줄이 뜨지 않게.
+	var tw := create_tween()
+	tw.tween_interval(6.0)
+	tw.tween_callback(func() -> void:
+		if player != null and is_instance_valid(player):
+			_show_veil_subtitle(line, 3.8)
+	)
 
 # ─── VEIL 시야 마킹 셋업 (시야=신뢰 파일럿) ───────────────────────
 # VEIL이 원거리/공중 위협을 HUD로 짚어준다. ACT3에선 그 마킹이 흐려지고 꺼진다 = 역전을 플레이로.
@@ -2604,6 +2631,10 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	e.add_child(col)
 	add_child(e)
 	e.global_position = pos
+	# 측면 단독 둥지 저격수(회피 전용) 태깅 — VEIL이 "정면으론 못 잡는다"를 짚어주는 대상.
+	# (kind 1 = sniper. nest_snipers 맵에선 모든 저격수가 둥지.)
+	if kind == 1 and bool(_map_data.get("nest_snipers", false)):
+		e.set_meta("avoid_only", true)
 	if wave_idx >= 0:
 		e.set_meta("wave_idx", wave_idx)
 	e.killed.connect(_on_enemy_killed.bind(wave_idx))
@@ -3177,6 +3208,7 @@ func _camera_shake(magnitude: float, duration: float) -> void:
 
 var _traps_present: bool = false
 var _trap_warned: bool = false
+var _avoid_warned: bool = false
 
 func _process(delta: float) -> void:
 	_refresh_hud()
@@ -3184,6 +3216,7 @@ func _process(delta: float) -> void:
 	_tick_challenge(delta)
 	_tick_escape_transition(delta)
 	_tick_trap_warning()
+	_tick_avoid_warning()
 
 # 발사 함정에 처음 가까워지면 VEIL이 "파괴 불가, 회피" 1회 안내(못 잡는 함정 명시).
 func _tick_trap_warning() -> void:
@@ -3193,8 +3226,31 @@ func _tick_trap_warning() -> void:
 		for t in get_tree().get_nodes_in_group(grp):
 			if t is Node2D and player.global_position.distance_to((t as Node2D).global_position) < 320.0:
 				_trap_warned = true
-				_show_veil_subtitle("저 포탑은 못 부숴요. 타이밍 보고 지나가요.", 3.2)
+				# 시야 붕괴(ACT3) 후엔 마커로 못 짚어주니 "잘 안 보인다"는 톤으로.
+				if GameState.veil_degraded:
+					_show_veil_subtitle("앞에 함정이 있는 것 같아요. 잘 안 보여요 — 발밑·천장 조심해요.", 3.4)
+				else:
+					_show_veil_subtitle("저 포탑은 못 부숴요. 타이밍 보고 지나가요.", 3.2)
 				return
+
+# 측면 단독 둥지 저격수(회피 전용)에 처음 가까워지면 VEIL이 1회 안내 — "정면으론 못 잡으니
+# 사선 피하거나 글라이드로 덮쳐라". 못 잡는 적 명시 + 글라이드-저격 상성 학습.
+func _tick_avoid_warning() -> void:
+	if _avoid_warned or player == null or not is_instance_valid(player):
+		return
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not (e is Node2D) or not is_instance_valid(e):
+			continue
+		var en: Node2D = e as Node2D
+		if not en.has_meta("avoid_only") or bool(en.get("dead")):
+			continue
+		if player.global_position.distance_to(en.global_position) < 430.0:
+			_avoid_warned = true
+			if GameState.veil_degraded:
+				_show_veil_subtitle("저 위 저격수... 잘 안 보여요. 사선만 피하든지, 글라이드로 덮쳐요.", 3.6)
+			else:
+				_show_veil_subtitle("저 저격수, 정면으론 안 닿아요. 사선 피해 가거나 글라이드로 위에서 덮쳐요.", 3.6)
+			return
 
 # ─── 도전 방(블랙아웃 런) — world_layout §3.2 ───
 # 30s 타이머 + 1 hit 실패 + 좁은 시야. 실패해도 stage는 그냥 스킵 (페널티 없음).
