@@ -9,6 +9,9 @@ const VALUE: int = 1
 var collected: bool = false
 var spawn_anim_t: float = 0.0
 var bounce_velocity: Vector2 = Vector2.ZERO
+# 흡인 반경 — 기본 PICKUP_RANGE. 글라이드 게이트 오브는 작게(60) 설정해 아래/옆 메인 경로에서
+# 벽·바닥 무시 흡인되던 문제를 막는다(실제 알코브에 도달해야만 획득).
+var attract_range: float = PICKUP_RANGE
 
 func _ready() -> void:
 	add_to_group("exp_orb")
@@ -29,7 +32,7 @@ func _process(delta: float) -> void:
 	if to.length() < 18.0:
 		_collect()
 		return
-	if to.length() < PICKUP_RANGE:
+	if to.length() < attract_range:
 		position += to.normalized() * ATTRACT_SPEED * delta
 
 func _find_player() -> Node2D:

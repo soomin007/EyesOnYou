@@ -237,7 +237,9 @@ func _route_enemy_kinds(route_id: String) -> Array:
 		var wd: Dictionary = w
 		var wen: Dictionary = wd.get("enemies", {})
 		for k in wen.keys():
-			if int(wen[k]) > 0 and not (str(k) in kinds):
+			# wen[k]는 적 위치 배열(개수 아님) — int() 생성자 없음(크래시 원인). size()로 검사.
+			var arr: Array = wen[k]
+			if arr.size() > 0 and not (str(k) in kinds):
 				kinds.append(str(k))
 	return kinds
 

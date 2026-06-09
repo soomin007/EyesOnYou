@@ -147,9 +147,9 @@ static func _rooftops() -> Dictionary:
 				Vector2(1060, 1790.0), Vector2(1100, 1790.0),
 				Vector2(1160, 2250.0), Vector2(1200, 2250.0),
 				Vector2(640, 1190.0), Vector2(680, 1190.0),
-				# 글라이드 게이트 알코브(1180,2060) 보너스
-				Vector2(1160, 2038.0), Vector2(1200, 2038.0),
 			],
+			# 글라이드 게이트 알코브(1180,2060) 보너스 — 흡인 반경 축소(직접 도달 필요)
+			"gate_orbs":  [Vector2(1160, 2038.0), Vector2(1200, 2038.0)],
 			"hp_pickups": [
 				Vector2(200, 1790.0),
 				Vector2(1180, 2250.0),
@@ -368,9 +368,9 @@ static func _cooling() -> Dictionary:
 			"xp_orbs":    [
 				Vector2(960, 1410.0), Vector2(1000, 1410.0),
 				Vector2(1080, 2450.0), Vector2(1100, 2450.0), Vector2(1120, 2450.0),
-				# 글라이드 게이트 알코브(1100,2250) 보너스
-				Vector2(1080, 2228.0), Vector2(1120, 2228.0),
 			],
+			# 글라이드 게이트 알코브(1100,2250) 보너스 — 흡인 반경 축소(직접 도달 필요)
+			"gate_orbs":  [Vector2(1080, 2228.0), Vector2(1120, 2228.0)],
 			"hp_pickups": [
 				Vector2(180, 1410.0),
 				Vector2(1100, 2450.0),
@@ -465,9 +465,9 @@ static func _watchtower() -> Dictionary:
 				Vector2(160, 1790.0), Vector2(200, 1790.0),
 				Vector2(60, 2630.0), Vector2(100, 2630.0),
 				Vector2(640, 1150.0), Vector2(680, 1150.0),
-				# 글라이드 게이트 알코브(820,960) 보너스
-				Vector2(800, 938.0), Vector2(840, 938.0),
 			],
+			# 글라이드 게이트 알코브(820,960) 보너스 — 흡인 반경 축소(직접 도달 필요)
+			"gate_orbs":  [Vector2(800, 938.0), Vector2(840, 938.0)],
 			"hp_pickups": [
 				Vector2(640, 1790.0),
 				Vector2(80, 2630.0),
@@ -478,8 +478,9 @@ static func _watchtower() -> Dictionary:
 		# 수직 등반 압박 — 벽면 가로 포탑(타이밍 회피 / 글라이드로 지나치기) + 합류 직전 트립와이어→버스트.
 		# 가로탄 사거리 ~736px라 등반 경로를 한 높이씩 가로질러 "지나갈 때를 노리는" 라인이 됨.
 		"traps": [
-			{"x": 1240, "y": 1520.0, "dir": "left",  "interval": 2.0, "phase": 0.0},   # 상층 우벽 → 좌 발사
-			{"x": 40,   "y": 2140.0, "dir": "right", "interval": 2.0, "phase": 1.0},   # 분기 좌벽 → 우 발사
+			# 발판 top이 아니라 **갭(점프 경로) 높이**에 둬 통과 시 몸통을 지나가게(같은 높이면 무해).
+			{"x": 1240, "y": 1440.0, "dir": "left",  "interval": 2.0, "phase": 0.0},   # 1520↔1360 갭 가로지름
+			{"x": 40,   "y": 2060.0, "dir": "right", "interval": 2.0, "phase": 1.0},   # 분기 2140↔1980 갭 가로지름
 			# 합류 직전(720,1520 발판 밑) 하향 버스트 포탑 — 트립와이어 가로지르면 일제 발사로 머리 위에서 쏟아짐.
 			{"x": 700, "y": 1532.0, "dir": "down", "mode": "triggered", "trigger_id": "wt1", "burst": 4},
 		],
@@ -527,8 +528,9 @@ static func _ward() -> Dictionary:
 			"shield": [Vector2(1500, 600.0), Vector2(2400, 600.0)],
 		},
 		"rewards": {
-			# 글라이드 알코브(1380,200) 위 보상 — 삼단점프/활강으로만 회수.
-			"xp_orbs":    [Vector2(1355, 178.0), Vector2(1405, 178.0)],
+			# 글라이드 알코브(1380,200) 위 보상 — 삼단점프/활강으로만 회수(gate_orbs=흡인 반경 축소).
+			"xp_orbs":    [],
+			"gate_orbs":  [Vector2(1355, 178.0), Vector2(1405, 178.0)],
 			"hp_pickups": [Vector2(1800, 400.0)],
 		},
 		"spikes": [],
@@ -623,8 +625,9 @@ static func _datacenter() -> Dictionary:
 		# 후반 ARENA 압박 — 양 벽 중층(서버 랙 높이)에서 가로 교차 발사. 랙 위 캠핑 차단, 타이밍 회피.
 		# 탄 사거리 ~736px라 좌 포탑은 좌측 랙(200/600), 우 포탑은 우측 랙(1400/1000)을 견제 → 중앙은 상대 안전지대.
 		"traps": [
-			{"x": 40,   "y": 580.0, "dir": "right", "interval": 2.2, "phase": 0.0, "telegraph": 0.6},
-			{"x": 1880, "y": 580.0, "dir": "left",  "interval": 2.2, "phase": 1.1, "telegraph": 0.6},
+			# 랙 top(580)이 아니라 랙 위 body 높이(550)에 둬 랙 캠퍼 몸통을 지나가게(같은 높이면 무해).
+			{"x": 40,   "y": 550.0, "dir": "right", "interval": 2.2, "phase": 0.0, "telegraph": 0.6},
+			{"x": 1880, "y": 550.0, "dir": "left",  "interval": 2.2, "phase": 1.1, "telegraph": 0.6},
 		],
 	}
 

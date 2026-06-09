@@ -2663,8 +2663,9 @@ func _can_arena_clear() -> bool:
 			return false
 	return true
 
-func _spawn_orb(pos: Vector2, static_placement: bool = false) -> void:
+func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: float = -1.0) -> void:
 	# static_placement=true면 bounce 스킵 — 분기 보상으로 미리 배치된 orb는 그 자리에 그대로 둠.
+	# attract_range>0이면 흡인 반경 축소(글라이드 게이트 — 알코브에 실제 도달해야 획득).
 	var orb := Node2D.new()
 	orb.set_script(load("res://scripts/ExpOrb.gd"))
 	var sprite := ColorRect.new()
@@ -2679,6 +2680,8 @@ func _spawn_orb(pos: Vector2, static_placement: bool = false) -> void:
 		# bounce 스킵 — 즉시 attract 단계로
 		orb.set("spawn_anim_t", 1.0)
 		orb.set("bounce_velocity", Vector2.ZERO)
+	if attract_range > 0.0:
+		orb.set("attract_range", attract_range)
 
 func _spawn_hp_orb(pos: Vector2) -> void:
 	# 분기 보상으로 미리 배치된 HP 회복 픽업 (적 처치 드롭과 별개).
@@ -2723,6 +2726,10 @@ func _build_rewards() -> void:
 	var rewards: Dictionary = _map_data.get("rewards", {})
 	for pos in rewards.get("xp_orbs", []):
 		_spawn_orb(pos, true)
+	# 글라이드 게이트 보상 — 흡인 반경 60px(기본 220)로 축소해 아래/옆 메인 경로에서 빨려오지 않게.
+	# 실제 알코브에 삼단점프로 도달해야만 획득 → 게이트 의미 보존.
+	for pos in rewards.get("gate_orbs", []):
+		_spawn_orb(pos, true, 60.0)
 	for pos in rewards.get("hp_pickups", []):
 		_spawn_hp_orb(pos)
 

@@ -221,7 +221,7 @@ func _flip_visual(facing_left: bool) -> void:
 		visual.scale.x = -1.0 if facing_left else 1.0
 
 func _physics_process(delta: float) -> void:
-	if dead:
+	if dead or not is_inside_tree():
 		return
 	if touch_cd > 0.0:
 		touch_cd -= delta
@@ -682,7 +682,12 @@ func _shield_blocks(from_dir: int) -> bool:
 # ─── 공통 ───────────────────────────────────────────────────
 
 func _find_player() -> Node2D:
-	var nodes := get_tree().get_nodes_in_group("player")
+	# 트리에서 빠진(씬 전환 중) 노드의 콜백/틱이 player를 조회하면 get_tree()가 null →
+	# "get_nodes_in_group on null" 크래시. player 조회의 단일 길목이라 여기서 가드.
+	var tree := get_tree()
+	if tree == null:
+		return null
+	var nodes := tree.get_nodes_in_group("player")
 	if nodes.size() == 0:
 		return null
 	return nodes[0] as Node2D
