@@ -105,7 +105,7 @@ func _icon_hp(c: Vector2, r: float, col: Color) -> void:
 	draw_colored_polygon(pts, col)
 
 func _icon_shield(c: Vector2, r: float, col: Color) -> void:
-	# 방패 — "비상 방어막"
+	# 방패 형태 — "비상 부활"(shield 라인, 생존)
 	var pts := PackedVector2Array([
 		c + Vector2(-r * 0.8, -r * 0.7), c + Vector2(r * 0.8, -r * 0.7),
 		c + Vector2(r * 0.8, r * 0.2), c + Vector2(0.0, r * 1.0), c + Vector2(-r * 0.8, r * 0.2)])

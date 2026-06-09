@@ -80,6 +80,7 @@ func _open_panel() -> void:
 	v.add_child(_build_route_row())
 	v.add_child(_build_int_row("Risk", "current_route_risk", _on_risk_pressed))
 	v.add_child(_build_int_row("Reward", "current_route_reward", _on_reward_pressed))
+	v.add_child(_build_veil_row())
 
 	v.add_child(HSeparator.new())
 	v.add_child(_make_row_label("스킬 (티어 직접 지정)"))
@@ -170,6 +171,23 @@ func _build_skill_row(line_id: String, label_text: String) -> HBoxContainer:
 		hb.add_child(b)
 	return hb
 
+# 시야 붕괴(veil_degraded) 토글 — ACT3 진입 경고/붕괴 톤 대사·비네트를 연습장에서 테스트.
+func _build_veil_row() -> HBoxContainer:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 6)
+	hb.add_child(_make_row_label("시야"))
+	var b := Button.new()
+	b.text = "붕괴 %s" % ("켜짐" if GameState.veil_degraded else "꺼짐")
+	b.custom_minimum_size = Vector2(110, 26)
+	b.add_theme_font_size_override("font_size", 12)
+	b.pressed.connect(_on_veil_degraded_toggle)
+	hb.add_child(b)
+	return hb
+
+func _on_veil_degraded_toggle() -> void:
+	GameState.veil_degraded = not GameState.veil_degraded
+	_reload()
+
 # 베이스라인(대시·이중점프) on/off.
 func _build_baseline_row() -> HBoxContainer:
 	var hb := HBoxContainer.new()
@@ -220,12 +238,15 @@ func _on_stage_pressed(idx: int) -> void:
 
 func _on_route_pressed(rid: String) -> void:
 	GameState.current_route_id = rid
-	# RouteData에서 같은 id의 tags/risk/reward는 그대로 가져옴.
-	# 단, risk/reward는 패널의 별도 행에서 사용자가 따로 지정한 값 우선 → 덮어쓰지 않음.
+	# 맵 선택 시 그 맵의 기본 위험/보상/스테이지로 자동 설정(직관적 테스트 — 사용자 요청).
+	# (이후 Risk/Reward/스테이지 행에서 따로 미세조정 가능.)
 	for r in RouteData.ALL_ROUTES:
 		var route: Dictionary = r
 		if route.get("id", "") == rid:
 			GameState.current_route_tags = route.get("tags", [])
+			GameState.current_route_risk = int(route.get("risk", GameState.current_route_risk))
+			GameState.current_route_reward = int(route.get("reward", GameState.current_route_reward))
+			GameState.current_stage = int(route.get("min_stage", GameState.current_stage))
 			break
 	_reload()
 

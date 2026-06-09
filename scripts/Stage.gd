@@ -40,7 +40,8 @@ var _escape_city_near: Node2D = null
 var cd_attack_slot: Control
 var cd_dash_slot: Control
 var cd_skill_slot: Control
-var cd_barrier_slot: Control  # 방어막 — 충전 progress, 완료 시 청록 가득
+var cd_barrier_slot: Control  # 에너지 방어막 — 충전 progress(헥스 + 남은 초), 완료 시 청록 가득
+var cd_shield_slot: Control   # 비상 부활 — T3 재충전 카운트다운(없으면 ✓), 미보유 시 숨김
 const CD_BAR_WIDTH: float = 90.0
 
 func _ready() -> void:
@@ -69,6 +70,9 @@ func _ready() -> void:
 	_build_rewards()
 	_build_goal()
 	_setup_veil_mistakes()
+	# 시야 붕괴 후속 맵 진입 경고 — _setup_veil_mistakes(연습장 early-return)와 분리해 따로 호출.
+	# 자체적으로 veil_degraded를 검사하므로(self-gate), 연습장의 시야붕괴 토글로도 테스트된다.
+	_arm_degraded_hazard_warning()
 	_setup_veil_sight()
 	_setup_challenge_mode()
 	_build_lever_puzzles()
@@ -143,8 +147,6 @@ func _setup_veil_mistakes() -> void:
 		_show_veil_subtitle(entry, 4.5, false, true)
 	# ACT3 시야 역전 최고조 — 플레이 *중* 결정론적으로 한 번 더 박는다 (v3 §4 ★).
 	_arm_act3_vision_subtitle()
-	# 이미 시야가 붕괴한 ACT3 후속 맵 — 함정/매복을 마커로 못 짚어주니 진입 직후 말로 미리 경고.
-	_arm_degraded_hazard_warning()
 
 func _arm_ward_foreshadow_at(trigger_x: float) -> void:
 	var area := Area2D.new()
@@ -2086,10 +2088,12 @@ func _build_hud() -> void:
 		dot.color = Color(0.20, 0.22, 0.26, 0.4)
 		charges_row.add_child(dot)
 	cd_skill_slot.add_child(charges_row)
+	cd_shield_slot = _make_cd_slot("부활")
 	cd_row.add_child(cd_attack_slot)
 	cd_row.add_child(cd_dash_slot)
 	cd_row.add_child(cd_skill_slot)
 	cd_row.add_child(cd_barrier_slot)
+	cd_row.add_child(cd_shield_slot)
 
 	var keys := Label.new()
 	keys.name = "KeysHint"
@@ -2206,6 +2210,10 @@ func _refresh_hud() -> void:
 			cd_barrier_slot.visible = GameState.has_skill("barrier")
 			if cd_barrier_slot.visible:
 				_update_barrier_slot()
+		if cd_shield_slot != null:
+			cd_shield_slot.visible = GameState.has_skill("shield")
+			if cd_shield_slot.visible:
+				_update_shield_slot()
 
 # 방어막 슬롯 — 일반 cd_slot과 달리 헥스 셀 8개로 표시 (에너지 방어막 패턴).
 # 충전이 진행되면 셀이 좌→우로 청록빛으로 차오름. ready 상태에서는 전체 셀 밝게 + 펄스.
@@ -2255,6 +2263,7 @@ func _update_barrier_slot() -> void:
 		return
 	var ready: bool = bool(player.get("barrier_ready"))
 	var ratio: float
+	var remaining: float = 0.0
 	if ready:
 		ratio = 1.0
 	else:
@@ -2262,6 +2271,11 @@ func _update_barrier_slot() -> void:
 		var tier: int = GameState.get_skill_tier("barrier")
 		var charge_max: float = 6.0 if tier >= 2 else 10.0  # Player.BARRIER_CHARGE_T1/T2
 		ratio = clamp(charge_t / charge_max, 0.0, 1.0)
+		remaining = maxf(0.0, charge_max - charge_t)
+	# 라벨에 실제 남은 초 표시(헥스 칸 수가 직관적이지 않다는 피드백) — "방어막  6s" / "방어막  준비".
+	var blbl := cd_barrier_slot.get_child(0) as Label
+	if blbl != null:
+		blbl.text = "방어막  준비" if ready else "방어막  %ds" % int(ceil(remaining))
 	var filled: int = int(round(ratio * float(BARRIER_HEX_COUNT)))
 	var ready_color: Color = Color(0.55, 0.95, 1.0, 0.95)
 	var charging_color: Color = Color(0.35, 0.70, 0.95, 0.90)
@@ -2279,6 +2293,33 @@ func _update_barrier_slot() -> void:
 		holder.modulate.a = pulse
 	else:
 		holder.modulate.a = 1.0
+
+# 비상 부활 슬롯 — 일반 cd_slot(fill 바) 재사용. 부활 가능하면 "부활  ✓"(가득/초록),
+# T3 재충전 중이면 남은 초 카운트다운("부활  12s")으로 진행 바 채워짐. (T1/T2는 1회용이라
+# 사용 후 skills에서 erase → 슬롯 자체가 숨겨진다.)
+func _update_shield_slot() -> void:
+	if cd_shield_slot == null or player == null or not is_instance_valid(player):
+		return
+	var lbl := cd_shield_slot.get_child(0) as Label
+	var bar_bg := cd_shield_slot.get_child(1) as ColorRect
+	if bar_bg == null:
+		return
+	var fill := bar_bg.get_node_or_null("Fill") as ColorRect
+	if fill == null:
+		return
+	var spent: bool = bool(player.get("shield_spent"))
+	if spent:
+		var remaining: float = maxf(0.0, float(player.get("shield_recharge_t")))
+		var ratio: float = 1.0 - clamp(remaining / 30.0, 0.0, 1.0)  # Player.SHIELD_RECHARGE_TIME
+		fill.size.x = CD_BAR_WIDTH * ratio
+		fill.color = Color(0.55, 0.78, 0.95)  # 재충전 중
+		if lbl != null:
+			lbl.text = "부활  %ds" % int(ceil(remaining))
+	else:
+		fill.size.x = CD_BAR_WIDTH
+		fill.color = Color(0.55, 0.95, 0.65)  # 준비
+		if lbl != null:
+			lbl.text = "부활  준비"
 
 # 스킬 충전 점 갱신 — explosive T3에서 2개 보유. 색으로 활성/비활성/(미사용) 구분.
 func _update_skill_charges() -> void:

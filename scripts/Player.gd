@@ -24,7 +24,8 @@ const BARRIER_CHARGE_T1: float = 10.0
 const BARRIER_CHARGE_T2: float = 6.0
 const BARRIER_INVULN_T3: float = 0.6
 
-# 비상 방어막(shield) — SkillTreeData.shield 라인. T1 1회 부활 / T2 부활 HP 2 / T3 재충전.
+# 비상 부활(shield) — SkillTreeData.shield 라인. T1 1회 부활 / T2 부활 HP 2 / T3 재충전.
+# (이름은 barrier "에너지 방어막"과 헷갈리지 않게 "부활"로 통일.)
 const SHIELD_RECHARGE_TIME: float = 30.0  # T3 — 부활 소진 후 이 시간 뒤 재무장
 
 const ATTACK_MUZZLE_X: float = 13.0
@@ -73,7 +74,7 @@ var barrier_ready: bool = false
 var barrier_charge_t: float = 0.0
 var barrier_indicator: Node2D = null
 
-# shield(비상 방어막) T3 재충전 상태 — 부활 소진 후 recharge_t 동안 비무장, 0 도달 시 재무장.
+# shield(비상 부활) T3 재충전 상태 — 부활 소진 후 recharge_t 동안 비무장, 0 도달 시 재무장.
 # (T1/T2는 GameState.skills에서 erase되어 1회용이라 이 상태를 안 씀.)
 var shield_spent: bool = false
 var shield_recharge_t: float = 0.0
@@ -488,7 +489,7 @@ func take_hit(amount: int) -> void:
 	if hp_tier >= 3:
 		_trigger_hit_slowmo()
 	emit_signal("damaged")
-	# 비상 방어막 — T1: HP 1로 부활, T2: HP 2로 부활. T3: 라인 유지 + 30s 후 재무장.
+	# 비상 부활 — T1: HP 1로 부활, T2: HP 2로 부활. T3: 라인 유지 + 30s 후 재무장.
 	# T1/T2는 발동 시 라인 erase(1회용), T3는 shield_spent로 비무장 두었다가 recharge로 재무장.
 	var sh_tier: int = GameState.get_skill_tier("shield")
 	if GameState.is_dead() and sh_tier >= 1 and not shield_spent:

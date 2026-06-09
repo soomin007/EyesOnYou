@@ -75,9 +75,9 @@ const LINES: Array = [
 	{
 		"id": "shield", "family": FAMILY_SURVIVAL,
 		"tiers": [
-			{"name": "비상 방어막",   "desc": "쓰러질 때 1회 부활 (HP 1)",     "active": false},
-			{"name": "방어막 회복+",  "desc": "부활 시 HP 2 회복",             "active": false},
-			{"name": "방어막 재충전", "desc": "30s 후 방어막 재무장",          "active": false},
+			{"name": "비상 부활",    "desc": "쓰러질 때 1회 부활 (HP 1)",     "active": false},
+			{"name": "부활 회복+",   "desc": "부활 시 HP 2 회복",             "active": false},
+			{"name": "부활 재충전",  "desc": "30s 후 부활 재무장",            "active": false},
 		],
 	},
 	{
