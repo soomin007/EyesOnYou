@@ -13,7 +13,7 @@
 
 **B. 콘텐츠/게임플레이 (방향 결정 필요)**
 - **글라이드 유리한 맵 + 저격수 배치/발사 함정** — 신규 맵 vs 기존 개조(방향 미정). 내가 구체안 제안 가능.
-- **shield T3 "방어막 재충전" 처리** — 현재 미구현인데 트리엔 표시됨(desc≠효과). 구현하거나 트리에서 빼기.
+- [x] **shield T3 "방어막 재충전" 처리** — **구현**(2026-06-09). T1/T2는 1회용(`skills.erase`), T3는 라인 유지 + `shield_spent`로 비무장 두었다가 `SHIELD_RECHARGE_TIME`(30s) 후 재무장(`Player.take_hit`/`_tick_timers`, 재무장 시 `_show_shield_flash`). desc "30s 후 방어막 재무장"과 일치. → **남음**: 재충전 시간·재무장 플래시 톤 플레이테스트.
 
 **C. UI/시각 — "텍스트→그래픽" 계속** (2026-06-08 자율 진행 — 검토만)
 - [x] **전역 텍스트 아웃라인 통일** (c306d22) — `assets/theme/default_theme.tres` 기본 테마로 전체 적용.
@@ -64,4 +64,4 @@
 
 - [x] **outdated docs** (정리) — `STORY_REDESIGN_v1~v3` + `v1/v2_REVIEW`(5개)를 `docs/archive/`로 이동(하드 삭제 대신, 설계 흐름 이력 보존). `docs/archive/README.md`에 캐논(`STORY.md`/`STORY_HANDOFF.md`) 안내. `INDEX.md`에 아카이브 규칙 한 줄 추가. 활성 문서·코드 참조 없음 확인 후 이동.
 - [x] **STORY.md 인벤토리 스테일분** (정리) — Part II §1(첫 브리핑)·§3(Stage 브리핑 풀)을 라이브 `VeilDialogue` 풀에 재동기화. Stage 5/6 채움(미작성→실제 텍스트), Stage 3에 ward/봉인 복선 반영, v2/v3 시야 역전 재설계로 드리프트된 §1·Stage 0~4·인트로까지 일치. §3 헤더에 "코드 풀의 스냅샷" 명시 + 스토리 모드 별도 풀 안내. (§2 맵 표는 의도된 발췌라 유지.)
-- [x] **barrier 라인 desc/효과 대조** (정리) — T1/T2/T3 desc와 `Player.gd` 구현 일치 확인, 불일치 없음. growth_system.md에 결과 기록. (별개로 shield T3 "방어막 재충전"은 여전히 미구현 — growth_system §8에서 추적 중.)
+- [x] **barrier 라인 desc/효과 대조** (정리) — T1/T2/T3 desc와 `Player.gd` 구현 일치 확인, 불일치 없음. growth_system.md에 결과 기록. (별개였던 shield T3 "방어막 재충전"은 2026-06-09 구현 완료 — growth_system §8.)

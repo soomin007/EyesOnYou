@@ -24,6 +24,9 @@ const BARRIER_CHARGE_T1: float = 10.0
 const BARRIER_CHARGE_T2: float = 6.0
 const BARRIER_INVULN_T3: float = 0.6
 
+# 비상 방어막(shield) — SkillTreeData.shield 라인. T1 1회 부활 / T2 부활 HP 2 / T3 재충전.
+const SHIELD_RECHARGE_TIME: float = 30.0  # T3 — 부활 소진 후 이 시간 뒤 재무장
+
 const ATTACK_MUZZLE_X: float = 13.0
 const ATTACK_MUZZLE_Y: float = -31.0  # 총구 높이 — 5두신 비례 재조정 후 새 손목 위치
 const EXPLOSION_RADIUS: float = 180.0
@@ -69,6 +72,11 @@ var skill_max_charges: int = 1
 var barrier_ready: bool = false
 var barrier_charge_t: float = 0.0
 var barrier_indicator: Node2D = null
+
+# shield(비상 방어막) T3 재충전 상태 — 부활 소진 후 recharge_t 동안 비무장, 0 도달 시 재무장.
+# (T1/T2는 GameState.skills에서 erase되어 1회용이라 이 상태를 안 씀.)
+var shield_spent: bool = false
+var shield_recharge_t: float = 0.0
 
 func _ready() -> void:
 	add_to_group("player")
@@ -172,6 +180,12 @@ func _tick_timers(delta: float) -> void:
 		if muzzle_flash.modulate.a <= 0.05:
 			muzzle_flash.visible = false
 			muzzle_flash.modulate.a = 1.0
+	# shield T3 재충전 — 소진 상태에서 시간 경과 후 재무장(보호 복귀를 플래시로 알림).
+	if shield_spent:
+		shield_recharge_t -= delta
+		if shield_recharge_t <= 0.0:
+			shield_spent = false
+			_show_shield_flash()
 	_tick_barrier(delta)
 
 func _tick_barrier(delta: float) -> void:
@@ -474,13 +488,19 @@ func take_hit(amount: int) -> void:
 	if hp_tier >= 3:
 		_trigger_hit_slowmo()
 	emit_signal("damaged")
-	# 비상 방어막 — T1: HP 1로 부활, T2: HP 2로 부활. 발동 시 라인 erase (T3 재충전은 미구현).
+	# 비상 방어막 — T1: HP 1로 부활, T2: HP 2로 부활. T3: 라인 유지 + 30s 후 재무장.
+	# T1/T2는 발동 시 라인 erase(1회용), T3는 shield_spent로 비무장 두었다가 recharge로 재무장.
 	var sh_tier: int = GameState.get_skill_tier("shield")
-	if GameState.is_dead() and sh_tier >= 1:
+	if GameState.is_dead() and sh_tier >= 1 and not shield_spent:
 		GameState.player_hp = 2 if sh_tier >= 2 else 1
-		GameState.skills.erase("shield")
 		_show_shield_flash()
 		emit_signal("revived")
+		if sh_tier >= 3:
+			# T3 재충전 — 라인을 소비하지 않고 비무장으로 두었다가 SHIELD_RECHARGE_TIME 후 재무장.
+			shield_spent = true
+			shield_recharge_t = SHIELD_RECHARGE_TIME
+		else:
+			GameState.skills.erase("shield")
 		return
 	if GameState.is_dead():
 		SfxPlayer.play("player_death")

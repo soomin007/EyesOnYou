@@ -245,7 +245,7 @@ trust/aggression 추천과 별개로, **현재 맵의 적 구성**을 보고 약
 - [x] explosive T3 (2회 충전) — `Player.skill_charges`/`_refresh_skill_charges`로 구현
 - [x] hp T3 (피격 슬로모) — `Player._trigger_hit_slowmo` 구현 (실시간 타이머로 슬로모 내 정확 해제)
 - [x] multishot T3 (약한 추적) — `Bullet.tracking` 기본값으로 구현
-- [ ] shield T3 (방어막 재충전) — **미구현**. 현재 발동 시 라인을 erase (`Player.take_hit`의 "T3 재충전은 미구현" 주석)
+- [x] shield T3 (방어막 재충전) — 구현(2026-06-09). T1/T2는 발동 시 `skills.erase`(1회용), **T3는 라인 유지 + `shield_spent`로 비무장 두었다가 `SHIELD_RECHARGE_TIME`(30s) 후 재무장**(`Player.take_hit`/`_tick_timers`, 재무장 시 `_show_shield_flash`로 알림). 맵 전환 시 Player 재생성으로 자연 재무장(T3 = "다시 돌아오는 방어막" 판타지와 일치).
 - [x] barrier 라인(에너지 방어막) — 트리 desc/효과 대조 완료(2026-06-08): T1 10초 충전→1회 무효(`BARRIER_CHARGE_T1`), T2 6초 단축(`BARRIER_CHARGE_T2`), T3 무효 직후 0.6초 무적(`BARRIER_INVULN_T3`). 셋 다 `Player._tick_barrier`/`take_hit`와 desc 일치. 불일치 없음.
 
 ---
