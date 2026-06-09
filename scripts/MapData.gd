@@ -465,6 +465,18 @@ static func _watchtower() -> Dictionary:
 			],
 		},
 		"spikes": [],
+		# 수직 등반 압박 — 벽면 가로 포탑(타이밍 회피 / 글라이드로 지나치기) + 합류 직전 트립와이어→버스트.
+		# 가로탄 사거리 ~736px라 등반 경로를 한 높이씩 가로질러 "지나갈 때를 노리는" 라인이 됨.
+		"traps": [
+			{"x": 1240, "y": 1520.0, "dir": "left",  "interval": 2.0, "phase": 0.0},   # 상층 우벽 → 좌 발사
+			{"x": 40,   "y": 2140.0, "dir": "right", "interval": 2.0, "phase": 1.0},   # 분기 좌벽 → 우 발사
+			# 합류 직전(720,1520 발판 밑) 하향 버스트 포탑 — 트립와이어 가로지르면 일제 발사로 머리 위에서 쏟아짐.
+			{"x": 700, "y": 1532.0, "dir": "down", "mode": "triggered", "trigger_id": "wt1", "burst": 4},
+		],
+		"tripwires": [
+			# 합류 발판(560,1680) → 상층 진입 사이 가로 레이저. 올라서며 가로지르면 wt1 버스트 발동.
+			{"x": 420, "y": 1610.0, "dir": "right", "len": 300.0, "trigger_id": "wt1", "cooldown": 3.0},
+		],
 	}
 
 # ─── 7. 격리 병동 (HORIZONTAL + 이스터에그 트리거) ──────────────
@@ -598,6 +610,12 @@ static func _datacenter() -> Dictionary:
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
 		"spikes": [],
 		"arena_clear_xp": 4,
+		# 후반 ARENA 압박 — 양 벽 중층(서버 랙 높이)에서 가로 교차 발사. 랙 위 캠핑 차단, 타이밍 회피.
+		# 탄 사거리 ~736px라 좌 포탑은 좌측 랙(200/600), 우 포탑은 우측 랙(1400/1000)을 견제 → 중앙은 상대 안전지대.
+		"traps": [
+			{"x": 40,   "y": 580.0, "dir": "right", "interval": 2.2, "phase": 0.0, "telegraph": 0.6},
+			{"x": 1880, "y": 580.0, "dir": "left",  "interval": 2.2, "phase": 1.1, "telegraph": 0.6},
+		],
 	}
 
 # ─── 9. 비상 탈출로 (HORIZONTAL, 짧음) ─────────────────────────
