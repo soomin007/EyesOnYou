@@ -71,7 +71,7 @@
 
 ---
 
-## 11개 맵 + 진행 흐름 (Dead Cells 스타일)
+## 12개 맵 + 진행 흐름 (Dead Cells 스타일)
 
 각 맵마다 등장 가능 스테이지가 다름. Dead Cells 스타일로 매 스테이지마다 풀에서 2~3개를 추첨해 보여준다.
 
@@ -114,6 +114,38 @@
 
 ---
 
+## 스킬 (8 라인 × 3 티어, 3 계열)
+
+레벨업마다 3중 1 카드. 계열은 색으로 구분(전투=주황 / 이동=하늘 / 생존=초록). 같은 라인의 다음 티어는 이전 티어 보유 시에만 후보로 등장. 일시정지·레벨업 화면에서 트리 오버레이로 전체 라인을 미리 본다.
+
+| 계열 | 라인 | T1 → T2 → T3 |
+|---|---|---|
+| 전투 | 사격 강화 (fire_boost) | 데미지 +1 → +2·사격 시 가속 → 1체 관통 |
+| 전투 | 다중사격 (multishot) | 삼연사(부채꼴 3) → 오연사(5) → 5발 + 약한 추적 |
+| 전투 | 폭발물 (explosive, 액티브) | 광역 처치(3s) → 반경 +30%·쿨 2.5s → 2회 충전 |
+| 이동 | 공중 활강 (glide) | 자동 활강 + 공중 점프 1회(=삼단) → 활강 중 관통 사격 → 유도 사격 |
+| 이동 | 대시 강화 (dash_boost) | 쿨 −20% → 거리 +30% → 대시 후 0.3s 무적 |
+| 생존 | 체력 (hp) | 최대 HP +1 → +2·피격 후 1s 무적 → 피격 슬로모 |
+| 생존 | 비상 부활 (shield) | 쓰러질 때 1회 부활(HP1) → 부활 HP2 → 30s 후 재충전(반복) |
+| 생존 | 에너지 방어막 (barrier) | 10s 충전 후 1회 피격 무효 → 충전 6s 단축 → 무효 직후 0.6s 무적 |
+
+- 베이스라인(시작 시 보유): **대시**(짧은 무적 이동), **이중점프**.
+- **"비상 부활"과 "에너지 방어막"은 다른 라인** — 부활은 *쓰러질 때 되살아남*, 방어막은 *충전식 피격 1회 무효*. 화면 하단 게이지에 각각 남은 초(부활 재충전 / 방어막 충전)가 표시된다.
+- **스킬↔적 상성**: 방패병→폭발물 / 저격수→활강 / 드론→다중사격 / 자폭병→사격강화. 맵에 그 적이 있고 카운터를 아직 안 가졌으면 VEIL이 레벨업에서 콕 집어 추천(★)하고 출현 가중을 준다.
+
+## 위협 요소 & 맵 기믹
+
+| 기믹 | 설명 |
+|---|---|
+| **발사 함정** (BulletTrap) | 표면 장착 포탑, **파괴 불가**. 텔레그래프 후 주기/버스트 발사 — 타이밍·대시로 회피. subway·cooling·ward·datacenter(가로 교차)·watchtower(등반). |
+| **레이저 탐지선** (LaserTripwire) | 가로지르면 떨어진 곳의 triggered 포탑이 일제 버스트. 포탑과 분리 배치라 "밟으면 다른 데서 불을 뿜는다". |
+| **둥지 저격수** | rooftops·watchtower·cooling의 저격수는 메인 경로 밖 **측면 단독 둥지**(회피 전용). VEIL이 "정면으론 못 잡으니 사선 피하거나 글라이드로 덮쳐라" 안내 → 글라이드 가치와 시너지. |
+| **VEIL 시야** (VeilSight) | VEIL이 화면 안팎 위협을 마킹·말로 짚어줌. ACT3에선 마킹이 흐려지고 일부는 영영 안 보임(시야 역전) + 진입 시 함정/매복 미리 경고. |
+| **글라이드 게이트 보상** | 발판 위 ~220px 단독 알코브 — 더블점프(190)론 못 닿고 **삼단점프(글라이드 T1)/활강으로만**. 흡인 반경을 줄여 직접 도달해야 획득. ward·cooling·rooftops·watchtower. |
+| **정적 가시 / 토글 가시** | "함정" 태그 맵(배수로·블랙아웃)에 자동 배치. |
+
+---
+
 ## 프로젝트 구조
 
 ```
@@ -128,8 +160,11 @@ EoY/
 │   ├── SPEC.md                 구현 사양 (씬 구조·시스템 도식·인게임 텍스트 인벤토리)
 │   ├── STORY.md                스토리 캐논 + 게임 텍스트 (단일 진실)
 │   └── design/
+│       ├── backlog.md          미착수 작업 단일 소스 (다음 작업 후보 + ★추천)
+│       ├── known_issues.md     반복 방지 — 버그/설계 함정 "증상→원인→방지책"
+│       ├── map_audit.md        12맵 감사 (흐름·난이도·적 배치·스킬-맵 정합)
 │       ├── growth_system.md    스킬 트리 3계열×3티어 + 7스테이지 확장 설계
-│       ├── world_layout.md     맵 4 템플릿 + 11맵 좌표 + 보스/이스터에그 명세
+│       ├── world_layout.md     맵 4 템플릿 + 12맵 좌표 + 보스/이스터에그 명세
 │       └── show_dont_tell.md   "글로 명시 < 체험으로 체득" 톤 원칙 + 적용 후보
 ├── assets/
 │   └── fonts/Pretendard-Regular.otf   (한글 default font, OFL)
@@ -141,26 +176,30 @@ EoY/
 │   ├── GameState.gd            AutoLoad — 진행도/점수/스킬/루트/도감 영속
 │   ├── SceneRouter.gd
 │   ├── RouteData.gd            루트 풀 (id/risk/reward/tags/available_stages)
-│   ├── MapData.gd              11맵 + 도전방 좌표 + 보스/웨이브/이스터에그 메타
-│   ├── SkillTreeData.gd        스킬 트리 3계열×다라인×3티어 정의
+│   ├── MapData.gd              12맵 좌표 + 함정/트립와이어 + 보스/웨이브/이스터에그 메타
 │   ├── SkillSystem.gd          레벨업 3중 1 카드 풀 빌더
 │   ├── VeilDialogue.gd         ACT별 브리핑/사망/레벨업 대사 풀
 │   ├── EndingResolver.gd       trust/aggression → 결말 결정
-│   ├── Player.gd               이동/점프/대시/사격/barrier 등
+│   ├── Player.gd               이동/점프/대시/사격/활강/부활/방어막 등
 │   ├── Enemy.gd                5종 + 가장자리 raycast + spawn snap
 │   ├── BossSentinel.gd         핵심부 보스 (3페이즈 + 자폭)
 │   ├── BossMissile.gd          보스 측면 미사일 (약한 유도)
-│   ├── Bullet.gd / Bomb.gd / ExpOrb.gd / HpOrb.gd
+│   ├── Bullet.gd / EnemyBullet.gd / Bomb.gd / ExpOrb.gd / HpOrb.gd
+│   ├── BulletTrap.gd           발사 포탑 (periodic/triggered, 파괴 불가)
+│   ├── LaserTripwire.gd        레이저 탐지선 — 가로지르면 떨어진 포탑 트리거
+│   ├── VeilSight.gd            VEIL 위협 마킹 + 시야 비네트 + ACT3 붕괴
+│   ├── SkillTreeData.gd        스킬 트리 8라인×3티어 + 스킬↔적 상성(MATCHUP)
+│   ├── SkillTreeOverlay.gd     스킬 트리 미리보기 오버레이
+│   ├── SkillIcon.gd / EnemyIcon.gd   절차적 아이콘 (스킬·적)
 │   ├── CharacterArt.gd         벡터 캐릭터 빌더 (코드 생성)
-│   ├── BestiaryData.gd         적 관찰 메모 (행동 키워드만)
-│   ├── BestiaryOverlay.gd      첫 조우 카드 (RichText + 키워드 강조)
-│   ├── ArchiveOverlay.gd       ??? 맵 단말기 자막 (타자기 패널)
-│   ├── ArcturusDocumentOverlay.gd   이스터에그 풀스크린 문서 + 자동 스크롤
+│   ├── BriefingVisual.gd / MissionObjective.gd   오프닝 VEIL 눈·목표물 비주얼
+│   ├── BestiaryData.gd / BestiaryOverlay.gd   적 도감 (메모 + 첫 조우 카드)
+│   ├── ArchiveOverlay.gd / ArcturusDocumentOverlay.gd   ??? 단말기·이스터에그 문서
 │   ├── LevelUpOverlay.gd       스킬 3중 1 카드
-│   ├── PlaygroundOverlay.gd    디버그 연습장 패널
-│   ├── PauseHelper.gd
-│   ├── Tutorial.gd / TutorialDummy.gd
-│   ├── Settings.gd
+│   ├── PlaygroundOverlay.gd    디버그 연습장 패널 (맵/스킬/시야붕괴 즉시 조정)
+│   ├── LeverInteractable.gd / PressurePlate.gd   레버·발판 상호작용
+│   ├── SfxPlayer.gd / BgmPlayer.gd / Accessibility.gd
+│   ├── PauseHelper.gd / Tutorial.gd / TutorialDummy.gd / Settings.gd / Credits.gd
 │   └── Main.gd / Title.gd / Briefing.gd / RouteMap.gd / Stage.gd / Death.gd / Ending.gd
 └── session_logs/               일자별 작업 로그
 ```
@@ -172,7 +211,7 @@ EoY/
 - **Physics interpolation**: 60Hz 물리 + 고주사율 모니터에서 떨림 없도록 활성화.
 - **VEIL은 가끔 틀린다**: 조언을 늘 따르는 게 정답이 되지 않도록 의도적으로 빗나간 조언을 풀에 넣음. `trust`와 `aggression`이 직교하도록 설계됨.
 - **도감 트리거**: 적 첫 조우 시 자동으로 카드 표시. seen_enemies는 settings.cfg에 영속화돼서 다음 런에선 안 뜸.
-- **디버그 연습장**: 설정 메뉴 → 디버그 탭 → 연습장 진입. HUD에 토글 패널이 떠서 그 자리에서 stage/route/risk/reward를 바꾸고 즉시 reload.
+- **디버그 연습장**: 설정 → "연습장으로 진입". HUD에 토글 패널이 떠서 stage/route/risk/reward·스킬 티어(8라인 0~3)·기본(대시·이중점프)·시야붕괴를 그 자리에서 바꾸고 즉시 reload. **맵을 누르면 그 맵의 기본 risk/reward/stage가 자동 설정**되고, 시야붕괴 토글로 ACT3 경고·붕괴 톤 대사를 연습장에서도 테스트할 수 있다.
 
 ---
 
@@ -211,7 +250,9 @@ EoY/
 - ✅ **show-don't-tell 톤 적용** — 도감/오프닝/보스 알림 단순화. [`docs/design/show_dont_tell.md`](docs/design/show_dont_tell.md)
 - ✅ **Xbox 컨트롤러 지원** — project.godot 모든 액션에 패드 매핑 + Settings 보존. 입력 모드 자동 감지로 모든 화면의 키 안내가 키보드/패드 실시간 swap
 - ✅ **스토리 모드** — HP 무제한 / 5 스테이지 / 보스 단순화 / 드론 없음. 키보드/패드가 어색한 사람용 짧은 코스. Title의 다단계 메뉴(시작/모드 선택/튜토리얼 prompt)에서 진입
-- 🚧 **잔여** — 배경 이미지, SFX, itch.io 별도 배포, 튜토리얼·결말 톤 추가 적용
+- ✅ **UI 시각화 (텍스트→그래픽)** — 스킬 트리 오버레이, 맵 진행 노드맵, 오프닝 VEIL 눈/목표물 비주얼, 절차적 스킬·적 아이콘, 전역 텍스트 아웃라인, 비네트 셰이더
+- ✅ **맵 폴리시** — 발사 함정(BulletTrap/LaserTripwire), 둥지 저격수 + VEIL "못 잡는 적" 안내, VeilSight 시야 마킹·ACT3 붕괴, 글라이드 게이트 숨은 보상, 해상도/창모드 옵션
+- 🚧 **잔여** — 배경 이미지, SFX, itch.io 별도 배포, 후반 트랩/둥지 난이도 플레이테스트 튜닝, VEIL 추천 임계값 튜닝
 
 상세 우선순위는 [`PRD.md`](PRD.md) §6, 구현 디테일은 [`docs/SPEC.md`](docs/SPEC.md), 스토리 캐논은 [`docs/STORY.md`](docs/STORY.md) 참조.
 

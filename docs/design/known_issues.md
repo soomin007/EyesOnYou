@@ -22,6 +22,11 @@
 - **GDScript: untyped Array/Dictionary 인덱싱 시 명시 타입 선언.** `var x := arr[i]` 대신 `var x: Dictionary = arr[i]`.
   `Array[T]`에 untyped Array(사전 리터럴 값, `Dictionary.get` 결과) 직접 대입 금지(런타임 에러).
 
+- **`int(배열)`/`int(딕셔너리)` 호출 금지 — "Nonexistent 'int' constructor" 크래시.**
+  값이 *개수*가 아니라 *컬렉션*일 때 `int()`로 변환하면 크래시. 적 종류 집계에서 wave의 enemies 값이
+  위치 **배열**인데 `int(wen[k]) > 0`으로 개수처럼 다뤄 크래시(RouteMap.gd:240, 2026-06-09).
+  → 컬렉션 크기는 `arr.size()`. 같은 데이터를 여러 경로에서 셀 땐(enemies/waves) 동일 패턴 유지.
+
 ---
 
 ## 게임 설계 함정
@@ -59,6 +64,17 @@
 
 - **AskUserQuestion `questions` 누락이 또 재발(2026-06-08 세션 4).** 빈 호출로 1회 실패 — 위 작업
   프로세스 항목 재확인. 호출 직전 `questions` 배열 채웠는지 항상 점검.
+
+- **흡인형 보상(ExpOrb)은 벽/바닥을 무시한다 — 높이 게이트 보상이 메인 경로로 빨려옴.**
+  `PICKUP_RANGE`(220) 안이면 직선거리로 끌려오므로, 글라이드 게이트 알코브(발판 위 220px) 보상이
+  바로 아래 메인 경로에서 바닥을 뚫고 흡인돼 게이트가 무의미해졌다(2026-06-09). 게이트 높이와 흡인
+  반경이 같았던 게 직접 원인. → "직접 도달해야 하는" 보상은 작은 흡인 반경(`gate_orbs`, 60px)으로
+  분리. 흡인 반경은 "줍는 손맛"이 아니라 "도달 의도"에 맞춰 설정할 것.
+
+- **가로 발사 포탑이 발판 top과 같은 높이면 위협이 안 된다.**
+  탄이 발판 표면/발 밑을 스쳐 지나가 서 있는 플레이어 몸통을 안 맞힌다(감시탑 포탑, 2026-06-09).
+  발판 top 좌표를 그대로 포탑 y로 쓴 게 원인. → 가로 포탑은 **갭(점프 경로) 높이**(발판 사이)나
+  **발판 위 body 높이(~top-28)**에 둬 통과/체류 시 실제로 맞게. 같은 높이=무해.
 
 - **기본 입력 보강은 `load_settings()` *뒤에* 둘 것.**
   project.godot 기본 attack에 마우스 좌클릭이 없어 Main이 런타임에 `_ensure_mouse_event`로 추가한다.
@@ -98,3 +114,10 @@
 - **paused / Engine.time_scale carry로 인한 freeze.**
   `get_tree().paused`는 SceneTree 전역이라 scene 전환에 carry된다. overlay/도전방 등에서 paused 해제
   누락 시 다음 scene이 freeze. 새 overlay/scene 추가 시 paused 해제 안전판을 같은 패턴으로 둘 것.
+
+- **트리에서 빠진 노드의 콜백/틱이 `get_tree()`를 쓰면 null 크래시.**
+  플레이어 사망 → 씬 전환 중, 아직 free 안 된 적의 tween/timer 콜백이나 한 프레임 늦은 틱이
+  `get_tree().get_nodes_in_group(...)`를 호출 → "Cannot call method ... on a null value"(Enemy.gd, 2026-06-09).
+  → 트리 접근(`get_tree()`/`get_world_2d()`/`get_parent()`) 전에 null 가드. player 조회처럼 자주 쓰는
+  접근은 **단일 헬퍼**(`_find_player`)에 가드를 모아 모든 호출처를 한 번에 보호. `_physics_process`엔
+  `is_inside_tree()` 가드를 더해도 저렴.
