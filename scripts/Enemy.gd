@@ -56,6 +56,13 @@ const SNIPER_AIM_TIME: float = 0.7
 # 저격수다운 사거리 — 플레이어 총알 사거리(495px)보다 충분히 길게.
 # 플레이어가 사거리 안에 들어오면 LoS 체크 후 발사. 엄폐가 보일 만큼 길어야 진짜 저격수.
 const SNIPER_RANGE: float = 820.0
+# 측면 단독 둥지(회피 전용) 저격수 — 등반/회피 맵(watchtower/rooftops/cooling)에서 아래를 너무 쉽게
+# 쏴 등반이 막힌다는 피드백. 둥지 저격수만 사거리·조준·발사를 완화해 "한 둥지씩, 텔레그래프 보고 피하며"
+# 오르게 한다. 전투 맵(subway/datacenter) 저격수는 avoid_only 미부착이라 그대로(영향 없음).
+# 모래주머니/ㄴ자 발판으로는 하향 사격을 못 막는다(탄이 발판 밑으로 빠짐) → 압박 수치로 조정.
+const NEST_SNIPER_RANGE: float = 700.0
+const NEST_SNIPER_AIM_TIME: float = 1.1    # 텔레그래프(붉은 조준선) 길게 — 피할 시간
+const NEST_SNIPER_INTERVAL_MUL: float = 1.5  # 발사 간격 1.5배(2.6→3.9s) — 등반 중 피탄 횟수↓
 
 # Drone — 머리 위 호버 후 폭탄 투하
 const DRONE_SPEED: float = 110.0
@@ -202,7 +209,21 @@ func _patrol_fire_interval() -> float:
 	return PATROL_FIRE_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
 
 func _sniper_interval() -> float:
-	return SNIPER_FIRE_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
+	var base: float = SNIPER_FIRE_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
+	if _is_nest_sniper():
+		base *= NEST_SNIPER_INTERVAL_MUL
+	return base
+
+# 측면 단독 둥지(회피 전용) 저격수 식별 — Stage가 spawn 직후 avoid_only 메타를 붙인다.
+func _is_nest_sniper() -> bool:
+	return has_meta("avoid_only")
+
+# 둥지 저격수는 사거리·조준 텔레그래프를 완화 — 한 둥지씩 상대하며 텔레그래프 보고 피해 오르게.
+func _eff_sniper_range() -> float:
+	return NEST_SNIPER_RANGE if _is_nest_sniper() else SNIPER_RANGE
+
+func _eff_sniper_aim_time() -> float:
+	return NEST_SNIPER_AIM_TIME if _is_nest_sniper() else SNIPER_AIM_TIME
 
 func _drone_bomb_interval() -> float:
 	return DRONE_BOMB_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
@@ -398,13 +419,13 @@ func _tick_sniper(delta: float) -> void:
 		_clear_aim()
 		return
 	var dist: float = global_position.distance_to(p.global_position)
-	if dist > SNIPER_RANGE:
+	if dist > _eff_sniper_range():
 		_clear_aim()
 		fire_timer = _sniper_interval()
 		return
 
 	fire_timer -= delta
-	if fire_timer < SNIPER_AIM_TIME:
+	if fire_timer < _eff_sniper_aim_time():
 		aim_los_clear = _has_line_of_sight(p)
 		if aim_los_clear:
 			if aim_line == null:
@@ -699,7 +720,7 @@ func _fire_at_player() -> void:
 	if player == null:
 		return
 	var dist: float = global_position.distance_to(player.global_position)
-	if dist > SNIPER_RANGE:
+	if dist > _eff_sniper_range():
 		return
 	SfxPlayer.play_at("enemy_sniper_fire", global_position)
 	var tracer := Line2D.new()

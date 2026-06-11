@@ -279,11 +279,11 @@ func _act3_vision_line(stage: int) -> String:
 	if GameState.story_mode:
 		# 보스 직전(stage 2)은 역전의 시작, 보스(stage 3)는 클라이맥스로 점증.
 		if stage >= 3:
-			return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
-		return "여기서부터는 잘 안 보여요. 이제 요원이 봐줘요."
+			return "여기는... 저도 안 보여요. 이제 요원이 봐요. 저는 들을게요."
+		return "여기서부터는 잘 안 보여요. 이제 요원이 제 눈이 돼 줘요."
 	if stage >= GameState.effective_total_stages() - 1:
-		return "여기는... 제가 안 보여요. 요원이 봐줘요. 저는 들을게요."
-	return "여기서부터는 잘 안 보여요. 이제 요원이 봐줘요."
+		return "여기는... 저도 안 보여요. 이제 요원이 봐요. 저는 들을게요."
+	return "여기서부터는 잘 안 보여요. 이제 요원이 제 눈이 돼 줘요."
 
 # ─── 시야 붕괴 후 위험 미리 경고 (못 잡는 적 안내 §2) ───────────────
 # 이미 시야가 붕괴(GameState.veil_degraded)한 ACT3 후속 맵에 진입하면, VEIL은 함정·매복을
@@ -2704,16 +2704,31 @@ func _can_arena_clear() -> bool:
 			return false
 	return true
 
-func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: float = -1.0) -> void:
+func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: float = -1.0, is_gate: bool = false) -> void:
 	# static_placement=true면 bounce 스킵 — 분기 보상으로 미리 배치된 orb는 그 자리에 그대로 둠.
-	# attract_range>0이면 흡인 반경 축소(글라이드 게이트 — 알코브에 실제 도달해야 획득).
+	# is_gate=true면 글라이드 게이트 전용 보상 — 일반 오브와 성질이 다름을 모양·색으로 구분하고
+	# 개당 가치를 높인다(글라이드 투자 보상). 흡인은 작게 + 벽/바닥 너머론 안 끌려옴(ExpOrb LoS).
 	var orb := Node2D.new()
 	orb.set_script(load("res://scripts/ExpOrb.gd"))
 	var sprite := ColorRect.new()
 	sprite.name = "Sprite"
-	sprite.color = Color(0.4, 0.95, 0.6)
-	sprite.position = Vector2(-6.0, -6.0)
-	sprite.size = Vector2(12.0, 12.0)
+	if is_gate:
+		# 황금 마름모(45° 회전) + 옅은 후광 — 멀리서도 "글라이드로만 닿는 특별 보상"으로 읽히게.
+		sprite.color = Color(1.0, 0.82, 0.26)
+		sprite.size = Vector2(15.0, 15.0)
+		sprite.position = Vector2(-7.5, -7.5)
+		sprite.pivot_offset = Vector2(7.5, 7.5)
+		sprite.rotation = deg_to_rad(45.0)
+		var halo := ColorRect.new()
+		halo.color = Color(1.0, 0.82, 0.26, 0.16)
+		halo.position = Vector2(-13.0, -13.0)
+		halo.size = Vector2(26.0, 26.0)
+		halo.z_index = -1
+		orb.add_child(halo)
+	else:
+		sprite.color = Color(0.4, 0.95, 0.6)
+		sprite.position = Vector2(-6.0, -6.0)
+		sprite.size = Vector2(12.0, 12.0)
 	orb.add_child(sprite)
 	add_child(orb)
 	orb.global_position = pos
@@ -2721,7 +2736,11 @@ func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: flo
 		# bounce 스킵 — 즉시 attract 단계로
 		orb.set("spawn_anim_t", 1.0)
 		orb.set("bounce_velocity", Vector2.ZERO)
-	if attract_range > 0.0:
+	if is_gate:
+		orb.set("is_gate", true)
+		orb.set("value", 3)          # 일반 1 → 게이트 3 (게이트당 6 ≈ 거의 1레벨)
+		orb.set("attract_range", 44.0)
+	elif attract_range > 0.0:
 		orb.set("attract_range", attract_range)
 
 func _spawn_hp_orb(pos: Vector2) -> void:
@@ -2767,10 +2786,10 @@ func _build_rewards() -> void:
 	var rewards: Dictionary = _map_data.get("rewards", {})
 	for pos in rewards.get("xp_orbs", []):
 		_spawn_orb(pos, true)
-	# 글라이드 게이트 보상 — 흡인 반경 60px(기본 220)로 축소해 아래/옆 메인 경로에서 빨려오지 않게.
-	# 실제 알코브에 삼단점프로 도달해야만 획득 → 게이트 의미 보존.
+	# 글라이드 게이트 보상 — is_gate로 황금 마름모 + 가치 3 + 흡인 44px + LoS 차단.
+	# 실제 알코브에 삼단점프로 도달해야만 획득 → 게이트 의미 보존(아래/옆 메인 경로에서 안 빨려옴).
 	for pos in rewards.get("gate_orbs", []):
-		_spawn_orb(pos, true, 60.0)
+		_spawn_orb(pos, true, -1.0, true)
 	for pos in rewards.get("hp_pickups", []):
 		_spawn_hp_orb(pos)
 

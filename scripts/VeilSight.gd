@@ -138,11 +138,11 @@ func _call_threat(spos: Vector2, center: Vector2) -> void:
 	var line: String
 	if not _intro_called:
 		_intro_called = true
-		line = "위험은 제가 먼저 볼게요. 화면 끝에 표시해 둘게요."
+		line = "위험한 건 제가 먼저 볼게요. 화면 끝에 짚어둘게요."
 	elif _is_degraded():
-		line = dir_txt + "...일 거예요. 잘 안 보여요, 요원이 확인해줘요."
+		line = dir_txt + " 어딘가... 저도 잘 안 보여요. 직접 살펴요."
 	else:
-		line = dir_txt + ", 보여요? 제가 짚어둘게요."
+		line = dir_txt + ", 표시해 둘게요."
 	veil_calls_threat.emit(line)
 
 # 화면 중심 대비 위협 방향 → 8방위 한국어 (화면 좌표: y 아래가 +)
