@@ -138,7 +138,7 @@ func _call_threat(spos: Vector2, center: Vector2) -> void:
 	var line: String
 	if not _intro_called:
 		_intro_called = true
-		line = "위험한 건 제가 먼저 볼게요. 화면 끝에 짚어둘게요."
+		line = "위험한 건 제가 먼저 봐요. 화면 끝에 짚어둘게요."
 	elif _is_degraded():
 		line = dir_txt + " 어딘가... 저도 잘 안 보여요. 직접 살펴요."
 	else:

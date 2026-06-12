@@ -748,7 +748,9 @@ func _draw() -> void:
 		return
 	var rng: float = _eff_sniper_range()
 	var dist: float = global_position.distance_to(p.global_position)
-	if dist > rng * 1.15:
+	# 링 경계 = 실제 교전(인식) 사거리와 정확히 일치 — 링 안이면 사선만 트이면 맞고, 밖이면 안전.
+	# (이전 1.15배는 표시 범위가 실제 교전보다 넓어 "보이는데 안 쏨"이 됐다. 사용자 피드백 2026-06-13.)
+	if dist > rng:
 		return
 	var prox: float = clampf(1.0 - (dist - rng * 0.5) / (rng * 0.65), 0.0, 1.0)
 	var aiming: bool = aim_line != null

@@ -77,6 +77,11 @@ var goal_reached: bool = false
 var pause_overlay: CanvasLayer
 var settings_overlay: Control
 
+# VEIL 존재감 — 조작만 가르치던 튜토리얼에 게임의 분위기·인물(VEIL)·배경(SILO-7)을 도입.
+# 우상단에 살아있는 VEIL 눈(BriefingVisual) + 단계마다 VEIL이 직접 말로 안내(자막).
+var veil_layer: CanvasLayer
+var veil_sub_box: VBoxContainer
+
 func _ready() -> void:
 	add_to_group("stage")
 	# 안전망: 이전 scene에서 paused가 carry되어 Tutorial이 freeze되는 패턴 차단.
@@ -106,6 +111,10 @@ func _ready() -> void:
 	_build_goal()
 	_build_hud()
 	_refresh_hud()
+	_build_veil_presence()
+	# 어투 아크의 출발점 — 튜토리얼은 첫 접촉이라 가장 차갑고 격식 있는 격식체(~습니다).
+	# 후반으로 갈수록 ~해요체로 풀린다(친근함). 동시에 SILO-7/요원/작전이라는 세계를 도입.
+	_veil_say("통신 연결을 확인했습니다. 요원, 여기는 훈련 구역입니다. 실전 투입 전 조작 계통을 점검하십시오.", 6.5)
 
 # ─── 배경 / 지면 ───────────────────────────────────────────────
 
@@ -587,6 +596,72 @@ func _refresh_hud() -> void:
 		Step.DONE:    step_name = "튜토리얼 완료 — 골에 도달해요"
 	hud_label.text = "TUTORIAL  %s" % step_name
 
+# ─── VEIL 존재감 (눈 + 음성 자막) ──────────────────────────────
+# 조작만 가르치던 튜토리얼에 인물(VEIL)·분위기·배경을 도입. 우상단의 살아있는 감시 눈 +
+# 단계별 VEIL 음성. 어투는 게임 어투 아크의 시작점이라 가장 격식 있는 ~습니다체.
+func _build_veil_presence() -> void:
+	veil_layer = CanvasLayer.new()
+	veil_layer.layer = 20
+	add_child(veil_layer)
+	# 우상단 VEIL 눈 — "당신을 본다"의 시각적 존재(BriefingVisual 재사용, 자체 애니메이션).
+	var eye := Control.new()
+	eye.set_script(load("res://scripts/BriefingVisual.gd"))
+	eye.size = Vector2(96.0, 96.0)
+	eye.position = Vector2(1280.0 - 96.0 - 30.0, 30.0)
+	eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	veil_layer.add_child(eye)
+	var cap := Label.new()
+	cap.text = "VEIL"
+	cap.add_theme_font_size_override("font_size", 12)
+	cap.add_theme_color_override("font_color", Color(0.46, 0.86, 1.0, 0.85))
+	cap.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	cap.add_theme_constant_override("outline_size", 3)
+	cap.position = Vector2(1280.0 - 96.0 - 30.0, 128.0)
+	cap.size = Vector2(96.0, 18.0)
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	veil_layer.add_child(cap)
+	# 하단 중앙 자막 스택 — Stage._show_veil_subtitle과 동일 톤(시안 글자 + 다크 pill).
+	veil_sub_box = VBoxContainer.new()
+	veil_sub_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	veil_sub_box.anchor_left = 0.0
+	veil_sub_box.anchor_right = 1.0
+	veil_sub_box.anchor_top = 1.0
+	veil_sub_box.anchor_bottom = 1.0
+	veil_sub_box.offset_top = -230.0
+	veil_sub_box.offset_bottom = -82.0
+	veil_sub_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	veil_layer.add_child(veil_sub_box)
+
+func _veil_say(line: String, dur: float) -> void:
+	if veil_sub_box == null:
+		return
+	SfxPlayer.play("veil_subtitle_in")
+	var l := Label.new()
+	l.text = "VEIL  —  " + line
+	l.add_theme_font_size_override("font_size", 20)
+	l.add_theme_color_override("font_color", Color(0.80, 0.92, 1.0))
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	l.add_theme_constant_override("outline_size", 4)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.03, 0.05, 0.09, 0.82)
+	sb.set_corner_radius_all(7)
+	sb.content_margin_left = 18.0
+	sb.content_margin_right = 18.0
+	sb.content_margin_top = 8.0
+	sb.content_margin_bottom = 8.0
+	l.add_theme_stylebox_override("normal", sb)
+	l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.modulate.a = 0.0
+	veil_sub_box.add_child(l)
+	var tw := l.create_tween()
+	tw.tween_property(l, "modulate:a", 1.0, 0.3)
+	tw.tween_interval(dur)
+	tw.tween_property(l, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(func() -> void:
+		if is_instance_valid(l):
+			l.queue_free())
+
 # ─── 인터랙션 노드 ─────────────────────────────────────────────
 
 func _build_player() -> void:
@@ -822,18 +897,24 @@ func _advance_to(next: int) -> void:
 		Step.JUMP:
 			sign_jump.visible = true
 			sign_drop.visible = true
+			_veil_say("상승 기동입니다. 공중에서 한 번 더 입력하면 2단 도약이 가능합니다.", 5.0)
 		Step.ATTACK:
 			sign_attack.visible = true
 			_build_attack_dummy()
+			_veil_say("전방에 표적 하나. 사격으로 제거하십시오.", 4.5)
 		Step.LEVELUP:
 			sign_levelup.visible = true
 			_spawn_levelup_dummies()
+			_veil_say("전투 기록이 누적되면 강화됩니다. 처리하십시오.", 4.5)
 		Step.SKILL:
 			_build_skill_sign()
 			_spawn_skill_dummies()
+			_veil_say("임시 권한을 부여했습니다. 잔여 표적에 사용해 보십시오.", 5.0)
 		Step.DASH:
 			sign_dash.visible = true
+			_veil_say("전방 장애물 감지. 회피 기동으로 통과하십시오.", 5.0)
 		Step.DONE:
+			_veil_say("점검을 완료했습니다. ...SILO-7로 진입합니다. 행운을 빕니다, 요원.", 5.5)
 			# 골 빛이 충분한 시각 유도 — 별도 안내문 없음.
 			if barrier != null:
 				barrier.queue_free()
@@ -872,7 +953,7 @@ func _show_levelup() -> void:
 	# 본편 진입 시 GameState.start_main_game()이 skills를 STARTING_SKILLS로 초기화함.
 	var explosive_card: Dictionary = SkillTreeData.make_card("explosive", 1)
 	var advice: Dictionary = {
-		"line": "이건 잠깐 빌려드릴게요. 튜토리얼 안에서만 — 본편엔 안 들어가요.",
+		"line": "임시 권한입니다. 훈련 구역에서만 유효하며, 본 작전에는 이관되지 않습니다.",
 		"family": "",  # 단일 카드라 추천 표시 불필요
 	}
 	levelup_overlay = LevelUpOverlay.show(self, advice, _on_levelup_picked, [explosive_card])
