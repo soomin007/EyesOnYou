@@ -9,7 +9,11 @@ extends Node2D
 # 하우징이 장착면(-direction)에 붙어 부유 안 함. ⚠ 표식 + Stage가 근접 시 VEIL "파괴 불가" 1회 안내.
 
 const BULLET_SPEED: float = 460.0   # 적 일반탄(240)보다 빠름
-const LINE_LEN: float = 460.0
+# 조준선 길이 = 실제 총알 사거리(속도 × 수명)와 일치시킴. 트랩 총알은 EnemyBullet을 그대로 쓰되
+# 속도만 460으로 올리고 수명(1.6s)은 그대로라, 실제론 460×1.6 = 736px 날아갔다(선은 460만 그려
+# 끝 너머에서도 맞던 불일치). 이제 그려지는 위협 라인이 진짜 사거리를 정직하게 보여준다.
+# 사용자 피드백 2026-06-13.
+const LINE_LEN: float = BULLET_SPEED * EnemyBullet.BASE_LIFETIME
 const COL_PORT: Color = Color(0.16, 0.12, 0.10, 1.0)
 const COL_EDGE: Color = Color(0.58, 0.42, 0.32, 1.0)
 const COL_HOT: Color = Color(1.0, 0.55, 0.28)

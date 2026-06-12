@@ -441,6 +441,7 @@ func _tick_sniper(delta: float) -> void:
 		if aim_los_clear:
 			_fire_at_player()
 		_clear_aim()
+	queue_redraw()  # 사거리 링(_draw) 갱신 — 플레이어 접근/조준 상태 반영
 
 func _has_line_of_sight(p: Node2D) -> bool:
 	var space := get_world_2d().direct_space_state
@@ -735,6 +736,31 @@ func _fire_at_player() -> void:
 	tw.tween_callback(tracer.queue_free)
 	if player.has_method("take_hit"):
 		player.take_hit(1)
+
+# 저격수 사거리 시각화 — 히트스캔이라 '사거리 안 + 시야 트임'이면 무조건 맞는다. 그 위협 반경을
+# 점선 링으로 보여줘 플레이어가 "이 원 밖이면 안전 / 안이면 엄폐·이동"을 읽게 한다. 사거리 근처에
+# 들어와야 떠오르고(평소엔 숨김), 안으로 들수록·조준 중일수록 진해진다. 사용자 피드백 2026-06-13.
+func _draw() -> void:
+	if enemy_type != EnemyType.SNIPER or dead or harmless:
+		return
+	var p := _find_player()
+	if p == null:
+		return
+	var rng: float = _eff_sniper_range()
+	var dist: float = global_position.distance_to(p.global_position)
+	if dist > rng * 1.15:
+		return
+	var prox: float = clampf(1.0 - (dist - rng * 0.5) / (rng * 0.65), 0.0, 1.0)
+	var aiming: bool = aim_line != null
+	var a: float = (0.09 + 0.15 * prox) * (1.7 if aiming else 1.0)
+	a = clampf(a, 0.0, 0.42)
+	var col: Color = Color(1.0, 0.40, 0.34, a)
+	var c: Vector2 = Vector2(0, -20)  # 발사 원점과 맞춤
+	var segs: int = 72
+	for i in range(0, segs, 2):  # 한 칸 건너뛰어 점선
+		var a0: float = float(i) / float(segs) * TAU
+		var a1: float = float(i + 1) / float(segs) * TAU
+		draw_arc(c, rng, a0, a1, 5, col, 1.5, true)
 
 func _exit_tree() -> void:
 	_clear_aim()
