@@ -29,9 +29,9 @@ const SHOT_W: float = 336.0
 const SHOT_H: float = 189.0
 const SHOT_GAP: float = 16.0
 const SHOTS: Array = [
-	["res://poster_out/shots/shot_route_subway.png", "폐쇄 지하철"],
-	["res://poster_out/shots/shot_route_watchtower.png", "감시탑"],
-	["res://poster_out/shots/shot_route_datacenter.png", "데이터 센터"],
+	["res://poster_out/shots/shot_routemap.png", "맵 선택 — 위험과 보상"],
+	["res://poster_out/shots/shot_skilltree.png", "스킬 트리 — 3계열"],
+	["res://poster_out/shots/shot_route_datacenter.png", "전투 — 데이터 센터"],
 ]
 
 const DIV1_Y: float = 1018.0
@@ -194,7 +194,7 @@ func _build_text() -> void:
 	_feat_cell(FX_R, FY_2, 36.0, "12개 맵 · Dead Cells식",
 		"스테이지마다 추첨되는 루트. 위험을 감수할수록 보상이 커진다.")
 	# VEIL 인용
-	_label("“위험한 건 제가 먼저 볼게요. 화면 끝에 짚어둘게요.”",
+	_label("“당신은 앞만 봐요. 뒤는, 제가 보고 있을 테니까.”",
 		Vector2(M, 1488.0), W - 2.0 * M, 28, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false)
 	_label("— VEIL", Vector2(M, 1532.0), W - 2.0 * M, 19, COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
 	# 푸터
