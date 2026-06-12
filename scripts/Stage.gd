@@ -2383,6 +2383,14 @@ func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
 		if positions.is_empty():
 			continue
 		var kind_int: int = int(kind_map.get(kind_name, 0))
+		# 둥지 저격수(좁은 64px 단독 발판 거치)는 risk 배율로 복제하지 않는다. 추가분이
+		# base_p±120 오프셋으로 스폰되면 둥지 발판을 벗어나 허공에서 떨어진다(감시탑 risk3에서
+		# 발생 — 우측 둥지 추가 저격수가 시작 지점으로 낙하). 정의된 위치에 정확히 1명씩만.
+		# 사용자 피드백 2026-06-12.
+		if str(kind_name) == "sniper" and bool(_map_data.get("nest_snipers", false)):
+			for p in positions:
+				_spawn_enemy(kind_int, p, wave_idx)
+			continue
 		var target: int = int(round(float(positions.size()) * mult))
 		target = clamp(target, 0, positions.size() * 2)
 		if target >= positions.size():
@@ -2977,8 +2985,12 @@ func _build_rooftops_secret() -> void:
 		_descend_drop_platform(step1)
 		_descend_drop_platform(step2)
 		_spawn_hp_orb(Vector2(200.0, 2820.0))
-		_spawn_orb(Vector2(170.0, 2810.0), true)
-		_spawn_orb(Vector2(230.0, 2810.0), true)
+		# 레버 보상 상향(XP2→4) — 외곽 진입로 해치(XP5)보다 어려운 맵(수직 등반+저격)인데
+		# 더 적던 역전 해소. 글라이드 게이트 제거 보전도 겸함. 사용자 피드백 2026-06-12.
+		_spawn_orb(Vector2(160.0, 2810.0), true)
+		_spawn_orb(Vector2(200.0, 2810.0), true)
+		_spawn_orb(Vector2(240.0, 2810.0), true)
+		_spawn_orb(Vector2(200.0, 2770.0), true)
 	)
 
 var _enemies_remaining: int = 0  # ARENA enemy_clear 카운트

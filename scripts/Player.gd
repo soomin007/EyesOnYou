@@ -291,7 +291,7 @@ func _try_jump() -> void:
 
 # 현재 티어가 반영된 실제 max 쿨다운 (HUD 게이지 표시용).
 func get_attack_cd_max() -> float:
-	return ATTACK_COOLDOWN * (0.75 if GameState.get_skill_tier("fire_boost") >= 2 else 1.0)
+	return ATTACK_COOLDOWN * (0.70 if GameState.get_skill_tier("fire_boost") >= 2 else 1.0)
 
 func get_dash_cd_max() -> float:
 	return DASH_COOLDOWN * (0.8 if GameState.get_skill_tier("dash_boost") >= 1 else 1.0)
@@ -305,9 +305,9 @@ func get_skill_cd_max() -> float:
 func _try_attack() -> void:
 	if attack_cd > 0.0:
 		return
-	# fire_boost T2: 사격 쿨다운 -25% + 사격 후 0.5s 이동 가속(_handle_input에서 적용).
+	# fire_boost T2 "속사": 사격 쿨다운 -30%(연사 속도↑) + 사격 후 0.5s 이동 가속(_handle_input에서 적용).
 	var fb_tier: int = GameState.get_skill_tier("fire_boost")
-	var cd_mult: float = 0.75 if fb_tier >= 2 else 1.0
+	var cd_mult: float = 0.70 if fb_tier >= 2 else 1.0
 	attack_cd = ATTACK_COOLDOWN * cd_mult
 	if fb_tier >= 2:
 		sprint_t = _SPRINT_DURATION
@@ -326,9 +326,11 @@ func _try_attack() -> void:
 func _spawn_bullet(idx: int, total: int) -> void:
 	var b := Bullet.new()
 	b.dir = facing
-	# fire_boost: T1=+1, T2=+2, T3=관통(데미지 추가 없음). 베이스 데미지 1.
+	# fire_boost: T1=데미지 +1(→2 고정), T2=연사 속도(데미지 추가 없음), T3=관통. 베이스 1.
+	# 추가 데미지는 방패병(HP3) 외엔 효용 낮아(대부분 적 HP 1~2) T2를 연사로 전환(피드백 2026-06-12).
+	# 방패병은 폭발물이 상성 카운터라 데미지 스택이 불필요.
 	var fb_tier: int = GameState.get_skill_tier("fire_boost")
-	b.damage = 1 + min(fb_tier, 2)  # T0=1, T1=2, T2=3, T3=3
+	b.damage = 2 if fb_tier >= 1 else 1  # T0=1, T1+=2 고정
 	b.pierce = fb_tier >= 3
 	# multishot T3 — 약한 추적
 	b.tracking = GameState.get_skill_tier("multishot") >= 3

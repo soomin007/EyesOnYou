@@ -61,7 +61,7 @@ const SNIPER_RANGE: float = 820.0
 # 오르게 한다. 전투 맵(subway/datacenter) 저격수는 avoid_only 미부착이라 그대로(영향 없음).
 # 모래주머니/ㄴ자 발판으로는 하향 사격을 못 막는다(탄이 발판 밑으로 빠짐) → 압박 수치로 조정.
 const NEST_SNIPER_RANGE: float = 700.0
-const NEST_SNIPER_AIM_TIME: float = 1.1    # 텔레그래프(붉은 조준선) 길게 — 피할 시간
+const NEST_SNIPER_AIM_TIME: float = 1.7    # 텔레그래프(붉은 조준선)=조준→발사 시간. 길게 잡아 등반 중 피할 여유.
 const NEST_SNIPER_INTERVAL_MUL: float = 1.5  # 발사 간격 1.5배(2.6→3.9s) — 등반 중 피탄 횟수↓
 
 # Drone — 머리 위 호버 후 폭탄 투하
