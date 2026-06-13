@@ -70,16 +70,16 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_cooling",
 		"name": "냉각 시설",
-		"description": "내부 기계실. 차가운 공기와 수직 파이프, 위에서 떨어지는 드론.",
+		"description": "서버를 식히는 냉각 플랜트. 바닥 증기 분출구가 주기로 터지고, 드론이 머리 위를 점한다.",
 		"risk": 2,
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
 		# 드론 첫 등장 맵 — 사용자 피드백상 후반에 등장하는 게 더 자연스러워 stage 3~4로 이동.
 		"min_stage": 3, "max_stage": 4,
-		"tags": ["전투", "드론", "수직"],
-		"veil_comment": "냉각 파이프 위로 올라가는 길이에요. 드론이 위에서 떨어져요.",
-		"entry_comment": "냉각 파이프 위쪽이 출구예요. 우측 외곽에 뭔가 따로 있는 것 같기도 해요.",
+		"tags": ["전투", "드론", "함정"],
+		"veil_comment": "냉각 플랜트예요. 바닥 증기는 타이밍 보고 지나가요. 드론은 위에 떠 있어요.",
+		"entry_comment": "여긴 서버를 식히는 곳이에요. ...저도 이런 데 어딘가 있겠죠. 바닥 증기 조심해요.",
 		"stage_color": Color(0.10, 0.16, 0.20),
 	},
 	{

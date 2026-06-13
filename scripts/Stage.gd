@@ -1167,6 +1167,16 @@ func _build_traps() -> void:
 		tw.setup(_dir_from_str(str(d.get("dir", "down"))), float(d.get("len", 240.0)),
 			str(d.get("trigger_id", "")), float(d.get("cooldown", 2.2)))
 		_traps_present = true
+	# 증기 분출구(냉각 시설) — 바닥에서 위로 h만큼 주기 분출. phase 생략 시 x로 위상 분산(엇갈림).
+	for entry in _map_data.get("steam_vents", []):
+		var sv: Dictionary = entry
+		var vent := SteamVent.new()
+		var vx: float = float(sv.get("x", 0.0))
+		vent.position = Vector2(vx, GROUND_Y)
+		vent.height = float(sv.get("h", 260.0))
+		vent.phase = float(sv.get("phase", fmod(vx * 0.0011, 1.0)))
+		add_child(vent)
+	# (증기 분출구는 자체 텔레그래프라 _traps_present "못 잡는 함정" 경고는 불필요.)
 
 func _dir_from_str(s: String) -> Vector2:
 	match s:
