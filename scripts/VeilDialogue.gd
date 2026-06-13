@@ -1,105 +1,79 @@
 class_name VeilDialogue
 extends RefCounted
 
-# Stage 브리핑 — stage 인덱스별 풀에서 랜덤 선택. ACT 톤 변화 반영.
-# ACT 1 (stage 0~1): 담담하고 직업적
-# ACT 2 (stage 2~3): "저도" 등장, 균열 시작
-# ACT 3 (stage 4):   임무 외 말, 가장 개인적
-# 스토리 모드 5스테이지 전용 briefing — 일반 모드(7스테이지)의 BRIEFINGS는
-# 후반부 핵심부/드론/저격수 컨텍스트가 짙어 5스테이지 압축 흐름과 맞지 않음.
-# 스토리 모드 stage 매핑: 0=외곽, 1=시설 안, 2=격리/배수로, 3=lab(보스), 4=탈출.
-const STORY_BRIEFINGS: Array = [
-	# stage 0 — 외곽 진입 (ACT1 건조 · 모티프 주 거점은 인트로)
-	# 인트로가 이미 "외곽부터, 천천히 가요"를 말하므로 여기선 그 어휘를 반복하지 않음(중복 회피).
-	[
-		"경계가 느슨해요. 여기서 감을 잡아요.",
-		"첫 임무예요, 요원. 제가 봐줄게요.",
-	],
-	# stage 1 — 시설 안으로 (신뢰 쌓임)
-	[
-		"안으로 들어왔어요. 경비 보여요.",
-		"두 번째 구역이에요. 잘 따라오고 있어요.",
-	],
-	# stage 2 — 흠칫 + 시야 새기 시작(겸함). 스토리 모드는 곡선이 짧아 1·2단계를 s2가 겸함 (v3 §2).
-	[
-		"저 문 너머는... 잠깐. 아니에요. 가던 길 가요.",
-		"여기부터는 잘 안 보여요. 머리 위는 요원이 봐줘요.",
-	],
-	# stage 3 — 핵심부 보스 · 역전 완성(최고조). 두 줄 다 "이제 요원이 VEIL 대신 본다" (v3 §2).
-	[
-		"다 와서 앞이 안 보여요. 이런 적 없어요. 요원이 봐줘요.",
-		"여기서부터 잘 안 보여요. 이제 요원 차례예요. 저 대신.",
-	],
-	# stage 4 — 탈출
-	[
-		"잡았어요. 이제 빠져나가요.",
-		"조용히 빠져요. 거의 다 왔어요.",
-	],
-]
+# ─── Stage 브리핑 — 신뢰밴드 × 진행도 grid (veil_pool_remap.md) ──────────────
+# 재설계(2026-06-13): 어투를 stage가 아니라 **신뢰 단계**로 고른다(veil_register_band).
+#   - 내용(비트)=진행도 고정(시야 붕괴 아크는 막판 고정). 어투(register)=신뢰.
+#   - 3밴드: COLD(격식 작전통신) / THAW(격식+해요·저도 누수) / WARM(해요체 사적).
+#   - 도달 가능 밴드만 채우고, 빈 셀은 _resolve_band_cell이 인접 밴드로 폴백.
+# 기존 ACT1/2/3 풀을 그대로 재활용 — 풀을 고르는 *축*만 stage→trust로 바뀐 것.
 
-# 재작성(STORY_REDESIGN_v1 §4): "두려움 에스컬레이션"을 진행도에 묶어 점증.
-# 각 stage 풀을 톤 동질화 — 어느 줄이 뽑혀도 그 stage의 ACT/두려움 비트를 운반.
-# 그래서 아크는 stage 순서로 결정론적으로 누적되고, 회차 변화는 유지된다.
-# 시야가 흐려지는 비트의 원인(차폐인지 VEIL의 두려움인지)은 게임이 답하지 않음 — 대사는 "안 보인다"만.
-# 보이스(§2-1): 40자 내외 / "요원" 호칭 / em dash 없음 / "저도"는 ACT2(stage 3)부터.
-const BRIEFINGS: Array = [
-	# stage 0 — ACT1 건조·직업적 (시야 모티프 주 거점은 인트로로 이전 — v2 §1-3)
-	# 인트로 "외곽부터, 천천히 가요"와 어휘 중복 회피 — 여기선 전술 정보 위주.
-	[
-		"경비가 느슨한 편이에요. 앞쪽이 더 빨라요.",
-		"첫 임무예요, 요원. 제가 봐줄게요.",
-		"여기서 감을 잡아요. 무리하지 말아요.",
+# 일반 모드 7스테이지 비트: 0 도입 / 1 전방안내 / 2 흠칫(전조) / 3 봉인구역 /
+# 4 시야 새기[고정] / 5 ACT3·서버근접 / 6 역전 완성[고정].
+const BRIEFINGS_BY_BAND: Dictionary = {
+	"cold": [
+		["경비가 느슨합니다. 전방 경로가 더 빠릅니다.", "첫 임무입니다, 요원. 지원하겠습니다.", "여기서 감각을 익히십시오. 무리하지 마십시오."],
+		["내부에 진입했습니다. 경비 패턴을 확인했습니다.", "두 번째 구역입니다. 잘 따라오고 있습니다.", "여기서부터 통로가 좁습니다. 전방은 제가 확인하겠습니다."],
+		["전방에... 잠시. 아닙니다. 경로 유지하십시오.", "방금 무언가. ...오인입니다. 진행하십시오."],
+		["이 층은 도면과 다릅니다. 기록에 없는 구역입니다.", "어딘가 잠긴 문이 있습니다. 봉인 주체 불명."],
+		["이 구간 시야 확보가 어렵습니다. 전방은 요원이 직접 확인하십시오."],
+		["핵심부가 아래입니다. 신중히 접근하십시오.", "도면에 없는 통로가 있습니다. 정보 없음."],
+		["시야가 거의 끊겼습니다. 이제 요원이 보십시오. 제 대신.", "이 지점부터 제 판단이 틀릴 수 있습니다. 미리 알립니다."],
 	],
-	# stage 1 — ACT1 신뢰 쌓임
-	[
-		"안으로 들어왔어요. 경비 패턴 보여요.",
-		"두 번째예요. 잘 따라오고 있어요.",
-		"여기서부터 좁아요. 제가 먼저 짚을게요.",
+	"thaw": [
+		["경비가 느슨한 편이에요. 앞쪽이 더 빨라요.", "첫 임무예요, 요원. 제가 봐줄게요."],
+		["안으로 들어왔어요. 경비 패턴 보여요.", "두 번째예요. 잘 따라오고 있어요."],
+		["저 문 너머는... 잠깐. 아니에요. 가던 길 가요.", "앞에 뭔가... 아니에요. 제가 잘못 봤어요. 가요.", "방금... 아니에요. 신경 쓰지 말아요. 저도 가끔 이래요."],
+		["이 층은 도면이랑 달라요. 저도 처음 봐요.", "어딘가 잠긴 문이 있을 거예요. 누가 봉인했는진 저도 몰라요.", "이 구역은 오래됐어요. 오래 닫혀 있었고요."],
+		["여기부터는 잘 안 보여요. 이쪽은 요원이 봐줘요.", "자꾸... 놓쳐요. 이런 적 없는데. 요원이 직접 봐요."],
+		["서버실이 저 아래예요. 천천히 가도 됩니다.", "도면에 없는 길이 하나 있어요. 저도 잘 모르겠어요."],
+		["여기, 시야가 거의 끊겼어요. 이제 요원이 봐요. 저 대신."],
 	],
-	# stage 2 — ACT2 시작 · 1단계 흠칫(시야 역전 전조). 모든 줄이 "VEIL이 앞의 무언가에 흠칫하고
-	# 얼버무린다"(v3 §2). 숨기는 걸 signposting하지 않음 — 플레이어는 불안만, 숨김은 엔딩에서 회수.
-	[
-		"저 문 너머는... 잠깐. 아니에요. 가던 길 가요.",
-		"앞에 뭔가... 아니에요. 제가 잘못 봤어요. 가요.",
-		"방금... 아니에요. 신경 쓰지 말아요. 저도 가끔 이래요.",
+	"warm": [
+		[],
+		[],
+		[],
+		[],
+		["제가 못 보는 데가 생겨요. 거긴 요원이 봐줘요."],
+		["서버실이 저 아래예요. ...요원. 천천히 가도 돼요.", "여기 도면에 없는 길이 하나 있어요. 저도 잘 모르겠어요.", "요원. 끝까지 따라와줘서, 고마워요."],
+		["다 와서... 앞이 안 보여요. 이런 적 없어요.", "여기, 제가 잘 안 보여요. 이제 요원이 봐줘요. 저 대신.", "지금부터 제가 틀릴 수도 있어요. 미리 말해둬요."],
 	],
-	# stage 3 — ACT2 균열 · 봉인/오래된 구역 ("저도" 등장)
-	[
-		"이 층은 도면이랑 달라요. 저도 처음 봐요.",
-		"어딘가 잠긴 문이 있을 거예요. 누가 봉인했는진 저도 몰라요.",
-		"이 구역은 오래됐어요. 오래 닫혀 있었고요.",
+}
+
+# 스토리 모드 5스테이지(곡선 짧음). 비트: 0 도입 / 1 진입 / 2 흠칫+시야새기[고정] /
+# 3 역전 완성[고정] / 4 탈출. (드론 배제 → "머리 위" 대신 "이쪽".)
+const STORY_BRIEFINGS_BY_BAND: Dictionary = {
+	"cold": [
+		["경계가 느슨합니다. 여기서 감각을 익히십시오."],
+		["내부에 진입했습니다. 경비를 확인했습니다."],
+		["전방에... 아닙니다. 경로 유지하십시오.", "이쪽 시야 확보가 어렵습니다. 요원이 확인하십시오."],
+		["시야가 거의 끊겼습니다. 이제 요원이 보십시오. 제 대신."],
+		["확보했습니다. 탈출 경로로 이동하십시오."],
 	],
-	# stage 4 — 2단계 시야가 새기 시작 · 차폐. 모든 줄이 "VEIL의 봄이 끊기고 요원에게 봐달라 넘긴다"(v3 §2).
-	[
-		"여기부터는 잘 안 보여요. 머리 위는 요원이 봐줘요.",
-		"자꾸... 놓쳐요. 이런 적 없는데. 요원이 직접 봐요.",
-		"제가 못 보는 데가 생겨요. 거긴 요원이 봐줘요.",
+	"thaw": [
+		["경계가 느슨해요. 여기서 감을 잡아요."],
+		["안으로 들어왔어요. 경비 보여요."],
+		["저 문 너머는... 잠깐. 아니에요. 가던 길 가요.", "여기부터는 시야가 흐려져요. 이쪽은 요원이 봐줘요."],
+		["여기, 시야가 거의 끊겼어요. 이제 요원이 봐요. 저 대신."],
+		["잡았어요. 이제 빠져나가요."],
 	],
-	# stage 5 — ACT3 · 두려움 오름 · 임무 외 말 (??? 복선)
-	[
-		"서버실이 저 아래예요. ...요원. 천천히 가도 돼요.",
-		"여기 도면에 없는 길이 하나 있어요. 저도 잘 모르겠어요.",
-		"요원. 끝까지 따라와줘서, 고마워요.",
+	"warm": [
+		[],
+		[],
+		[],
+		["다 와서 앞이 안 보여요. 이런 적 없어요. 요원이 봐줘요.", "여기서부터 잘 안 보여요. 이제 요원 차례예요. 저 대신."],
+		["조용히 빠져요. 거의 다 왔어요."],
 	],
-	# stage 6 — 3단계 역전 완성 · 서버 직전. 모든 줄이 "VEIL이 거의 못 보고 이제 요원이 자기 대신 본다"(v3 §2).
-	# 안심 줄("제가 보는 한")은 이 풀에서 빼 보스 처치 후 자막으로 이전(v3 §4, Stage._on_boss_killed).
-	# 최고조 비트는 ACT3 인게임 자막(Stage._arm_act3_vision_subtitle)으로도 한 번 더 보강.
-	[
-		"다 와서... 앞이 안 보여요. 이런 적 없어요.",
-		"여기, 제가 잘 안 보여요. 이제 요원이 봐줘요. 저 대신.",
-		"지금부터 제가 틀릴 수도 있어요. 미리 말해둘게요.",
-	],
-]
+}
 
 # 첫 임무 시작 화면 — Briefing.gd가 stage 0 진입 시 한 번만 표시.
 # 한 화면에 임무명·목표·VEIL 동행을 같이 통보 — 이전엔 라인이 4개로 쪼개져
 # 사용자가 무슨 내용인지 못 읽고 그냥 ENTER로 넘기던 문제(사용자 보고).
 const INTRO_SYSTEM: String = "침투 작전 — 보안 시설 SILO-7\n목표: 핵심 데이터 회수\n도면 없음. 사전 정보 없음.\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
 
-# 시스템 텍스트 직후 VEIL 첫 마디 — 한 화면(여러 줄)으로 묶음.
-# 한 줄씩 나누면 ENTER 연타로 의미가 다 새서 한 호흡으로 통보.
+# 시스템 텍스트 직후 VEIL 첫 마디 — 한 화면(여러 줄)으로 묶음. 항상 초반(trust 0)이라 COLD 고정.
 const INTRO_VEIL: Array[String] = [
-	"...연결됐어요. 들리세요, 요원?\n이 안은 도면이 없어요. 제가 보이는 대로 알려줄게요.\n멀리는 제가 봐줄 테니, 눈앞은 요원이 맡아줘요.\n외곽부터, 천천히 가요.",
+	"...통신 연결됐습니다. 들립니까, 요원?\n이 안은 도면이 없습니다. 보이는 대로 전달하겠습니다.\n멀리는 제가 보겠습니다. 눈앞은 요원이 맡으십시오.\n외곽부터, 천천히 진입합니다.",
 ]
 
 # 레벨업 fallback — 특정 추천(★)이 없을 때. 그래서 카드에 ★가 안 붙으니, 멘트도 "딱 집어줄 게
@@ -113,59 +87,65 @@ const SKILL_GENERIC_COMMENTS: Array[String] = [
 	"어느 쪽이든 이유가 있으면 돼요.",
 ]
 
-# ─── 사망 메시지 (ACT별) ──────────────────────────────────
+# ─── 사망 메시지 — 신뢰밴드 × 맥락(first/followed/ignored) ──────────────────
+# ACT→밴드 재키. 첫 죽음은 부드럽게, 이후엔 추천 따름/무시. 실력은 오버레이(아래 두 풀).
+const DEATH_BY_BAND: Dictionary = {
+	"cold": {
+		"first":    ["첫 손실입니다. 재정비하고 다시 갑니다.", "괜찮습니다, 요원. 처음입니다."],
+		"followed": ["제 경로가 까다로웠습니다. 다시 갑니다.", "조언이 적절치 않았습니까. 재시도하십시오."],
+		"ignored":  ["다른 경로를 택하셨군요. 다시 갑니다.", "이 경로는 맞지 않았던 것 같습니다."],
+	},
+	"thaw": {
+		"first":    ["저도 좀 걱정됐어요. 다시 가요.", "이 구역이 어려워요. 같이 풀어봐요."],
+		"followed": ["제 말을 믿었는데 결과가 좋지 않았어요. 미안해요.", "제 판단이 틀렸어요. 미안해요, 요원."],
+		"ignored":  ["제 말은 안 들었는데, 결과는 비슷했네요.", "요원 방식대로 해봤는데 쉽지 않죠."],
+	},
+	"warm": {
+		"first":    ["거의 다 왔어요. 다시 해요.", "여기서 멈추지 않아도 돼요, 요원."],
+		"followed": ["제가 잘 못 봐서... 미안해요. 다시 가요.", "마지막인데 쉽지 않네요. 저도요."],
+		"ignored":  ["여기서 멈추지 않아도 돼요, 요원.", "요원 방식이 틀린 건 아니었어요."],
+	},
+}
 
-# ACT 1 (stage 0~1) — 담담하고 직업적
-const DEATH_ACT1_FIRST: Array[String] = [
-	"처음 쓰러진 거예요. 다시 가요.",
-	"괜찮아요, 요원. 첫 번이에요.",
-]
-const DEATH_ACT1_FOLLOWED: Array[String] = [
-	"제 루트가 어려웠어요. 다시 해요.",
-	"조언이 별로였나요. 다시 가요.",
-]
-const DEATH_ACT1_IGNORED: Array[String] = [
-	"다른 방법으로 가봤군요. 다시 해요.",
-	"이 루트가 맞지 않았던 것 같아요.",
-]
-
-# ACT 2 (stage 2~3) — 균열, "저도" 등장
-const DEATH_ACT2_FIRST: Array[String] = [
-	"저도 좀 걱정됐어요. 다시 가요.",
-	"이 구역이 어려워요. 같이 풀어봐요.",
-]
-const DEATH_ACT2_FOLLOWED: Array[String] = [
-	"제 말을 믿었는데 결과가 좋지 않았어요. 미안해요.",
-	"제 판단이 틀렸어요. 미안해요, 요원.",
-]
-const DEATH_ACT2_IGNORED: Array[String] = [
-	"제 말은 안 들었는데, 결과는 비슷했네요.",
-	"요원 방식대로 해봤는데 쉽지 않죠.",
-]
-
-# ACT 3 (stage 4) — 가장 개인적, 어떤 사망이든
-const DEATH_ACT3_ANY: Array[String] = [
-	"거의 다 왔어요. 다시 해요.",
-	"여기서 멈추지 않아도 돼요, 요원.",
-	"마지막인데 쉽지 않네요. 저도요.",
-	"제가 잘 못 봐서... 미안해요. 다시 가요.",  # 시야 역전을 죽음과 묶음 (v3 §4)
-]
-const DEATH_ACT3_HEAVY: Array[String] = [
-	"이 임무가 너무 힘든 거면 말해줘도 돼요.",
-	"제가 더 잘 안내했어야 했어요.",
-]
+# 실력 오버레이(§5). struggling(사망 누적)=위로 강화, skilled(드물게 죽은 고수)=terse·의외.
+const DEATH_STRUGGLE: Dictionary = {
+	"cold": ["고전 중이군요. 침착하게, 다시 갑니다.", "어려운 구간입니다. 한 번 더 가시죠."],
+	"thaw": ["많이 막히죠. ...같이 천천히 가봐요.", "여기 어려워요. 제가 더 짚어줄게요."],
+	"warm": ["이 임무가 너무 힘든 거면 말해줘도 돼요.", "제가 더 잘 안내했어야 했어요."],
+}
+const DEATH_SKILLED: Dictionary = {
+	"cold": ["흔치 않네요, 요원. 바로 갑니다.", "드문 일입니다. 재시도."],
+	"thaw": ["이런 적 잘 없는데. 바로 가요.", "어, 막혔네요. 다시 가요."],
+	"warm": ["여기서 잡힐 줄은 몰랐어요. 다시 가요.", "이런 데서 멈출 요원이 아닌데. 다시 가요."],
+}
 
 # ─── API ──────────────────────────────────────────────────
 
 static func get_briefing(stage_index: int) -> String:
-	# 스토리 모드는 5스테이지 전용 풀에서 선택 — 일반 모드 BRIEFINGS는 7스테이지
-	# 흐름이라 후반부 컨텍스트가 다름.
-	var pool_arr: Array = STORY_BRIEFINGS if GameState.story_mode else BRIEFINGS
-	var idx: int = clamp(stage_index, 0, pool_arr.size() - 1)
-	var pool: Array = pool_arr[idx]
-	if pool.size() == 0:
+	# 어투 밴드(신뢰)로 풀 선택, 진행도(stage)로 비트 행 선택. 빈 셀은 인접 밴드 폴백.
+	var pools: Dictionary = STORY_BRIEFINGS_BY_BAND if GameState.story_mode else BRIEFINGS_BY_BAND
+	var pool: Array = _resolve_band_cell(pools, GameState.veil_register_band(), stage_index)
+	if pool.is_empty():
 		return ""
 	return str(pool[randi() % pool.size()])
+
+# 요청 밴드의 stage 셀이 비었으면 인접 밴드로 폴백(따뜻↔차가움 순). 항상 비지 않은 셀을 찾는다.
+static func _resolve_band_cell(pools: Dictionary, band: String, stage_index: int) -> Array:
+	var order: Array
+	match band:
+		"warm":
+			order = ["warm", "thaw", "cold"]
+		"cold":
+			order = ["cold", "thaw", "warm"]
+		_:
+			order = ["thaw", "warm", "cold"]
+	for b in order:
+		var arr: Array = pools.get(b, [])
+		if stage_index >= 0 and stage_index < arr.size():
+			var cell: Array = arr[stage_index]
+			if cell.size() > 0:
+				return cell
+	return []
 
 static func get_intro_system_text() -> String:
 	return INTRO_SYSTEM
@@ -212,24 +192,34 @@ static func _matchup_line(skill_id: String) -> String:
 	return "이 구역에 맞는 한 수가 있어요."
 
 static func get_death_briefing(death_count: int, followed_advice: bool) -> String:
-	# stage 진행도로 ACT 판별 (current_stage는 사망 시점의 진행 stage).
-	# 7스테이지 매핑: ACT 1=stage 0~1, ACT 2=stage 2~4, ACT 3=stage 5~6.
-	var stage: int = GameState.current_stage
-	var is_first: bool = death_count <= 1
-	if stage <= 1:
-		# ACT 1
-		if is_first:
-			return _pick(DEATH_ACT1_FIRST)
-		return _pick(DEATH_ACT1_FOLLOWED) if followed_advice else _pick(DEATH_ACT1_IGNORED)
-	elif stage <= 4:
-		# ACT 2
-		if is_first:
-			return _pick(DEATH_ACT2_FIRST)
-		return _pick(DEATH_ACT2_FOLLOWED) if followed_advice else _pick(DEATH_ACT2_IGNORED)
-	# ACT 3
-	if death_count >= 3:
-		return _pick(DEATH_ACT3_HEAVY)
-	return _pick(DEATH_ACT3_ANY)
+	# 어투 밴드(신뢰) × 맥락 + 실력 오버레이. (ACT/stage가 아니라 신뢰로 톤 결정.)
+	var band: String = GameState.veil_register_band()
+	var comp: String = GameState.competence_tier()
+	# 무사망 고수가 드물게 죽음 → terse·의외 톤(첫 죽음 포함, 맥락보다 우선).
+	if comp == "skilled":
+		var sk: Array = DEATH_SKILLED.get(band, [])
+		if sk.is_empty():
+			sk = DEATH_SKILLED.get("warm", [])
+		if not sk.is_empty():
+			return _pick(sk)
+	# 맥락 — 첫 죽음은 부드럽게, 이후엔 추천 따름/무시.
+	var ctx: String
+	if death_count <= 1:
+		ctx = "first"
+	elif followed_advice:
+		ctx = "followed"
+	else:
+		ctx = "ignored"
+	# 사망 누적(고전) → 위로 강한 풀을 절반 확률로 섞음.
+	if comp == "struggling" and death_count >= 3:
+		var hv: Array = DEATH_STRUGGLE.get(band, [])
+		if hv.is_empty():
+			hv = DEATH_STRUGGLE.get("warm", [])
+		if not hv.is_empty() and randi() % 2 == 0:
+			return _pick(hv)
+	var cell: Dictionary = DEATH_BY_BAND.get(band, DEATH_BY_BAND["thaw"])
+	var pool: Array = cell.get(ctx, cell.get("first", []))
+	return _pick(pool)
 
 static func _pick(pool: Array) -> String:
 	if pool.size() == 0:
