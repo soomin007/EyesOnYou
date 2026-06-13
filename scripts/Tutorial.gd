@@ -114,7 +114,7 @@ func _ready() -> void:
 	_build_veil_presence()
 	# 어투 아크의 출발점 — 튜토리얼은 첫 접촉이라 가장 차갑고 격식 있는 격식체(~습니다).
 	# 후반으로 갈수록 ~해요체로 풀린다(친근함). 동시에 SILO-7/요원/작전이라는 세계를 도입.
-	_veil_say("통신 연결을 확인했습니다. 요원, 여기는 훈련 구역입니다. 실전 투입 전 조작 계통을 점검하십시오.", 6.5)
+	_veil_say("통신 연결됐습니다. 요원, 여기는 훈련 구역입니다. 실전에 들어가기 전에 조작을 익혀두십시오.", 5.0)
 
 # ─── 배경 / 지면 ───────────────────────────────────────────────
 
@@ -897,24 +897,24 @@ func _advance_to(next: int) -> void:
 		Step.JUMP:
 			sign_jump.visible = true
 			sign_drop.visible = true
-			_veil_say("상승 기동입니다. 공중에서 한 번 더 입력하면 2단 도약이 가능합니다.", 5.0)
+			_veil_say("공중에서 점프를 한 번 더 누르면 2단 도약입니다.", 3.5)
 		Step.ATTACK:
 			sign_attack.visible = true
 			_build_attack_dummy()
-			_veil_say("전방에 표적 하나. 사격으로 제거하십시오.", 4.5)
+			_veil_say("전방에 표적 하나. 사격으로 제거하십시오.", 3.0)
 		Step.LEVELUP:
 			sign_levelup.visible = true
 			_spawn_levelup_dummies()
-			_veil_say("전투 기록이 누적되면 강화됩니다. 처리하십시오.", 4.5)
+			_veil_say("적을 처치하면 경험치가 쌓입니다. 레벨이 오르면 더 강해집니다. 처리하십시오.", 4.0)
 		Step.SKILL:
 			_build_skill_sign()
 			_spawn_skill_dummies()
-			_veil_say("임시 권한을 부여했습니다. 잔여 표적에 사용해 보십시오.", 5.0)
+			_veil_say("스킬을 하나 내줬습니다. 남은 표적에 써 보십시오.", 3.5)
 		Step.DASH:
 			sign_dash.visible = true
-			_veil_say("전방 장애물 감지. 회피 기동으로 통과하십시오.", 5.0)
+			_veil_say("전방 장애물. 대시로 통과하십시오.", 3.5)
 		Step.DONE:
-			_veil_say("점검을 완료했습니다. 요원이 저를 믿을수록, 제가 더 많이 도와드릴 수 있습니다. ...SILO-7로 진입합니다. 행운을 빕니다, 요원.", 7.0)
+			_veil_say("점검 완료입니다. 요원이 저를 믿을수록, 제가 더 많이 도와드릴 수 있습니다. ...SILO-7로 진입합니다. 행운을 빕니다, 요원.", 5.5)
 			# 골 빛이 충분한 시각 유도 — 별도 안내문 없음.
 			if barrier != null:
 				barrier.queue_free()

@@ -61,10 +61,10 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	v.add_child(gauge)
 
 	if advice_line != "":
-		# 신뢰도는 폰트 색(veil_tone_color)으로 표현. 앞 prefix는 실력별 안내 강도만
-		# (struggling=강조 / skilled=물러섬, §5). 과거 trust-prefix("그럼,")는 폐지됨.
+		# 신뢰도는 폰트 색(veil_tone_color)으로 표현. prefix는 안 붙임 — 실력 lead-in을
+		# 위협 문장 앞에 붙이면 "필요하면, 저격수가 노려요"처럼 어색해 폐지(플레이테스트 피드백).
 		var advice_label := Label.new()
-		advice_label.text = "VEIL  —  " + VeilDialogue.levelup_leadin() + advice_line
+		advice_label.text = "VEIL  —  " + advice_line
 		advice_label.add_theme_font_size_override("font_size", 22)
 		advice_label.add_theme_color_override("font_color", GameState.veil_tone_color())
 		advice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

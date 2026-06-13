@@ -543,8 +543,9 @@ func _on_archive_finished() -> void:
 		archive_term2_done = true
 		archive_active_term = "veil_self"
 		# 사용자 피드백: 마지막 베일 대화는 문서 패널이 아닌 자막창으로.
-		# ArchiveOverlay panel은 페이드아웃 후 hide. 자막은 _show_veil_subtitle 큐로
-		# 차례로 표시(서로 겹치지 않게 _drain_subtitles가 보장). 다 끝나면 ENDING.
+		# ArchiveOverlay panel은 페이드아웃 후 hide. 자막은 한 줄씩 *순차* 표시.
+		# (_show_veil_subtitle은 큐가 아니라 즉시 Label을 쌓으므로, 루프에서 한꺼번에
+		#  호출하면 3줄이 동시에 떴다 — 각 줄 수명만큼 await로 끊어 차례로 보이게 한다.)
 		var arch_panel := get_node_or_null("ArchiveOverlay") as ArchiveOverlay
 		if arch_panel != null:
 			arch_panel.hide_panel()
@@ -553,14 +554,11 @@ func _on_archive_finished() -> void:
 		var lines: Array = _veil_self_lines()
 		for entry in lines:
 			var d: Dictionary = entry
-			_show_veil_subtitle(str(d.get("text", "")), float(d.get("delay", 2.0)))
-		# 큐 길이 추산해 마지막 자막 후 ENDING. _show_veil_subtitle 한 줄당
-		# 0.3 fade-in + duration + 0.5 fade-out + 0.2 gap.
-		var total_t: float = 0.0
-		for entry2 in lines:
-			var d2: Dictionary = entry2
-			total_t += 0.3 + float(d2.get("delay", 2.0)) + 0.5 + 0.2
-		await get_tree().create_timer(total_t + 0.4).timeout
+			var dur: float = float(d.get("delay", 2.0))
+			_show_veil_subtitle(str(d.get("text", "")), dur)
+			# 이 줄이 fade-in(0.3)→유지(dur)→fade-out(0.5)으로 사라진 뒤 다음 줄.
+			await get_tree().create_timer(0.3 + dur + 0.5 + 0.2).timeout
+		await get_tree().create_timer(0.4).timeout
 		_finish_hidden_archive()
 
 func _finish_hidden_archive() -> void:
@@ -2172,12 +2170,7 @@ func _refresh_hud() -> void:
 		map_label.text = (" ·  " + route_name) if route_name != "" else ""
 	# VEIL 신뢰 — 5점 게이지, 0에서 차오름(재설계 §3.1). 색은 차가움→따뜻함.
 	if trust_label != null:
-		var t: int = GameState.trust_score
-		var thresholds: Array[int] = [2, 4, 8, 12, 16]
-		var dots: String = ""
-		for i in 5:
-			dots += "●" if t >= thresholds[i] else "○"
-		trust_label.text = "VEIL " + dots
+		trust_label.text = "VEIL " + GameState.veil_trust_gauge_dots()
 		trust_label.add_theme_color_override("font_color", GameState.veil_tone_color())
 	if GameState.skills.size() > 0:
 		var names: Array = []

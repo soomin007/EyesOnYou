@@ -464,6 +464,10 @@ func _apply_gravity(delta: float) -> void:
 		velocity.y = min(velocity.y, fall_speed)
 
 func take_hit(amount: int) -> void:
+	# 0뎀 타격은 피격이 아니다 — 보스 자폭 반경(700px) 밖처럼 거리 감쇠로 0뎀이 된 경우,
+	# barrier 소모·hit 카운트가 일어나면 안 됨(사용자 보고: 노란 원 밖인데 방어막이 벗겨짐).
+	if amount <= 0:
+		return
 	if invuln > 0.0:
 		return
 	# 실력 추적 — invuln을 통과한 실제 타격마다 1회 카운트(barrier 흡수·스토리 무피해 포함).
