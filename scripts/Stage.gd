@@ -2056,6 +2056,25 @@ func _build_hud() -> void:
 	hb2.add_child(skill_label)
 	_refresh_hud()
 
+	# 상시 VEIL 눈 — 게임 내내 우상단에 "VEIL이 함께 본다"를 띄운다(튜토리얼 눈과 동일, 더 작게).
+	# 시야 붕괴(veil_degraded) 시 BriefingVisual이 알아서 글리치(드롭아웃·지터·흐려짐).
+	var eye := Control.new()
+	eye.set_script(load("res://scripts/BriefingVisual.gd"))
+	eye.size = Vector2(54.0, 54.0)
+	eye.position = Vector2(1280.0 - 54.0 - 18.0, 14.0)
+	eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(eye)
+	var eye_cap := Label.new()
+	eye_cap.text = "VEIL"
+	eye_cap.add_theme_font_size_override("font_size", 10)
+	eye_cap.add_theme_color_override("font_color", Color(0.46, 0.86, 1.0, 0.8))
+	eye_cap.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	eye_cap.add_theme_constant_override("outline_size", 3)
+	eye_cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	eye_cap.position = Vector2(1280.0 - 54.0 - 18.0, 70.0)
+	eye_cap.size = Vector2(54.0, 14.0)
+	hud.add_child(eye_cap)
+
 	var bottom := MarginContainer.new()
 	bottom.add_theme_constant_override("margin_left", 24)
 	bottom.add_theme_constant_override("margin_bottom", 16)
@@ -3292,6 +3311,21 @@ func _process(delta: float) -> void:
 	_tick_escape_transition(delta)
 	_tick_trap_warning()
 	_tick_avoid_warning()
+	_tick_subtitle_glitch()
+
+# 시야 붕괴 시 자막창이 통신 두절처럼 떨리고 주기적으로 끊긴다(EMP 재머 느낌). 평시엔 offset 0.
+func _tick_subtitle_glitch() -> void:
+	if _subtitle_stack_layer == null or not is_instance_valid(_subtitle_stack_layer):
+		return
+	if not GameState.veil_degraded:
+		if _subtitle_stack_layer.offset != Vector2.ZERO:
+			_subtitle_stack_layer.offset = Vector2.ZERO
+		return
+	var tm: float = float(Time.get_ticks_msec()) * 0.001
+	if fmod(tm * 8.0, 1.0) < 0.12:
+		_subtitle_stack_layer.offset = Vector2(randf_range(-6.0, 6.0), randf_range(-3.0, 3.0))
+	else:
+		_subtitle_stack_layer.offset = Vector2(randf_range(-1.5, 1.5), randf_range(-1.0, 1.0))
 
 # 발사 함정에 처음 가까워지면 VEIL이 "파괴 불가, 회피" 1회 안내(못 잡는 함정 명시).
 func _tick_trap_warning() -> void:

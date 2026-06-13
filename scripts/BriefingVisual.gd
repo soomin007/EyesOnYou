@@ -20,6 +20,7 @@ func _process(delta: float) -> void:
 	t += delta
 	if appear < 1.0:
 		appear = minf(1.0, appear + delta / 0.9)
+	degraded = GameState.veil_degraded   # 진행 중 붕괴(begin_degradation) 시작도 실시간 반영
 	queue_redraw()
 
 func _draw() -> void:
@@ -27,6 +28,11 @@ func _draw() -> void:
 	var r: float = minf(size.x * 0.5, size.y * 0.5) * 0.86
 	if r <= 1.0:
 		return
+	# 시야 붕괴 — 통신 두절/EMP 재머 느낌. 주기적 신호 끊김(드롭아웃) + 위치 지터.
+	if degraded:
+		if fmod(t * 9.0, 1.0) < 0.16:
+			return  # 짧게 화면에서 사라졌다 돌아옴(신호 끊김)
+		c += Vector2(randf_range(-2.5, 2.5), randf_range(-2.5, 2.5))
 	# easeOutCubic — 등장 알파/스케일.
 	var a: float = 1.0 - pow(1.0 - appear, 3.0)
 	# 시야 붕괴 후엔 눈이 흐려지고 불안정하게 깜빡인다(VEIL이 잘 못 봄을 브리핑에서도 체감).
