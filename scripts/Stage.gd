@@ -826,10 +826,17 @@ func _ensure_subtitle_stack() -> void:
 	add_child(_subtitle_stack_layer)
 	# 화면 하단 중앙 — 플레이어가 캐릭터(화면 중앙~하단)를 보는 시선 가까이로. 상단에 두면
 	# 조작 중 인지가 안 된다는 사용자 피드백. 하단 쿨다운 게이지(좌하단) 위쪽 band에 배치.
+	# 단 ARENA(camera FIXED — datacenter/보스)는 맵 전체가 줌으로 보여 플레이어가 화면 하단 중앙에
+	# 와 자막과 겹친다(사용자 보고) → 자막을 상단으로 올려 시야를 안 가린다.
 	var holder := Control.new()
-	holder.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	holder.offset_top = -320.0
-	holder.offset_bottom = -112.0
+	if _camera_mode == "FIXED":
+		holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		holder.offset_top = 100.0
+		holder.offset_bottom = 300.0
+	else:
+		holder.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		holder.offset_top = -320.0
+		holder.offset_bottom = -112.0
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_subtitle_stack_layer.add_child(holder)
 	_subtitle_stack_box = VBoxContainer.new()
@@ -2836,6 +2843,8 @@ func _build_lever_puzzles() -> void:
 			_build_back_alley_secret()
 		"route_rooftops":
 			_build_rooftops_secret()
+		"route_cooling":
+			_build_cooling_secret()
 		"route_datacenter":
 			_build_datacenter_secret()
 
@@ -2973,7 +2982,9 @@ func _build_datacenter_secret() -> void:
 # 비밀 해치: 2300, 280 (6번 발판 위 천장 alcove)
 # 풀면 해치 fade + drop platform 강하 + XP orb 5개 spawn
 func _build_back_alley_secret() -> void:
-	var lever := _spawn_lever(Vector2(1300.0, 588.0), "back_alley_vent")
+	# 첫 레버 튜토리얼 — 레버와 해치를 한 화면에 둬 "당김→바로 앞 칸 열림" 인과를 즉시 이해하게 함
+	# (사용자 피드백 2026-06-14: 이전엔 1000px 떨어져 무엇이 열렸는지 안 보였음). 1300→2120.
+	var lever := _spawn_lever(Vector2(2120.0, 588.0), "back_alley_vent")
 	var hatch := _spawn_closed_hatch(Vector2(2300.0, 290.0), Vector2(80.0, 50.0), Color(0.55, 0.85, 0.95))
 	var drop_platform := _spawn_drop_platform(
 		Vector2(2150.0, 200.0), Vector2(2150.0, 380.0), 100.0
@@ -2990,7 +3001,22 @@ func _build_back_alley_secret() -> void:
 			_spawn_orb(p, true)
 		# 첫 레버 튜토리얼: 레버↔해치가 1000px 떨어져 인과가 한 화면에 안 보임 → VEIL이
 		# 무엇을/어디를 열었는지 방향까지 짚어준다(사용자: "뭘 여는 건지 알려주는 기능이 모자람").
-		_show_veil_subtitle("잠긴 칸을 열었어요.\n오른쪽 앞, 천장 쪽에 길이 생겼어요.", 3.4)
+		_show_veil_subtitle("잠긴 칸이 열렸어요. 바로 앞, 위로 올라가 봐요.", 3.2)
+	)
+
+# ── cooling 비밀칸 (후반 맵 레버 강화 — back_alley 인과를 한 번 더) ──────────────
+# 레버 바로 위에 해치를 둬 인과가 한 화면에 또렷. 증기 분출구(x1380) 우측 안전 지대.
+func _build_cooling_secret() -> void:
+	var lever := _spawn_lever(Vector2(1450.0, 548.0), "cooling_vent")
+	var hatch := _spawn_closed_hatch(Vector2(1450.0, 300.0), Vector2(80.0, 50.0), Color(0.55, 0.85, 0.95))
+	var drop_platform := _spawn_drop_platform(Vector2(1450.0, 220.0), Vector2(1450.0, 400.0), 100.0)
+	lever.pulled.connect(func(_id: String) -> void:
+		_open_hatch(hatch)
+		_descend_drop_platform(drop_platform)
+		var spots: Array = [Vector2(1420.0, 270.0), Vector2(1450.0, 258.0), Vector2(1480.0, 270.0)]
+		for p in spots:
+			_spawn_orb(p, true)
+		_show_veil_subtitle("여기도 잠긴 칸이 있었네요. 바로 위로 올라가 봐요.", 3.0)
 	)
 
 # ── rooftops 비밀칸 ───────────────────────────────────────────
