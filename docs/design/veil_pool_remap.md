@@ -1,7 +1,9 @@
 # VEIL 대사 풀 재배치 초안 — 신뢰 단계 × 진행도 grid (검토용)
 
-> **상태:** 초안. **코드 미반영.** `veil_trust_arc.md`(확정 모델)의 §4를 실제 대사로 펼친 것.
-> 검토 포인트: **"어느 신뢰 단계에서, 어느 진행 시점에 어떤 대사가 뜨나"** 를 한눈에 확인 → OK면 이대로 코드.
+> **상태:** ✅ **구현됨**(2026-06-13). 이 grid가 `VeilDialogue.BRIEFINGS_BY_BAND`/`STORY_BRIEFINGS_BY_BAND`/
+> `DEATH_BY_BAND`로 들어갔다. **구현 시 편차:** 무사망→COLD 일관성을 위해 stage 4·5·6에 **COLD 시야붕괴
+> 셀을 신규 작성**(초안의 "THAW 폴백"보다 강화) + 스토리 s3 COLD 셀. 레벨업은 register 전면 분기 대신
+> 실력 lead-in만(§7-5 "명료함 우선"). 나머지는 grid 그대로.
 
 ---
 

@@ -105,8 +105,8 @@
 ### 선택 추적 (GameState에 기록)
 - `current_route_id` — 현재 진행 중인 루트
 - `current_route_tags` / `current_route_risk` / `current_route_reward` — Stage가 빌드 시 참조
-- VEIL 조언을 따랐는지 여부 (`followed_veil_last_choice`) → `trust_score` 누적
-- 전투/근접전 태그 선택 시 `aggression_score` 누적
+- VEIL 조언을 따랐는지 (`followed_veil_last_choice`) → 어투 `trust_score`(클리어 시 +2) + 엔딩 수용률(`rec_count`/`followed_count`) 집계
+- 전투/근접전·도전 태그 선택 시 `aggression_score` 누적 (엔딩 도덕축)
 
 ---
 
@@ -313,20 +313,26 @@ else:
 
 ## 8. 결말 시스템 (핵심)
 
-### 두 개의 축 추적
+### 축 추적 (2026-06-13 재설계 — veil_trust_arc.md)
 ```gdscript
 # GameState.gd
-var trust_score: int = 0      # VEIL 조언 따를 때마다 +1, 최대 스테이지 수
-var aggression_score: int = 0 # 전투 선택(우회 대신) 때마다 +1
+var trust_score: int = 0      # 어투(register)용. 0에서 climbing. 클리어 시 추천 따름 +2 / 함께 고비 +2 / 독립 성공 +0
+var aggression_score: int = 0 # 전투·도전 태그 맵 선택 때마다 +1 (엔딩 도덕축)
+var shared_hardship: int = 0  # 함께 고비 넘긴 횟수 — WARM 취약함 게이트
+var rec_count: int = 0        # 추천 제시 수 (엔딩 수용률 분모)
+var followed_count: int = 0   # 그중 따른 수 (엔딩 수용률 분자)
 ```
 
-### 결말 분기
+### 결말 분기 (신뢰축 = 추천 수용률 ≥ 50%, aggression 임계 4)
 ```
-trust_score >= 3 이상 AND aggression_score >= 3 → 결말 A
-trust_score >= 3 이상 AND aggression_score < 3  → 결말 C
-trust_score < 3  AND aggression_score >= 3      → 결말 B
-trust_score < 3  AND aggression_score < 3       → 결말 D
+# EndingResolver.resolve(followed_count, rec_count, aggression_score)
+수용률 ≥ 50%(followed*2 ≥ rec) AND aggression ≥ 4 → 결말 A 완벽한 도구
+수용률 ≥ 50%                   AND aggression < 4 → 결말 C 공생
+수용률 < 50%                   AND aggression ≥ 4 → 결말 B 혼자였던 사람
+수용률 < 50%                   AND aggression < 4 → 결말 D 유령 임무
 ```
+※ 어투 `trust_score`는 획득 인플레가 있어 엔딩은 *비율*로 분리. trust_score는 register 밴드
+(`veil_register_band` cold/thaw/warm)와 HUD 게이지·텍스트색에 쓰인다.
 
 ### 결말 A — "완벽한 도구"
 
@@ -512,7 +518,7 @@ var playground_active: bool = false
 ```
 
 ### 핵심 헬퍼
-- `record_route_choice(route, recommended_id)` — trust/aggression 누적, current_route_* 갱신
+- `record_route_choice(route, recommended_id)` — 수용률(rec/followed)·aggression 집계, current_route_* 갱신 (어투 trust는 `on_stage_clear`에서 적립)
 - `is_high_risk()` / `is_high_reward()` — risk/reward ≥ 3
 - `enemy_count_multiplier()` → 0.7 / 1.0 / 1.4
 - `mark_enemy_seen(id) -> bool` — 도감 첫 조우 판정 + save
@@ -556,7 +562,7 @@ P0 MVP (이동/사망/루트/레벨업/두 점수 축), P1 VEIL 4상황 발화 +
 완료. 캐논과 인게임 텍스트 인벤토리는 `STORY.md`로 통합.
 - 6개 맵 description → RouteData 반영
 - 5스테이지 narrative beat → 브리핑 풀 보강
-- VEIL 캐릭터 시트 → ACT별 톤 변화 적용
+- VEIL 캐릭터 시트 → 신뢰밴드(cold/thaw/warm)별 어투 변화 적용 (`veil_register_band`, veil_pool_remap.md)
 - ??? 맵 시퀀스 → 단말기 시스템 구현
 
 ### Phase 9 — 🚧 마무리 (P3)

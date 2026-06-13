@@ -36,6 +36,10 @@
   + 미션 목표물 아이콘(`MissionObjective.gd`). 설정에 해상도/창모드. 텍스트 검정 아웃라인으로 선명도.
 - **VEIL 적응형 추천**: 최근 스테이지 피격/죽음으로 실력 판정(`GameState.competence_tier`) → 맵을
   안전/가성비/고보상으로 추천, 사유를 VEIL 대사로(`RouteData`). 시야 붕괴(degradation)는 맵 간 지속.
+- **VEIL 어투 아크 (신뢰+사망 구동, 2026-06-13)**: 말투가 진행도가 아니라 **신뢰**로 변한다 —
+  COLD(격식)→THAW→WARM(`veil_register_band`). 신뢰는 0에서 climbing(추천 따라 클리어 +2/함께 고비 +2),
+  WARM은 취약함 게이트(같이 고비 넘긴 적 필요 → 무사망 고수는 COLD 유지). 엔딩은 추천 수용률로 분리.
+  설계: `docs/design/veil_trust_arc.md` / 대사 grid: `veil_pool_remap.md`.
 
 ## 단일 진실의 원칙
 
