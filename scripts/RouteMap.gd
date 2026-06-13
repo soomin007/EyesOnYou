@@ -287,20 +287,38 @@ func _update_veil_comment() -> void:
 		return
 	var route: Dictionary = pool[hovered_idx]
 	var msg: String = ""
-	# description은 카드에서 제거 — veil_comment와 같은 위협을 중복 서술해 군더더기였음
-	# (사용자 피드백 2026-06-06: "설명 부분과 밑 VEIL 코멘트가 너무 겹친다").
-	# VEIL이 직접 안내하는 한 목소리만 남긴다.
-	# 추천 맵: ★ 옆엔 "베일 추천"만, 추천 사유는 라벨이 아니라 VEIL이 직접 말로(멘트 자리에).
-	# 비추천 맵: 그 맵 고유 veil_comment.
+	# 맵 소개(존재 이유) — 이 장소가 *무엇인가*. veil_comment(전술 "어떻게")와 다른 축이라 중복 아님.
+	var lore: String = str(route.get("description", ""))
+	if lore != "":
+		msg += lore + "\n\n"
+	# 추천 맵: ★ + 추천 사유(VEIL이 직접 말로). 비추천 맵: 그 맵 고유 veil_comment.
 	var is_recommended: bool = (route.get("id", "") == recommended_id and recommended_reason != "")
 	if is_recommended:
-		msg += "★ 베일 추천\n"
-		msg += "VEIL  —  " + recommended_reason
+		msg += "★ 베일 추천\nVEIL  —  " + recommended_reason
 	else:
 		msg += "VEIL  —  " + str(route.get("veil_comment", ""))
+	# 권장 스킬(상성) — 이 맵 적에 잘 듣는 스킬을 가르친다(보유 여부 무관).
+	var rs: String = _recommended_skill_line(str(route.get("id", "")))
+	if rs != "":
+		msg += "\n\n" + rs
 	veil_text.text = msg
 	# 고위험/고보상 경고는 별도 우측 패널로 — 본 멘트와 시각 분리.
 	_update_risk_reward_panel(route)
+
+const _SKILL_DISPLAY: Dictionary = {"explosive": "폭발물", "barrier": "방어막", "glide": "글라이드", "fire_boost": "사격 강화", "multishot": "다중사격"}
+const _ENEMY_DISPLAY: Dictionary = {"shield": "방패병", "sniper": "저격수", "drone": "드론", "bomber": "폭격기", "patrol": "정찰병"}
+
+# 이 맵 적 구성에 가장 잘 듣는 상성 스킬 한 줄(SkillTreeData.MATCHUP 우선순위순).
+func _recommended_skill_line(route_id: String) -> String:
+	var kinds: Array = _route_enemy_kinds(route_id)
+	if kinds.is_empty():
+		return ""
+	for m in SkillTreeData.MATCHUP:
+		var en: String = str(m.get("enemy", ""))
+		if en in kinds:
+			var sid: String = str(m.get("skill", ""))
+			return "권장 스킬 — %s (%s에 강해요)" % [str(_SKILL_DISPLAY.get(sid, sid)), str(_ENEMY_DISPLAY.get(en, en))]
+	return ""
 
 func _update_risk_reward_panel(route: Dictionary) -> void:
 	if risk_reward_panel == null or risk_reward_label == null:

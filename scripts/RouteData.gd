@@ -12,7 +12,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_back_alley",
 		"name": "외곽 진입로",
-		"description": "SILO-7 외벽을 따라 난 좁은 통로. 가로등이 끊기는 구간이 있다.",
+		"description": "SILO-7 외벽을 따라 난 정비 통로. 경비망 사각이라 침투 시작점으로 쓴다.",
 		"risk": 1,
 		"reward": 1,
 		"hidden": false,
@@ -26,7 +26,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_rooftops",
 		"name": "외벽 옥상",
-		"description": "시설 외벽을 타고 오르는 루트. 탁 트여 있고, 그만큼 노출된다.",
+		"description": "외벽 옥상의 통신·환기 설비 구역. 트인 만큼 저격 감시선에 노출된다.",
 		"risk": 2,
 		"reward": 2,
 		"hidden": false,
@@ -40,7 +40,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_sewers",
 		"name": "지하 인입로",
-		"description": "시설 아래로 연결된 옛날 배수 통로. 보안 카메라가 없는 대신 함정이 있다.",
+		"description": "시설이 들어서기 전부터 있던 옛 배수로. 보안망 밖이라 함정으로 막아뒀다.",
 		"risk": 2,
 		"reward": 3,
 		"hidden": false,
@@ -55,7 +55,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_subway",
 		"name": "폐쇄 지하철",
-		"description": "SILO-7이 지어지기 전 폐쇄된 지하철 구간. 좁고 어둡고 길다.",
+		"description": "SILO-7이 덮어쓴 폐역. 도시의 흔적이 통로에 그대로 남아 있다.",
 		"risk": 2,
 		"reward": 2,
 		"hidden": false,
@@ -85,7 +85,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_watchtower",
 		"name": "감시탑",
-		"description": "내부 중층의 관제 구역. 멀리서 노려보는 저격수가 많다.",
+		"description": "내부를 굽어보는 관제 구역. 저격 감시선이 통로를 가로지른다.",
 		"risk": 3,
 		"reward": 3,
 		"hidden": false,
@@ -100,7 +100,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_ward",
 		"name": "격리 병동",
-		"description": "내부 중층, 오래 봉인된 구역. 좁은 복도에 흐릿한 비상등.",
+		"description": "오래 봉인된 격리 구역. 무엇을 가뒀는지 기록이 지워졌다.",
 		"risk": 2,
 		"reward": 3,
 		"hidden": false,
@@ -116,7 +116,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_datacenter",
 		"name": "데이터 센터",
-		"description": "핵심부 인접. 서버 랙과 푸른 LED, 그리고 드론과 저격이 동시에.",
+		"description": "핵심부 직전 서버 집적 구역. 회수할 데이터가 실제로 흐르는 곳.",
 		"risk": 3,
 		"reward": 3,
 		"hidden": false,
@@ -130,12 +130,15 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_escape",
 		"name": "비상 탈출로",
-		"description": "핵심부를 우회하는 비좁은 통로. 위험은 낮지만 보상도 적다.",
+		"description": "핵심부를 우회하는 비상 갱도. 마지막에 빠져나가는 길.",
 		"risk": 1,
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 5, "max_stage": 6,
+		# "마지막에 빠져나가는 길" — 일반 모드에선 최종 스테이지(6)에만 등장(중간에 미리 "탈출"하는
+		# 게 서사상 어색해 사용자 피드백으로 제한). 선택 시 클리어=엔딩(보스 없이 빠져나간 결말).
+		"min_stage": 6, "max_stage": 6,
+		"available_stages": [6],
 		"tags": ["우회", "은폐"],
 		"veil_comment": "비상 탈출로예요. 빨리 빠지면 그만큼 안전해요.",
 		"entry_comment": "조용한 길이에요. 멈추지 말고 빠지면 돼요.",
@@ -144,22 +147,22 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_lab",
 		"name": "핵심부",
-		"description": "서버실이 있는 시설 중심부. 드론이 상시 순찰한다.",
+		"description": "서버실이 있는 시설 심장부. 목표 데이터와 그것을 지키는 것이 모인 곳.",
 		"risk": 3,
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
 		"min_stage": 5, "max_stage": 6,
 		"tags": ["전투", "드론", "밝은_환경"],
-		"veil_comment": "핵심부예요. 정면 돌파, 드론 상시 순찰. 보상은 큽니다.",
+		"veil_comment": "핵심부예요. 정면 돌파에 드론이 상시 순찰해요. 그만큼 크게 벌어요.",
 		"entry_comment": "핵심부에 들어왔어요. 거리 잘 잡아요.",
 		"stage_color": Color(0.22, 0.18, 0.18),
 	},
 	{
 		"id": "route_blackout",
 		"name": "블랙아웃 런",
-		"description": "교신이 차단된 짧은 구역. 어둡고, 한 대 맞으면 끝.",
-		"risk": 2,
+		"description": "교신·전력이 차단된 봉쇄 구역. 안에선 VEIL도 닿지 않는다.",
+		"risk": 3,
 		"reward": 3,
 		"hidden": false,
 		"unique": true,
@@ -174,7 +177,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_hidden",
 		"name": "???",
-		"description": "도면에 없는 구역. 정보 없음.",
+		"description": "도면에 없는 한 층. VEIL조차 모른다고 한다.",
 		"risk": 2,
 		"reward": 3,
 		"hidden": true,
