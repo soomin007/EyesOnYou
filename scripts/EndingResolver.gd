@@ -6,10 +6,13 @@ const ENDING_B: String = "B"  # 혼자였던 사람
 const ENDING_C: String = "C"  # 공생
 const ENDING_D: String = "D"  # 유령 임무
 
-static func resolve(trust_score: int, aggression_score: int) -> String:
-	var threshold: int = GameState.SCORE_THRESHOLD
-	var trusts: bool = trust_score >= threshold
-	var aggressive: bool = aggression_score >= threshold
+# 엔딩 도덕 축(2026-06-13 재설계, veil_trust_arc.md §3.3):
+#  - 신뢰 = VEIL 추천을 절반 이상 따랐는가(수용률). 어투 trust(climbing)와 분리해
+#    획득량 인플레에 강건. rec_count=추천 제시 수, followed_count=그중 따른 수.
+#  - 공격성 = 전투/도전 맵 선택 누적(기존 유지).
+static func resolve(followed_count: int, rec_count: int, aggression_score: int) -> String:
+	var trusts: bool = rec_count > 0 and followed_count * 2 >= rec_count
+	var aggressive: bool = aggression_score >= GameState.SCORE_THRESHOLD
 	if trusts and aggressive:
 		return ENDING_A
 	if trusts and not aggressive:

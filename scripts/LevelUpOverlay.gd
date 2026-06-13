@@ -54,15 +54,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	# VEIL 신뢰도 게이지 — 카드 위에 5단계 점으로 표시.
 	# 신뢰도 따라 색이 바뀌어 플레이어와 VEIL의 관계가 매 선택에 보이게.
 	var gauge := Label.new()
-	var net: int = GameState.trust_score - GameState.aggression_score
-	var dots: String = ""
-	for i in 5:
-		var th: int = -4 + i * 2
-		if net >= th:
-			dots += "●"
-		else:
-			dots += "○"
-	gauge.text = "VEIL 신뢰   " + dots
+	gauge.text = "VEIL 신뢰   " + GameState.veil_trust_gauge_dots()
 	gauge.add_theme_font_size_override("font_size", 13)
 	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
 	gauge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

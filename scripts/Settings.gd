@@ -292,19 +292,26 @@ func _build_debug_tab() -> Control:
 # 기존 진행도는 백업 안 함 — 디버그 용도라 진행 데이터 손실은 무시 (사용자가 알고 누름).
 func _on_ending_preview_pressed(ending_id: String) -> void:
 	var t: int = GameState.SCORE_THRESHOLD
+	# 엔딩 미리보기 — 새 엔딩축(추천 수용률 + 공격성)을 강제. rec_count=4 분모 고정,
+	# followed_count로 신뢰 on/off. trust_score는 stats 표시용으로만 같이 세팅.
+	GameState.rec_count = 4
 	match ending_id:
 		"A":
-			GameState.trust_score = t
+			GameState.followed_count = 4
 			GameState.aggression_score = t
+			GameState.trust_score = 12
 		"B":
-			GameState.trust_score = 0
+			GameState.followed_count = 0
 			GameState.aggression_score = t
-		"C":
-			GameState.trust_score = t
-			GameState.aggression_score = 0
-		"D":
 			GameState.trust_score = 0
+		"C":
+			GameState.followed_count = 4
 			GameState.aggression_score = 0
+			GameState.trust_score = 12
+		"D":
+			GameState.followed_count = 0
+			GameState.aggression_score = 0
+			GameState.trust_score = 0
 	# explored_lore=true 풀 멘트 보기. (false 버전 보고 싶으면 둘 다 false 후 진입)
 	GameState.visited_arcturus = true
 	get_tree().paused = false

@@ -32,7 +32,7 @@ var stall_watchdog_t: float = 0.0
 func _ready() -> void:
 	# 안전망: 이전 scene에서 paused가 carry되어 Ending이 freeze되는 패턴 차단.
 	get_tree().paused = false
-	ending_id = EndingResolver.resolve(GameState.trust_score, GameState.aggression_score)
+	ending_id = EndingResolver.resolve(GameState.followed_count, GameState.rec_count, GameState.aggression_score)
 	title_label.text = "MISSION COMPLETE"
 	sub_title_label.text = "결말  %s — %s" % [ending_id, EndingResolver.get_ending_title(ending_id)]
 	stats_label.text = "신뢰  %d   |   공격성  %d   |   사망  %d   |   스코어  %d" % [

@@ -88,15 +88,7 @@ func _setup_trust_gauge() -> void:
 		return
 	var gauge := Label.new()
 	gauge.name = "TrustGauge"
-	var net: int = GameState.trust_score - GameState.aggression_score
-	var dots: String = ""
-	for i in 5:
-		var th: int = -4 + i * 2
-		if net >= th:
-			dots += "●"
-		else:
-			dots += "○"
-	gauge.text = "VEIL 신뢰   " + dots
+	gauge.text = "VEIL 신뢰   " + GameState.veil_trust_gauge_dots()
 	gauge.add_theme_font_size_override("font_size", 14)
 	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
 	header.add_child(gauge)
