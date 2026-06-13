@@ -186,9 +186,9 @@ static func get_levelup_advice(player_skills: Dictionary, route_tags: Array, rou
 static func _matchup_line(skill_id: String) -> String:
 	match skill_id:
 		"explosive": return "방패병이 정면을 막아요. 폭발물이면 방패째 뚫어요."
-		"glide":     return "저격수가 노려요. 글라이드로 떠서 사선을 흔들어요."
-		"multishot": return "드론이 위에서 와요. 연사로 쓸어내요."
-		"fire_boost": return "폭격기가 붙기 전에. 화력을 올려두는 게 좋아요."
+		"barrier":   return "저격수가 노려요. 방어막이 있으면 한 발 막고 지나가요."
+		"glide":     return "드론이 위에서 와요. 글라이드로 떠서 폭탄을 피하고 처리해요."
+		"fire_boost": return "폭격기가 붙기 전에 화력을 올려두면 좋아요."
 	return "이 구역에 맞는 한 수가 있어요."
 
 static func get_death_briefing(death_count: int, followed_advice: bool) -> String:

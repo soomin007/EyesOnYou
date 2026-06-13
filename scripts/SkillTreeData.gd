@@ -50,9 +50,9 @@ const LINES: Array = [
 	{
 		"id": "glide", "family": FAMILY_MOBILITY,
 		"tiers": [
-			{"name": "공중 활강",   "desc": "낙하 시 자동 활강(천천히) + 공중 점프 1회 추가", "active": false},
-			{"name": "관통 사격",   "desc": "활강 중 사격이 적을 관통 (데미지 +1)",      "active": false},
-			{"name": "유도 사격",   "desc": "활강 중 사격이 적을 추적",                 "active": false},
+			{"name": "공중 활강",   "desc": "낙하 시 자동으로 천천히 떨어진다", "active": false},
+			{"name": "삼단 점프",   "desc": "공중 점프 1회 추가 (최대 3단)",     "active": false},
+			{"name": "관통 사격",   "desc": "활강 중 사격이 관통·추적 (데미지 +1)", "active": false},
 		],
 	},
 	{
@@ -102,8 +102,8 @@ const BASELINE: Dictionary = {
 # B(레벨업 추천 ★)와 C(출현 가중)가 공유해 "이 적엔 이 스킬"을 가르친다.
 const MATCHUP: Array = [
 	{"enemy": "shield", "skill": "explosive"},   # 방향 무시 AoE로 방패 관통
-	{"enemy": "sniper", "skill": "glide"},       # 공중 체류로 저격 제압
-	{"enemy": "drone",  "skill": "multishot"},   # 부채꼴 다중으로 공중 처리
+	{"enemy": "sniper", "skill": "barrier"},     # 한 발 막고 사선 통과 (둥지 저격수=회피 대상)
+	{"enemy": "drone",  "skill": "glide"},       # 떠서 폭탄 피하고 활강 관통샷으로 처리
 	{"enemy": "bomber", "skill": "fire_boost"},  # 붙기 전에 빠른 처치
 ]
 

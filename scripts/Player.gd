@@ -276,8 +276,9 @@ func _try_jump() -> void:
 	var max_jumps: int = 1
 	if GameState.has_skill("double_jump"):
 		max_jumps += 1
-	# 글라이드 T1 — 공중 점프 1회 추가(높은 곳·숨은 보상 도달). 슬로우낙하와 함께 T1을 즉시 유용하게.
-	if GameState.get_skill_tier("glide") >= 1:
+	# 글라이드 T2 — 공중 점프 1회 추가(최대 3단; 높은 곳·숨은 보상 도달). 재설계(2026-06-13):
+	# T1은 활강만, 삼단점프는 T2로 분리(T1에 활강+삼단점프 둘 다라 글라이드 가치가 과했음).
+	if GameState.get_skill_tier("glide") >= 2:
 		max_jumps += 1
 	if is_on_floor():
 		velocity.y = JUMP_VELOCITY
@@ -334,15 +335,15 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	b.pierce = fb_tier >= 3
 	# multishot T3 — 약한 추적
 	b.tracking = GameState.get_skill_tier("multishot") >= 3
-	# glide — 활강 중(공중 낙하) 공중 제압. 패시브화에 맞춰 점프 홀드 조건 제거. T2=관통+데미지, T3=유도.
+	# glide T3 — 활강 중(공중 낙하) 사격 관통 + 추적 + 데미지. 재설계(2026-06-13): 관통샷을 T3로 통합
+	# (T2는 삼단점프). 활강 중 + 글라이드 전용이라 보스 밸런스 영향 적음.
 	var gl_tier: int = GameState.get_skill_tier("glide")
-	if gl_tier >= 2 and not is_on_floor() and velocity.y > 0.0:
+	if gl_tier >= 3 and not is_on_floor() and velocity.y > 0.0:
 		b.pierce = true
 		b.damage += 1
-		if gl_tier >= 3:
-			b.tracking = true
-			b.tracking_blend = 0.12      # 약한 추적(0.03)보다 강하게 — "완전 유도" 체감
-			b.tracking_max_angle = 0.42  # ~24도. 공중 활강 중 + 글라이드 전용이라 보스 밸런스 영향 적음
+		b.tracking = true
+		b.tracking_blend = 0.12      # 약한 추적(0.03)보다 강하게 — "완전 유도" 체감
+		b.tracking_max_angle = 0.42  # ~24도
 	# 부채꼴 — 가운데를 0으로 양 끝으로 10°씩 벌림.
 	# T1(3발): -10°/0/+10°. T2(5발): -20/-10/0/+10/+20.
 	if total > 1:

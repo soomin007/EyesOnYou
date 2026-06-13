@@ -3095,7 +3095,10 @@ func _begin_clear_sequence() -> void:
 		await get_tree().process_frame
 	GameState.restrict_combat_input = false
 	var leveled: bool = GameState.on_stage_clear()
-	if leveled:
+	# 보스(route_lab) 또는 최종 스테이지 클리어 후엔 위협 없는 마무리라 스킬 선택이 무의미 —
+	# 카드를 건너뛰고 보스 처치 대사/엔딩(서사 비트)이 보상을 대신한다(사용자 피드백 "1+3").
+	var skip_card: bool = GameState.current_route_id == "route_lab" or GameState.is_final_stage_done()
+	if leveled and not skip_card:
 		pending_levelup = true
 		get_tree().paused = true
 		var advice: Dictionary = VeilDialogue.get_levelup_advice(GameState.skills, GameState.current_route_tags, GameState.current_route_id)
