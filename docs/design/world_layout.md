@@ -617,22 +617,24 @@ camera:       가로 follow
 | 적 타입 | 약점 스킬 | 이유 |
 |--------|----------|------|
 | shield (방패병) | explosive (폭발물) | 방향 무시 AoE로 정면 방패 관통 |
-| sniper (저격수) | glide (공중 활강) | 공중 체류로 저격선 흔들어 제압 |
-| drone (드론) | multishot (다중 사격) | 부채꼴 다발로 공중 표적 처리 |
+| sniper (저격수) | barrier (방어막) | 한 발 막고 사선 통과 (둥지=회피 대상) |
+| drone (드론) | glide (공중 활강) | 떠서 폭탄 피하고 활강 관통샷으로 처리 |
 | bomber (폭격병) | fire_boost (사격 강화) | 붙기 전에 빠른 화력으로 처치 |
+
+> 상성 swap(2026-06-13): 저격수 카운터 glide→**barrier**, 드론 카운터 multishot→**glide**. (글라이드 OP 완화 + "떠서 드론 잡기"가 더 직관적.) multishot은 일반 화력 픽.
 
 맵별 주력 적 → 권장 스킬 (§2 spawn 기준):
 
 | 맵 | 주력 적 | 권장 스킬 |
 |----|--------|----------|
 | back_alley | patrol | (기본기 — 특화 없음) |
-| rooftops | patrol, **sniper** | glide |
+| rooftops | patrol, **sniper** | barrier |
 | sewers | patrol, **bomber** | fire_boost |
-| subway | patrol, **sniper, shield** | glide / explosive |
-| cooling | patrol, sniper, **drone** | multishot (+glide) |
-| watchtower | patrol, **sniper** | glide |
+| subway | patrol, **sniper, shield** | barrier / explosive |
+| cooling | patrol, sniper, **drone** | glide (+barrier) |
+| watchtower | patrol, **sniper** | barrier |
 | ward | patrol, **bomber, shield** | fire_boost / explosive |
-| datacenter (ARENA) | 전 종류 웨이브 | 상황별 — sniper엔 glide, drone엔 multishot, shield엔 explosive |
+| datacenter (ARENA) | 전 종류 웨이브 | 상황별 — sniper엔 barrier, drone엔 glide, shield엔 explosive |
 | escape | patrol | (숨 고르기 — 특화 없음) |
 | lab (보스) | SENTINEL 단독 | 보스 전용 (상성 표 비적용) |
 | blackout (도전) | patrol, bomber, **drone** | (1 hit fail — 회피 위주) |
