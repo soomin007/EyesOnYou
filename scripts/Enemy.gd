@@ -31,6 +31,10 @@ const PATROL_RECOVERY: float = 1.0
 const PATROL_CHARGE_RANGE: float = 240.0
 const PATROL_FIRE_INTERVAL: float = 1.5
 const PATROL_FIRE_AIM_TIME: float = 0.7  # 2026-06-06 사용자 피드백 — 1.0은 너무 느슨. 0.7로 살짝 조여 인식/반응을 빠르게 (Sniper와 동일). 여전히 텔레그래프 인지 + 회피 윈도우는 남김.
+# 사격은 비슷한 높이의 표적에만 — 높이 차가 이보다 크면 사격 안 함(2026-06-14). 감시탑 입구처럼
+# 플레이어가 아래서 좁은 발판으로 등반 중일 때 위 정찰병이 *내려쏘는* 불합리(점프 최고점에서만 겨우
+# 반격 가능한데 한두 대 맞기 쉬움)를 해소. 근접 돌진은 그대로라 같은 높이로 붙으면 여전히 위협.
+const PATROL_FIRE_MAX_DY: float = 48.0
 const PATROL_BULLET_DAMAGE: int = 1
 
 # Bomber — 천천히 접근 + 근접 시 자폭
@@ -315,12 +319,12 @@ func _tick_patrol(delta: float) -> void:
 			if not harmless and p != null and _player_in_charge_range(p):
 				dir = 1 if p.global_position.x > global_position.x else -1
 				velocity.x = 0.0
-				# 근접이면 돌진, 중거리면 사격. CHARGE_RANGE를 경계로 분기.
+				# 근접이면 돌진, 비슷한 높이의 중거리면 사격. 높이 차가 크면(등반 중) 사격하지 않고 순찰 유지.
 				var dist_p: float = global_position.distance_to(p.global_position)
 				if dist_p <= PATROL_CHARGE_RANGE:
 					patrol_state = PatrolState.TELEGRAPH
 					patrol_state_timer = _telegraph_time()
-				else:
+				elif absf(p.global_position.y - global_position.y) <= PATROL_FIRE_MAX_DY:
 					patrol_state = PatrolState.FIRING
 					patrol_fire_armed = true
 					patrol_state_timer = PATROL_FIRE_AIM_TIME
