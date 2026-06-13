@@ -147,6 +147,14 @@ static func _resolve_band_cell(pools: Dictionary, band: String, stage_index: int
 				return cell
 	return []
 
+# 레벨업 추천 lead-in — 실력별 안내 강도(§5). struggling=강조, skilled=물러섬.
+# 추천 정보 자체는 명료함 우선이라 그대로(§7-5) 두고, 앞에 톤만 얹는다. steady=없음.
+static func levelup_leadin() -> String:
+	match GameState.competence_tier():
+		"struggling": return "이건 꼭. "
+		"skilled": return "필요하면, "
+	return ""
+
 static func get_intro_system_text() -> String:
 	return INTRO_SYSTEM
 

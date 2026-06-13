@@ -135,12 +135,19 @@ func _scan_for_call() -> void:
 func _call_threat(spos: Vector2, center: Vector2) -> void:
 	_last_call_t = _t
 	var dir_txt: String = _direction_word(spos - center)
+	# 어투를 신뢰 밴드로 맞춘다(단일 문자열이라 코드 분기). degraded는 항상 막판=WARM.
+	var band: String = GameState.veil_register_band()
 	var line: String
 	if not _intro_called:
 		_intro_called = true
-		line = "위험한 건 제가 먼저 봐요. 화면 끝에 짚어둘게요."
+		if band == "warm":
+			line = "위험한 건 제가 먼저 볼게요. 화면 끝에 띄워둘게요. 요원은 앞만 봐요."
+		else:
+			line = "위험한 건 제가 먼저 확인하겠습니다. 화면 끝에 띄워둘 테니, 요원은 전방만 보십시오."
 	elif _is_degraded():
 		line = dir_txt + " 어딘가... 저도 잘 안 보여요. 직접 살펴요."
+	elif band == "cold":
+		line = dir_txt + ", 표시하겠습니다."
 	else:
 		line = dir_txt + ", 표시해 둘게요."
 	veil_calls_threat.emit(line)

@@ -914,7 +914,7 @@ func _advance_to(next: int) -> void:
 			sign_dash.visible = true
 			_veil_say("전방 장애물 감지. 회피 기동으로 통과하십시오.", 5.0)
 		Step.DONE:
-			_veil_say("점검을 완료했습니다. ...SILO-7로 진입합니다. 행운을 빕니다, 요원.", 5.5)
+			_veil_say("점검을 완료했습니다. 요원이 저를 믿을수록, 제가 더 많이 도와드릴 수 있습니다. ...SILO-7로 진입합니다. 행운을 빕니다, 요원.", 7.0)
 			# 골 빛이 충분한 시각 유도 — 별도 안내문 없음.
 			if barrier != null:
 				barrier.queue_free()
