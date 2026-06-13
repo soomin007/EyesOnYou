@@ -2170,16 +2170,13 @@ func _refresh_hud() -> void:
 			break
 	if map_label != null:
 		map_label.text = (" ·  " + route_name) if route_name != "" else ""
-	# VEIL 신뢰도 — 5단계 점, 색은 신뢰도 단계에 따라.
+	# VEIL 신뢰 — 5점 게이지, 0에서 차오름(재설계 §3.1). 색은 차가움→따뜻함.
 	if trust_label != null:
-		var net: int = GameState.trust_score - GameState.aggression_score
+		var t: int = GameState.trust_score
+		var thresholds: Array[int] = [2, 4, 8, 12, 16]
 		var dots: String = ""
 		for i in 5:
-			var th: int = -4 + i * 2
-			if net >= th:
-				dots += "●"
-			else:
-				dots += "○"
+			dots += "●" if t >= thresholds[i] else "○"
 		trust_label.text = "VEIL " + dots
 		trust_label.add_theme_color_override("font_color", GameState.veil_tone_color())
 	if GameState.skills.size() > 0:

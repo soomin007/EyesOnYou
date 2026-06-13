@@ -31,8 +31,13 @@ var recent_stage_hits: Array = []    # 최근 스테이지별 피격 수 (최대
 var recent_stage_deaths: Array = []  # 최근 스테이지별 죽음 수 (최대 2)
 var last_stage_secs: float = 0.0     # 직전 스테이지 소요 시간 (참고용)
 
+# 어투 trust 재설계(2026-06-13, veil_trust_arc.md §3) — 따뜻함=관계, 0에서 climbing.
+# 추천 따라 클리어 +2 / 함께 고비 +2 / 독립 성공 +0. 클리어 시점(on_stage_clear)에 적립.
 var trust_score: int = 0
 var aggression_score: int = 0
+var shared_hardship: int = 0      # 함께 고비를 넘긴 횟수 — WARM 취약함 게이트(§3.5)
+var rec_count: int = 0            # VEIL이 추천을 제시한 스테이지 수 — 엔딩 수용률 분모(§3.3)
+var followed_count: int = 0       # 그중 추천을 따른 수 — 엔딩 수용률 분자
 var route_history: Array = []
 var last_veil_recommended_route: String = ""
 var followed_veil_last_choice: bool = false
@@ -46,6 +51,8 @@ var current_route_id: String = ""
 var current_route_tags: Array = []
 var current_route_risk: int = 1   # 1~3, 적 수 배율 + 행동 강화에 사용
 var current_route_reward: int = 1  # 1~3, 클리어 시 보너스 XP에 사용
+var current_route_challenge: bool = false  # 도전 맵 여부 — 고비 판정용
+var current_route_hidden: bool = false     # 히든 맵 여부 — 고비 판정용
 
 var player_max_hp: int = 3
 var player_hp: int = 3
@@ -147,6 +154,9 @@ func reset() -> void:
 	score = 0
 	trust_score = 0
 	aggression_score = 0
+	shared_hardship = 0
+	rec_count = 0
+	followed_count = 0
 	route_history = []
 	last_veil_recommended_route = ""
 	followed_veil_last_choice = false
@@ -155,6 +165,8 @@ func reset() -> void:
 	current_route_tags = []
 	current_route_risk = 1
 	current_route_reward = 1
+	current_route_challenge = false
+	current_route_hidden = false
 	player_max_hp = 3
 	player_hp = 3
 	player_xp = 0
@@ -172,6 +184,9 @@ func start_main_game() -> void:
 	score = 0
 	trust_score = 0
 	aggression_score = 0
+	shared_hardship = 0
+	rec_count = 0
+	followed_count = 0
 	route_history = []
 	last_veil_recommended_route = ""
 	followed_veil_last_choice = false
@@ -179,6 +194,8 @@ func start_main_game() -> void:
 	current_route_tags = []
 	current_route_risk = 1
 	current_route_reward = 1
+	current_route_challenge = false
+	current_route_hidden = false
 	player_max_hp = 3
 	player_hp = player_max_hp
 	player_xp = 0
@@ -203,19 +220,20 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	current_route_tags = route.get("tags", [])
 	current_route_risk = int(route.get("risk", 1))
 	current_route_reward = int(route.get("reward", 1))
+	current_route_challenge = bool(route.get("challenge", false))
+	current_route_hidden = bool(route.get("hidden", false))
 	followed_veil_last_choice = (rid == recommended_id and recommended_id != "")
-	# 신뢰도 — 추천 따랐으면 +1, 무시했으면 -1. 도전/숨김 루트는 추가 페널티(자율성↑).
-	if followed_veil_last_choice:
-		trust_score += 1
-	elif recommended_id != "":
-		trust_score -= 1
+	# 엔딩 도덕 축 = 추천 수용률(§3.3). 선택 시점에 1회만 집계 — 죽음 재시도엔 record가
+	# 재호출되지 않으므로 한 맵당 한 번. (어투 trust는 클리어 시점에 적립 — on_stage_clear.)
+	if recommended_id != "":
+		rec_count += 1
+		if followed_veil_last_choice:
+			followed_count += 1
+	# 공격성 — 전투 태그/도전 맵 선택. 엔딩 축이며 어투 trust와는 무관(§2 두 축 분리).
 	if "전투" in current_route_tags or "근접전" in current_route_tags:
 		aggression_score += 1
-	if route.get("challenge", false):
-		trust_score -= 1
+	if current_route_challenge:
 		aggression_score += 1
-	if route.get("hidden", false):
-		trust_score -= 1
 	# 실력 추적 baseline — 이 스테이지에 들어가기 직전 스냅샷. 죽음 재시도엔 재호출되지
 	# 않으므로 baseline..on_stage_clear 한 창에 재시도의 피격·죽음이 모두 누적된다.
 	_stage_hits_base = hits_taken
@@ -259,33 +277,44 @@ func competence_tier() -> String:
 		return "skilled"
 	return "steady"
 
-# 신뢰도 단계 — UI 톤/멘트 prefix 결정.
-# trust - aggression 기준. 양수면 VEIL을 따르는 플레이어, 음수면 거리감.
+# 신뢰 단계 — UI 톤색 + ??? 방 분기용. 어투 trust(0에서 climbing) 원값 기준(§3.4).
+# 재설계(2026-06-13): trust는 음수가 안 되므로 "거리감"은 낮은 값(broken/cool)으로 표현.
+# 대사 풀 밴드 선택은 veil_register_band() — 취약함 게이트 포함이라 별도.
 func veil_trust_tier() -> String:
-	var net: int = trust_score - aggression_score
-	if net >= 4:
+	var t: int = trust_score
+	if t >= 12:
 		return "high"
-	if net >= 1:
+	if t >= 8:
 		return "warm"
-	if net >= -1:
+	if t >= 4:
 		return "neutral"
-	if net >= -3:
+	if t >= 2:
 		return "cool"
 	return "broken"
 
+# 대사 풀 어투 밴드(COLD/THAW/WARM) — veil_pool_remap.md. WARM은 취약함 게이트(§3.5):
+# trust가 충분해도 "같이 고비를 넘긴 적"이 없으면 THAW에 머문다(무사망 고수=COLD 가능).
+func veil_register_band() -> String:
+	if trust_score >= 8 and shared_hardship >= 1:
+		return "warm"
+	if trust_score >= 4:
+		return "thaw"
+	return "cold"
+
+# 차가움(직업적)→따뜻함(유대) 그라데이션. 시작(trust 0)은 스틸블루(거리감) — 적대 빨강 아님.
 func veil_tone_color() -> Color:
 	match veil_trust_tier():
 		"high":
-			return Color(0.55, 0.95, 0.85)
+			return Color(0.55, 0.97, 0.85)   # 따뜻한 청록 — 깊은 유대
 		"warm":
-			return Color(0.55, 0.85, 0.95)
+			return Color(0.55, 0.90, 0.92)   # 청록 기운
 		"neutral":
-			return Color(0.85, 0.85, 0.85)
+			return Color(0.72, 0.86, 0.92)   # 해빙 — 옅은 청
 		"cool":
-			return Color(0.95, 0.78, 0.50)
+			return Color(0.64, 0.76, 0.86)   # 직업적 — 스틸블루
 		"broken":
-			return Color(0.95, 0.55, 0.55)
-	return Color(0.55, 0.85, 0.95)
+			return Color(0.60, 0.70, 0.80)   # 가장 차가움 — 거리감(적대 아님)
+	return Color(0.64, 0.76, 0.86)
 
 # 신뢰도 단계별 prefix 풀. 매 호출 random 선택 — 단조롭지 않게.
 # neutral의 "그럼, "은 뒷 문장과 어색하게 붙어 제거 (사용자 피드백). 대신 정보형 톤.
@@ -305,10 +334,9 @@ func veil_tone_prefix() -> String:
 		return ""
 	return str(arr[randi() % arr.size()])
 
-# 신뢰도 게이지 — UI 표시용 (-1.0 ~ +1.0 정규화).
+# 신뢰 게이지 — UI 표시용 (0.0 ~ +1.0 정규화). 0에서 차오름(§3.1 리베이스).
 func veil_trust_normalized() -> float:
-	var net: float = float(trust_score - aggression_score)
-	return clamp(net / 6.0, -1.0, 1.0)
+	return clampf(float(trust_score) / 15.0, 0.0, 1.0)
 
 func is_high_risk() -> bool:
 	return current_route_risk >= 3
@@ -380,6 +408,16 @@ func on_stage_clear() -> bool:
 	# 띄울지 판단할 수 있게 해 보너스 레벨업이 누락되지 않도록.
 	# 방금 깬 스테이지의 실력 지표를 먼저 마감 (current_stage 증가 전).
 	_finalize_stage_metrics()
+	# 어투 trust 적립(§3.2) — 클리어 시점에만. 추천 따라 깼으면 +2.
+	# 함께 고비 돌파(죽고 회복 / 고위험·도전·히든 클리어) +2 = 따뜻함의 주 소스.
+	# 독립적 성공(추천 무시하고 무난히 클리어)은 +0 — 따뜻함은 관계로만 번다(§3.5).
+	var deaths_this_stage: int = max(0, death_count - _stage_deaths_base)
+	if followed_veil_last_choice:
+		trust_score += 2
+	var hardship: bool = deaths_this_stage > 0 or current_route_risk >= 3 or current_route_challenge or current_route_hidden
+	if hardship:
+		trust_score += 2
+		shared_hardship += 1
 	current_stage += 1
 	score += 100 * current_stage
 	var leveled: bool = false
