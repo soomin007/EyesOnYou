@@ -6,7 +6,7 @@
 
 > GitHub Pages 자동 배포 (main 푸시 시 갱신). 데스크톱 Chrome/Firefox 권장. 첫 로딩 ~10s.
 
-근미래 민간 보안기업의 현장 요원이 되어, 상황실 AI 파트너 **VEIL**의 조언을 들으며(혹은 무시하며) 7개의 짧은 횡스크롤 스테이지를 클리어한다. 누적된 선택(VEIL 조언 수용 여부 × 전투/우회 비율)이 4종 결말 중 하나를 결정한다.
+근미래 민간 보안기업의 현장 요원이 되어, 상황실 AI 파트너 **VEIL**의 조언을 들으며(혹은 무시하며) 7개의 짧은 횡스크롤 스테이지를 클리어한다. 누적된 선택(VEIL 추천 수용률 × 전투/우회 비율)이 4종 결말 중 하나를 결정하고, 그 과정에서 VEIL의 말투가 차갑게→따뜻하게 변한다.
 
 - **엔진**: Godot 4.6 (GL Compatibility, physics interpolation 활성)
 - **장르**: 횡스크롤 액션 어드벤처 + 로그라이트
@@ -37,17 +37,30 @@
 
 두 점수 축으로 4종 결말이 결정된다.
 
-| trust ≥ 3 | aggression ≥ 3 | 결말 | 한 줄 |
+| 추천 수용률 ≥ 50% | aggression ≥ 4 | 결말 | 한 줄 |
 |---|---|---|---|
 | ✅ | ✅ | **A — 완벽한 도구** | VEIL의 진짜 목적이 드러난다 |
 | ❌ | ✅ | **B — 혼자였던 사람** | VEIL은 의존받지 않기를 바랐다 |
 | ✅ | ❌ | **C — 공생** | 유일하게 VEIL에게 직접 묻는 선택지가 열린다 |
 | ❌ | ❌ | **D — 유령 임무** | 10초 정적, 임무 기록 없음 |
 
-- `trust_score`: VEIL 조언과 동일한 루트를 고를 때마다 +1
-- `aggression_score`: 전투 루트(우회 대신)를 고를 때마다 +1
+- **신뢰 축** = VEIL 추천을 **절반 이상 따랐는가**(`followed_count*2 ≥ rec_count`). 루트 선택 시점에 집계.
+- **공격성 축** = 전투·도전 태그 맵 선택 누적(`aggression ≥ 4`).
+- 별도로 **어투 trust**(0에서 climbing)가 VEIL 말투를 차갑게→따뜻하게 바꾼다 — 엔딩과는 분리(아래 "VEIL 어투 아크").
 
-두 축은 **루트 선택 시점에만** 누적된다. 임계값은 4 (7스테이지 중 4개 이상 패턴).
+---
+
+## VEIL 어투 아크 (신뢰 + 사망 구동)
+
+VEIL의 **말투가 관계에 따라 변한다.** 진행도가 아니라 *신뢰*가 구동한다:
+
+- **COLD**(격식 작전통신, `~습니다`) → **THAW**(격식+`저도` 누수) → **WARM**(`~해요`, 사적·고백).
+- 신뢰는 **0에서 벌어 올린다** — 추천 따라 클리어 +2, **같이 고비 돌파**(죽고 회복·고위험·도전·히든) +2, 독립적 성공 +0.
+- **취약함 게이트**: 신뢰가 높아도 *같이 고비를 넘긴 적*이 없으면 WARM에 못 든다 → **한 번도 안 죽고 VEIL을 무시한 고수는 엔딩까지 COLD**로 남는다.
+- 사망/실력에 따라 안내 강도도 변한다 — 고전하면 강조·위로↑, 무사망 고수에겐 "내가 필요 없겠네" 물러섬.
+- 같은 stage여도 신뢰가 낮으면 차가운 채. 튜토리얼이 "믿을수록 더 도와드릴 수 있다"로 미리 암시한다.
+
+설계: [`docs/design/veil_trust_arc.md`](docs/design/veil_trust_arc.md) · 대사 grid: [`docs/design/veil_pool_remap.md`](docs/design/veil_pool_remap.md)
 
 ---
 
@@ -58,9 +71,9 @@
 | 좌우 이동 | A / D, ←/→ | 좌스틱 / D-Pad |
 | 점프 (이중 점프) | W / Space | A |
 | 아래 내려가기 | S / ↓ | ↓ (좌스틱/D-Pad) |
-| 사격 | 마우스 좌 / J | X 또는 RT |
+| 사격 | J *(마우스 좌는 설정에서 바인드)* | X 또는 RT |
 | 대시 | Shift / K | B 또는 RB |
-| 액티브 스킬 | 마우스 우 / Q | Y |
+| 액티브 스킬 | Q *(마우스 우는 설정에서 바인드)* | Y |
 | 일시정지 | ESC | START |
 | UI 확정 | Enter / Space | A |
 | UI 취소 / 뒤로 | ESC | B |
@@ -96,7 +109,7 @@
 - **Reward**: 클리어 시 보너스 XP (1=+1, 2=+2, 3=+3)
 - 함정 태그(지하 배수로/지하철 연결로)에는 가시 자동 배치
 - 각 맵마다 다른 플랫폼 layout + 환경 효과
-- ??? 루트는 Stage 4 풀에 무작위 등장, hidden=true (VEIL 추천에서 제외) — 메타 서사 + trust +1 보너스
+- ??? 루트는 Stage 5~6 풀에 무작위 등장, hidden=true (VEIL 추천에서 제외) — 메타 서사. 비추천 카드라 고르면 추천 수용률이 내려가고(엔딩 B/D 쪽), 클리어 시 어투 trust(따뜻함)는 오른다
 
 ---
 
@@ -120,7 +133,7 @@
 
 | 계열 | 라인 | T1 → T2 → T3 |
 |---|---|---|
-| 전투 | 사격 강화 (fire_boost) | 데미지 +1 → +2·사격 시 가속 → 1체 관통 |
+| 전투 | 사격 강화 (fire_boost) | 데미지 +1 → 속사(연사 +40%)·사격 후 이동 가속 → 1체 관통 |
 | 전투 | 다중사격 (multishot) | 삼연사(부채꼴 3) → 오연사(5) → 5발 + 약한 추적 |
 | 전투 | 폭발물 (explosive, 액티브) | 광역 처치(3s) → 반경 +30%·쿨 2.5s → 2회 충전 |
 | 이동 | 공중 활강 (glide) | 자동 활강 + 공중 점프 1회(=삼단) → 활강 중 관통 사격 → 유도 사격 |
@@ -178,8 +191,8 @@ EoY/
 │   ├── RouteData.gd            루트 풀 (id/risk/reward/tags/available_stages)
 │   ├── MapData.gd              12맵 좌표 + 함정/트립와이어 + 보스/웨이브/이스터에그 메타
 │   ├── SkillSystem.gd          레벨업 3중 1 카드 풀 빌더
-│   ├── VeilDialogue.gd         ACT별 브리핑/사망/레벨업 대사 풀
-│   ├── EndingResolver.gd       trust/aggression → 결말 결정
+│   ├── VeilDialogue.gd         신뢰밴드별 브리핑/사망 풀(*_BY_BAND) + 레벨업 조언
+│   ├── EndingResolver.gd       추천 수용률 × aggression → 결말 결정
 │   ├── Player.gd               이동/점프/대시/사격/활강/부활/방어막 등
 │   ├── Enemy.gd                5종 + 가장자리 raycast + spawn snap
 │   ├── BossSentinel.gd         핵심부 보스 (3페이즈 + 자폭)
@@ -242,7 +255,7 @@ EoY/
 - ✅ **튜토리얼** — 5단계 점진 학습
 - ✅ **P2-β (스토리/콘텐츠)** — SILO-7 컨텍스트 6개 맵, ACT별 VEIL 대사 풀, ??? 단말기 시퀀스, 결말 4종 갱신
 - ✅ **P2-γ (적 확장)** — 자폭병/방패병 추가 (총 5종), 기본 HP 3 정책, 적 수 미세 상향
-- ✅ **P2-δ (성장 시스템 + 7스테이지 확장)** — 3계열×3티어 스킬 트리, 11개 맵, TOTAL_STAGES=7. [`docs/design/growth_system.md`](docs/design/growth_system.md) 참조
+- ✅ **P2-δ (성장 시스템 + 7스테이지 확장)** — 3계열×3티어 스킬 트리, 12개 루트, TOTAL_STAGES=7. [`docs/design/growth_system.md`](docs/design/growth_system.md) 참조
 - ✅ **P2-ε (맵 세계 구조 v2)** — 4 템플릿(HORIZONTAL/VERTICAL_UP/VERTICAL_DOWN/ARENA), 11맵 좌표, 카메라/골/월드 차원 동적. [`docs/design/world_layout.md`](docs/design/world_layout.md) 참조
 - ✅ **P2-ε P1 (특수 방 메커닉)** — 보스 SENTINEL 3페이즈+자폭, datacenter 웨이브, 이스터에그 ARCTURUS 문서, 도전 방 "블랙아웃 런", ??? 단말기 다회차 풀
 - ✅ **P3 배포 자동화** — GitHub Pages Actions 워크플로. main 푸시 → 자동 빌드 → 배포. [`DEPLOY.md`](DEPLOY.md)
@@ -252,7 +265,8 @@ EoY/
 - ✅ **스토리 모드** — HP 무제한 / 5 스테이지 / 보스 단순화 / 드론 없음. 키보드/패드가 어색한 사람용 짧은 코스. Title의 다단계 메뉴(시작/모드 선택/튜토리얼 prompt)에서 진입
 - ✅ **UI 시각화 (텍스트→그래픽)** — 스킬 트리 오버레이, 맵 진행 노드맵, 오프닝 VEIL 눈/목표물 비주얼, 절차적 스킬·적 아이콘, 전역 텍스트 아웃라인, 비네트 셰이더
 - ✅ **맵 폴리시** — 발사 함정(BulletTrap/LaserTripwire), 둥지 저격수 + VEIL "못 잡는 적" 안내, VeilSight 시야 마킹·ACT3 붕괴, 글라이드 게이트 숨은 보상, 해상도/창모드 옵션
-- 🚧 **잔여** — 배경 이미지, SFX, itch.io 별도 배포, 후반 트랩/둥지 난이도 플레이테스트 튜닝, VEIL 추천 임계값 튜닝
+- ✅ **VEIL 어투 아크 (신뢰+사망 구동)** — 말투가 신뢰에 따라 COLD→THAW→WARM. 0에서 벌어 올리는 trust, 취약함 게이트(무사망 고수는 COLD 유지), 엔딩은 추천 수용률로 분리. [`docs/design/veil_trust_arc.md`](docs/design/veil_trust_arc.md)
+- 🚧 **잔여** — 배경 이미지, SFX, itch.io 별도 배포, 플레이테스트 튜닝(어투 trust 임계·수용률 0.5·후반 트랩/둥지 난이도·무스킬 첫 전투 완충)
 
 상세 우선순위는 [`PRD.md`](PRD.md) §6, 구현 디테일은 [`docs/SPEC.md`](docs/SPEC.md), 스토리 캐논은 [`docs/STORY.md`](docs/STORY.md) 참조.
 

@@ -316,27 +316,20 @@ func veil_tone_color() -> Color:
 			return Color(0.60, 0.70, 0.80)   # 가장 차가움 — 거리감(적대 아님)
 	return Color(0.64, 0.76, 0.86)
 
-# 신뢰도 단계별 prefix 풀. 매 호출 random 선택 — 단조롭지 않게.
-# neutral의 "그럼, "은 뒷 문장과 어색하게 붙어 제거 (사용자 피드백). 대신 정보형 톤.
-const TONE_PREFIXES: Dictionary = {
-	"high":    ["당신이라면, ", "역시 당신이에요. ", "맞춰가볼게요. ", "믿어요. "],
-	"warm":    ["", "들어봐요, ", "", "제 의견은요, "],
-	"neutral": ["", "", "참고로, ", "보세요, "],
-	"cool":    ["음… ", "글쎄요. ", "흠… ", "잘 모르겠지만, "],
-	"broken":  ["마음대로 하세요. ", "원하는 대로요. ", "당신 결정이에요. ", "더는 안 말려요. "],
-}
-
-# 신뢰도에 따라 멘트 앞에 붙는 톤 변화. 같은 단계에서도 풀에서 랜덤 — 호출마다 다양.
-func veil_tone_prefix() -> String:
-	var tier: String = veil_trust_tier()
-	var arr: Array = TONE_PREFIXES.get(tier, [""])
-	if arr.is_empty():
-		return ""
-	return str(arr[randi() % arr.size()])
+# (구 TONE_PREFIXES / veil_tone_prefix 제거 — 2026-06-13. 어투는 신뢰밴드 대사 풀로 운반,
+#  레벨업 추천 앞 lead-in은 VeilDialogue.levelup_leadin. 미사용 dead code였음.)
 
 # 신뢰 게이지 — UI 표시용 (0.0 ~ +1.0 정규화). 0에서 차오름(§3.1 리베이스).
 func veil_trust_normalized() -> float:
 	return clampf(float(trust_score) / 15.0, 0.0, 1.0)
+
+# 신뢰 게이지 5점 문자열 — HUD/루트맵/레벨업 공용(드리프트 방지). 0에서 차오름.
+const TRUST_GAUGE_THRESHOLDS: Array[int] = [2, 4, 8, 12, 16]
+func veil_trust_gauge_dots() -> String:
+	var dots: String = ""
+	for th in TRUST_GAUGE_THRESHOLDS:
+		dots += "●" if trust_score >= int(th) else "○"
+	return dots
 
 func is_high_risk() -> bool:
 	return current_route_risk >= 3
