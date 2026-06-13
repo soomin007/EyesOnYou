@@ -38,7 +38,7 @@ goal_pos:        Vector2(640, 160)    [상단 중앙 — Area2D 트리거]
 camera:          세로 follow (y축 추적, x는 고정 중앙)
 camera_limits:   left=0, right=1280, top=-200, bottom=3400
 진행 방향:       아래→위
-적용 맵:         rooftops, cooling, watchtower
+적용 맵:         rooftops, watchtower  (cooling은 2026-06-14 HORIZONTAL로 이전)
 ```
 
 ### VERTICAL_DOWN
@@ -263,9 +263,14 @@ platform layout:
 
 ---
 
-### 2.5 냉각 시설 (cooling) — VERTICAL_UP
+### 2.5 냉각 시설 (cooling) — HORIZONTAL (2026-06-14 전면 리뉴얼)
+
+> ⚠️ **세로 등반 → 가로 냉각 통로로 전면 교체.** 서사 훅: 서버(=VEIL 하드웨어)를 식히는 냉각 플랜트.
+> 시그니처 해저드 = **증기 분출구**(`SteamVent.gd`, 바닥에서 주기 분출). 드론 주력(상성=글라이드) +
+> 고립 글라이드 게이트(삼단점프 전용). 라이브 좌표는 `MapData._cooling()` 참조. 아래 옛 VERTICAL 블록은 폐기.
 
 ```
+(폐기 — 옛 VERTICAL_UP 레이아웃)
 world_size:   (1280, 3200)
 start:        (640, 3050)
 goal:         Area2D at (640, 160)
@@ -631,7 +636,7 @@ camera:       가로 follow
 | rooftops | patrol, **sniper** | barrier |
 | sewers | patrol, **bomber** | fire_boost |
 | subway | patrol, **sniper, shield** | barrier / explosive |
-| cooling | patrol, sniper, **drone** | glide (+barrier) |
+| cooling | patrol, **drone** | glide |
 | watchtower | patrol, **sniper** | barrier |
 | ward | patrol, **bomber, shield** | fire_boost / explosive |
 | datacenter (ARENA) | 전 종류 웨이브 | 상황별 — sniper엔 barrier, drone엔 glide, shield엔 explosive |
