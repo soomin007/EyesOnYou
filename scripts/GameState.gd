@@ -87,6 +87,11 @@ const STORY_TOTAL_STAGES: int = 5
 # 디버그 연습장 모드 — Settings에서 진입. 영속화하지 않음.
 var playground_active: bool = false
 
+# 엔딩 후 "다시 플레이하기"로 들어온 회차인가 — 물음표 방 첫 단말기 변형(VEIL-1 → 추가 풀)을 가른다.
+# reset()/start_main_game()에서 일부러 안 지운다(크레딧 버튼이 set한 값이 새 런까지 살아남아야 함).
+# 부스(기기≠사람)에서 새 사람이 VEIL-1 도입을 놓치는 걸 막으려 기기 영속 카운트 대신 명시적 신호로.
+var replaying: bool = false
+
 # 디버그 메뉴 잠금. 타이틀에서 비밀 키 시퀀스("snu")를 입력해야 활성. 영속화하지 않음.
 # 부스/공유 환경에서 일반 플레이어가 디버그 기능에 접근하지 못하도록.
 var debug_unlocked: bool = false

@@ -576,7 +576,10 @@ func _finish_hidden_archive() -> void:
 # 이후 방문: 추가 풀(VEIL-1 첫 임무 / VEIL-2 마지막 교신 / 익명 클라이언트) 중 1개 랜덤.
 # 같은 풀 안에서도 매 방문마다 다른 게 뜨도록 randi() 기반.
 func _term1_lines_for_visit() -> Array:
-	if GameState.hidden_visit_count <= 0:
+	# 첫 단말기는 항상 VEIL-1(핵심 reveal). 단, 엔딩 후 "다시 플레이하기"로 들어온 회차(replaying)
+	# 에서만 추가 풀로 변형. 기기 영속 visit_count로 가르면 부스에서 새 사람이 VEIL-1을 놓치므로
+	# 명시적 replay 신호를 쓴다(사용자 피드백 2026-06-13).
+	if not GameState.replaying:
 		return _veil1_lines()
 	var pool: Array = [_alt_veil1_first_mission(), _alt_veil2_final_log(), _alt_anonymous_client()]
 	var idx: int = randi() % pool.size()

@@ -79,6 +79,14 @@ var _hint_label: Label
 # 진입 직후 입력 lockout — 게임 종료 후 점프 연타가 즉시 크레딧을 닫는 사고 방지.
 var _input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
 
+# 크레딧 끝 메뉴 (scene 모드). "다시 플레이하기"는 포커스 시 글리치로 글자가 바뀐다.
+var _menu_shown: bool = false
+var _replay_btn: Button = null
+var _morph_tween: Tween = null
+const GLITCH_CHARS: String = "▒░█▓◇◆#@%&/\\?ㅁㅇㄹㅂㅈ"
+const REPLAY_LABEL: String = "다시 플레이하기"
+const REPLAY_LABEL_GLITCH: String = "베일의 진실에 더 다가가기"
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -155,23 +163,33 @@ func _measure_content() -> void:
 func _process(delta: float) -> void:
 	if _input_lockout_t > 0.0:
 		_input_lockout_t -= delta
-	if _finished:
+	if _finished or _menu_shown:
 		return
 	var speed: float = SCROLL_SPEED
 	if Input.is_action_pressed("ui_skip") or Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept"):
 		speed *= SCROLL_FAST_MULT
 	_scroll_y += speed * delta
 	_scroll.position.y = TOP_GAP - _scroll_y
-	# 끝까지 다 올라갔으면 자동 페이드 아웃 후 종료. (사용자: 다 올라가면 알아서 끝나게)
+	# 끝까지 올라가면 — scene 모드: 다시 플레이/나가기 메뉴. overlay 모드: 그냥 닫기.
 	if _content_height > 0.0 and _scroll_y >= _content_height + BOTTOM_GAP:
-		_finish(true)
+		if _is_overlay:
+			_finish(true)
+		else:
+			_show_end_menu()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _input_lockout_t > 0.0:
 		return
 	if event.is_action_pressed("ui_cancel"):
-		# 수동 종료 — 짧게 페이드. ESC 누른 사용자는 빠르게 빠지길 원함.
-		_finish(false)
+		if _is_overlay:
+			# 오버레이 — 짧게 페이드 후 닫기.
+			_finish(false)
+		elif not _menu_shown:
+			# scene 모드 스크롤 중 ESC — 끝까지 기다리지 않고 바로 메뉴로.
+			_show_end_menu()
+		else:
+			# 메뉴에서 ESC — 메인으로.
+			_on_exit_pressed()
 		get_viewport().set_input_as_handled()
 
 # fade_long=true — 자동 종료(긴 1.5s 페이드, 여운). false — 수동 ESC(짧은 0.3s).
@@ -195,3 +213,91 @@ func _actually_finish() -> void:
 # Settings에서 호출. closed 시그널을 듣고 부모가 free하면 됨.
 func open_as_overlay() -> void:
 	_is_overlay = true
+
+# ─── 크레딧 끝 메뉴 (scene 모드) ──────────────────────────────────
+# "다시 플레이하기" = 명시적 다회차 신호(GameState.replaying). 물음표 방 첫 단말기가
+# VEIL-1 대신 추가 풀로 변형된다(부스 기기≠사람 문제 회피). 포커스 시 글자가 글리치로
+# "베일의 진실에 더 다가가기"로 치직거리며 바뀐다.
+func _show_end_menu() -> void:
+	if _menu_shown:
+		return
+	_menu_shown = true
+	if is_instance_valid(_hint_label):
+		_hint_label.visible = false
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(center)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 20)
+	vb.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_child(vb)
+	_replay_btn = _make_credit_button(REPLAY_LABEL)
+	_replay_btn.pressed.connect(_on_replay_pressed)
+	_replay_btn.focus_entered.connect(_on_replay_focus)
+	_replay_btn.focus_exited.connect(_on_replay_unfocus)
+	_replay_btn.mouse_entered.connect(_on_replay_focus)
+	_replay_btn.mouse_exited.connect(_on_replay_unfocus)
+	vb.add_child(_replay_btn)
+	var exit_btn := _make_credit_button("메인 화면으로 나가기")
+	exit_btn.pressed.connect(_on_exit_pressed)
+	vb.add_child(exit_btn)
+	center.modulate.a = 0.0
+	center.create_tween().tween_property(center, "modulate:a", 1.0, 0.6)
+	# 잠깐 "다시 플레이하기"를 보여준 뒤(0.6s) 포커스 → 그 순간 글리치로 변형.
+	GameState.arm_focus_with_delay(self, _replay_btn, 0.6)
+
+func _make_credit_button(label: String) -> Button:
+	var b := Button.new()
+	b.text = label
+	b.add_theme_font_size_override("font_size", 22)
+	b.custom_minimum_size = Vector2(480, 54)
+	b.focus_mode = Control.FOCUS_ALL
+	b.mouse_filter = Control.MOUSE_FILTER_STOP
+	return b
+
+func _on_replay_focus() -> void:
+	_glitch_morph(_replay_btn, REPLAY_LABEL_GLITCH)
+
+func _on_replay_unfocus() -> void:
+	# 포커스도 마우스도 없을 때만 원래 글자로 — 한쪽이라도 걸려 있으면 글리치 라벨 유지.
+	if is_instance_valid(_replay_btn) and not _replay_btn.has_focus():
+		_glitch_morph(_replay_btn, REPLAY_LABEL)
+
+# 글자가 글리치 문자로 흩어졌다 목표 텍스트로 수렴 (~0.3s). reveal 0→1로 점점 또렷해진다.
+func _glitch_morph(btn: Button, target: String) -> void:
+	if not is_instance_valid(btn):
+		return
+	if _morph_tween != null and _morph_tween.is_valid():
+		_morph_tween.kill()
+	_morph_tween = btn.create_tween()
+	_morph_tween.tween_method(func(r: float) -> void:
+		if is_instance_valid(btn):
+			btn.text = _scramble(target, r)
+	, 0.0, 1.0, 0.30)
+	_morph_tween.tween_callback(func() -> void:
+		if is_instance_valid(btn):
+			btn.text = target)
+
+func _scramble(target: String, reveal: float) -> String:
+	var out: String = ""
+	for i in target.length():
+		var ch: String = target[i]
+		if ch == " ":
+			out += ch
+		elif randf() < reveal:
+			out += ch
+		else:
+			out += GLITCH_CHARS[randi() % GLITCH_CHARS.length()]
+	return out
+
+func _on_replay_pressed() -> void:
+	# 명시적 다회차 — 물음표 변형 활성. 새 런(노멀) 시작.
+	GameState.replaying = true
+	GameState.reset()
+	get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+
+func _on_exit_pressed() -> void:
+	GameState.replaying = false
+	GameState.reset()
+	get_tree().change_scene_to_file(SceneRouter.TITLE)
