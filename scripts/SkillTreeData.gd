@@ -52,7 +52,7 @@ const LINES: Array = [
 		"tiers": [
 			{"name": "공중 활강",   "desc": "낙하 시 자동으로 천천히 떨어진다", "active": false},
 			{"name": "삼단 점프",   "desc": "공중 점프 1회 추가 (최대 3단)",     "active": false},
-			{"name": "관통 사격",   "desc": "활강 중 사격이 관통·추적 (데미지 +1)", "active": false},
+			{"name": "유도 사격",   "desc": "활강 중 사격이 적을 강하게 유도 (데미지 +1)", "active": false},
 		],
 	},
 	{

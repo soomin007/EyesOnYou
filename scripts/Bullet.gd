@@ -54,13 +54,15 @@ func _ready() -> void:
 	if style_tier >= 2:                       # 속사 — 긴 잔상
 		trail_w = 32.0
 		col_trail.a = 0.7
-	if pierce:                                # 관통 — 길쭉한 트레이서
+	if pierce:                                # 관통(사격강화 T3) — 길쭉한 트레이서
 		body_w = 18.0
 		body_h = 3.0
 		trail_w = max(trail_w, 34.0)
-	if pierce and tracking:                   # 활강 유도 관통 — 시안 틴트로 구분
-		col_body = Color(0.6, 0.95, 1.0, 1.0)
-		col_trail = Color(0.5, 0.88, 1.0, 0.65)
+	if tracking and tracking_blend >= 0.1:    # 유도(활강 T3) — 시안 틴트 + 길쭉(약한 추적과 구분)
+		col_body = Color(0.55, 0.95, 1.0, 1.0)
+		col_trail = Color(0.5, 0.88, 1.0, 0.7)
+		body_w = max(body_w, 16.0)
+		trail_w = max(trail_w, 30.0)
 
 	var trail := ColorRect.new()
 	trail.color = col_trail

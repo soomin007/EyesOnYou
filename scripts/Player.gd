@@ -340,11 +340,11 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	b.style_tier = fb_tier               # 총알 외형 분기용 (성장 가시화)
 	# multishot T3 — 약한 추적
 	b.tracking = GameState.get_skill_tier("multishot") >= 3
-	# glide T3 — 활강 중(공중 낙하) 사격 관통 + 추적 + 데미지. 재설계(2026-06-13): 관통샷을 T3로 통합
-	# (T2는 삼단점프). 활강 중 + 글라이드 전용이라 보스 밸런스 영향 적음.
+	# glide T3 — 활강 중(공중 낙하) 사격이 적을 강하게 유도 + 데미지. 재설계(2026-06-15):
+	# '관통'은 사격강화 T3 전담으로 넘기고 활강 T3는 '유도(homing)'를 정체성으로 분리(중복 제거).
+	# → 두 라인 모두 보유 시 활강 중엔 관통(fire_boost) + 유도(glide) 시너지가 자연히 겹친다.
 	var gl_tier: int = GameState.get_skill_tier("glide")
 	if gl_tier >= 3 and not is_on_floor() and velocity.y > 0.0:
-		b.pierce = true
 		b.damage += 1
 		b.tracking = true
 		b.tracking_blend = 0.12      # 약한 추적(0.03)보다 강하게 — "완전 유도" 체감
