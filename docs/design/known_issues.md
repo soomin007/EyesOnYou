@@ -178,3 +178,16 @@
   → 트리 접근(`get_tree()`/`get_world_2d()`/`get_parent()`) 전에 null 가드. player 조회처럼 자주 쓰는
   접근은 **단일 헬퍼**(`_find_player`)에 가드를 모아 모든 호출처를 한 번에 보호. `_physics_process`엔
   `is_inside_tree()` 가드를 더해도 저렴.
+
+- **`get_tree().paused=true` 중엔 PAUSABLE 노드가 입력 콜백(`_input`/`_unhandled_input`)을 못 받는다.**
+  pause는 `_process`뿐 아니라 입력 처리도 막는다. 그래서 "ESC로 자기 일시정지 메뉴를 *열고 닫기*"를
+  PAUSABLE 호스트(RouteMap/Stage)의 `_unhandled_input`에 두면, 연 뒤(paused=true)엔 닫는 ESC가
+  호스트에 도달하지 않아 안 닫힌다(헤드리스 재현 확인, 2026-06-15). → 메뉴 *씬*(게임 로직 없는 RouteMap)은
+  `process_mode = PROCESS_MODE_ALWAYS`로 둬 paused 중에도 ESC를 받게. Stage처럼 ALWAYS로 못 두는
+  게임플레이 호스트는 ESC는 열기만, 닫기는 "계속하기" 버튼(ALWAYS)에 맡기는 게 현재 동작.
+  ALWAYS로 둘 땐 `_input`이 paused 중 SPACE를 소비하지 않게 가드(일시정지 메뉴 버튼 ui_accept 보호).
+
+- **헤드리스 `-s` SceneTree 스크립트에선 오토로드가 컴파일 타임에 안 보일 수 있다.**
+  `godot --headless -s test.gd`로 `GameState` 등 오토로드를 직접 식별자로 쓰면 "Identifier not found"
+  컴파일 에러(2026-06-15). 오토로드가 필요한 런타임 검증은 **래퍼 .tscn(Control)을 창모드로 실행**하면
+  오토로드가 정상 초기화된다. `Input.parse_input_event`로 ESC 등 액션을 주입해 동작을 관찰할 수 있다.
