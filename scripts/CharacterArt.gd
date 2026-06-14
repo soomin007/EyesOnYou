@@ -413,107 +413,202 @@ static func build_tutorial_dummy(parent: Node2D) -> Node2D:
 static func attach_player_skill_parts(torso: Node2D, skills: Dictionary) -> void:
 	if torso == null:
 		return
+	var arm_front: Node2D = torso.get_node_or_null("ArmFront")
+	# 기존 부착물 제거 — torso + arm_front(총기) 양쪽의 skill_part 그룹.
 	for c in torso.get_children():
 		if c.is_in_group(SKILL_PART_GROUP):
 			c.queue_free()
-	# explosive — 허리춤 수류탄 파우치 (T3=2충전이면 2개)
+	if arm_front != null:
+		for c in arm_front.get_children():
+			if c.is_in_group(SKILL_PART_GROUP):
+				c.queue_free()
+	# fire_boost — 총기 외형 업그레이드 (T1 긴 총신+주황팁 / T2 측면 탄창 / T3 관통 총신).
+	# 사용자 의도: "사격 강화는 먹을 때마다 총기 외형이 변한다." → arm_front(조준 회전 따라감)에 부착.
+	var fb: int = int(skills.get("fire_boost", 0))
+	if fb >= 1 and arm_front != null:
+		_attach_gun_upgrade(arm_front, fb)
+	# explosive — 허리춤 수류탄 키트 (T1 띠+파우치 / T2 어깨 추가 / T3 두 번째 파우치).
 	var ex: int = int(skills.get("explosive", 0))
 	if ex >= 1:
-		_attach_grenade_pouch(torso, Vector2(-9.0, -22.0))
-		if ex >= 3:
-			_attach_grenade_pouch(torso, Vector2(-11.5, -18.5))
-	# glide — 등 글라이더 윙/벤트 (T2 삼단점프부터 벤트 추가)
+		_attach_grenade_kit(torso, ex)
+	# glide — 등 글라이더 윙 (T1 접힘 / T2~ 펼침·확대 / T3 분사 벤트).
 	var gl: int = int(skills.get("glide", 0))
 	if gl >= 1:
 		_attach_glide_wing(torso, gl)
-	# dash_boost — 양 발목 추진 노즐
+	# dash_boost — 양 발목 추진 노즐 (티어별 노즐·글로우 확대).
 	var db: int = int(skills.get("dash_boost", 0))
 	if db >= 1:
-		_attach_ankle_jet(torso, Vector2(-6.0, -4.0))
-		_attach_ankle_jet(torso, Vector2(6.0, -4.0))
-	# shield(부활) — 앞가슴 부활 코어 모듈
+		_attach_ankle_jet(torso, Vector2(-6.0, -4.0), db)
+		_attach_ankle_jet(torso, Vector2(6.0, -4.0), db)
+	# shield(부활) — 앞가슴 부활 코어 모듈 (티어별 확대·LED·재충전 링).
 	var sh: int = int(skills.get("shield", 0))
 	if sh >= 1:
-		_attach_revive_module(torso)
-	# hp — 어깨/가슴 장갑판 (T2부터 가슴 중앙판 추가)
+		_attach_revive_module(torso, sh)
+	# hp — 어깨/가슴 장갑판 (T2 가슴판, T3 헬멧 밴드+코어).
 	var hp: int = int(skills.get("hp", 0))
 	if hp >= 1:
 		_attach_armor_plates(torso, hp)
 
-static func _attach_grenade_pouch(torso: Node2D, pos: Vector2) -> void:
+# 총기 외형 업그레이드 — arm_front 로컬좌표(앞=+x). 기존 총신은 ~x=3에서 끝남.
+static func _attach_gun_upgrade(arm_front: Node2D, tier: int) -> void:
+	var g := Node2D.new()
+	g.add_to_group(SKILL_PART_GROUP)
+	arm_front.add_child(g)
+	# T1 — 더 길고 굵은 총신 + 주황 머즐 팁 (탄 색과 호응)
+	_filled(g, Color(0.26, 0.28, 0.33), PackedVector2Array([
+		Vector2(3, -2.2), Vector2(8, -2.2), Vector2(8, 2.2), Vector2(3, 2.2),
+	]))
+	_filled(g, Color(1.0, 0.62, 0.28), PackedVector2Array([
+		Vector2(8, -2.0), Vector2(10.5, -1.4), Vector2(10.5, 1.4), Vector2(8, 2.0),
+	]))
+	if tier >= 2:
+		# 속사 — 아래로 돌출한 측면 탄창/벤트 + 밝은 슬릿
+		_filled(g, Color(0.20, 0.22, 0.26), PackedVector2Array([
+			Vector2(-0.5, 2), Vector2(4, 2), Vector2(4, 7.5), Vector2(-0.5, 7.5),
+		]))
+		var slit := Polygon2D.new()
+		slit.color = Color(1.0, 0.72, 0.34, 0.9)
+		slit.polygon = PackedVector2Array([Vector2(0.3, 3), Vector2(3.5, 3), Vector2(3.5, 4), Vector2(0.3, 4)])
+		g.add_child(slit)
+	if tier >= 3:
+		# 관통 — 길쭉한 관통 총신 연장 + 시안 팁
+		_filled(g, Color(0.30, 0.33, 0.40), PackedVector2Array([
+			Vector2(10.5, -1.4), Vector2(15.5, -1.0), Vector2(15.5, 1.0), Vector2(10.5, 1.4),
+		]))
+		var tip := Polygon2D.new()
+		tip.color = Color(0.6, 0.95, 1.0, 0.95)
+		tip.polygon = PackedVector2Array([Vector2(14.5, -1), Vector2(16.5, -0.6), Vector2(16.5, 0.6), Vector2(14.5, 1)])
+		g.add_child(tip)
+
+# 수류탄 키트 — 밴돌리어 띠 + 파우치(티어별 개수).
+static func _attach_grenade_kit(torso: Node2D, tier: int) -> void:
+	var kit := Node2D.new()
+	kit.add_to_group(SKILL_PART_GROUP)
+	torso.add_child(kit)
+	# 밴돌리어 띠 (왼어깨→허리 대각, 어두운 띠)
+	_filled(kit, Color(0.20, 0.24, 0.16), PackedVector2Array([
+		Vector2(-11, -39), Vector2(-7, -40), Vector2(0, -22), Vector2(-4, -21),
+	]))
+	_attach_grenade_pouch(kit, Vector2(-9.0, -19.0))
+	if tier >= 2:
+		# 폭발물+ — 어깨 띠 위 추가 수류탄
+		_attach_grenade_pouch(kit, Vector2(-8.0, -33.0))
+	if tier >= 3:
+		# 이중 충전 — 허리 두 번째 파우치
+		_attach_grenade_pouch(kit, Vector2(-12.0, -16.0))
+
+static func _attach_grenade_pouch(parent: Node2D, pos: Vector2) -> void:
 	var p := Node2D.new()
 	p.add_to_group(SKILL_PART_GROUP)
 	p.position = pos
-	torso.add_child(p)
-	# 파우치(작은 사다리꼴)
-	_filled(p, Color(0.22, 0.26, 0.18), PackedVector2Array([
-		Vector2(-3, -2), Vector2(3, -2), Vector2(2, 4), Vector2(-2, 4),
+	parent.add_child(p)
+	# 파우치(사다리꼴) — 이전보다 1.4배 키움
+	_filled(p, Color(0.22, 0.27, 0.17), PackedVector2Array([
+		Vector2(-4, -3), Vector2(4, -3), Vector2(3, 5), Vector2(-3, 5),
 	]))
-	# 수류탄 머리(작은 원) + 신관
-	_filled_circle(p, Vector2(0, -3), 1.6, Color(0.50, 0.62, 0.34), 10)
+	# 수류탄 머리(원) + 신관
+	_filled_circle(p, Vector2(0, -4), 2.2, Color(0.52, 0.66, 0.36), 10)
 	_filled(p, Color(0.30, 0.32, 0.30), PackedVector2Array([
-		Vector2(-0.8, -5), Vector2(0.8, -5), Vector2(0.8, -4), Vector2(-0.8, -4),
+		Vector2(-1, -6.5), Vector2(1, -6.5), Vector2(1, -5), Vector2(-1, -5),
 	]))
 
 static func _attach_glide_wing(torso: Node2D, tier: int) -> void:
 	var w := Node2D.new()
 	w.add_to_group(SKILL_PART_GROUP)
 	torso.add_child(w)
-	# 등 마운트(어깨 뒤 -x)
-	_filled(w, Color(0.30, 0.46, 0.56), PackedVector2Array([
-		Vector2(-11, -40), Vector2(-7, -38), Vector2(-8, -30), Vector2(-12, -31),
-	]))
-	# 접힌 윙 패널 (뒤로 뻗음, 시각 경계 x≥-14 준수)
-	_filled(w, Color(0.45, 0.72, 0.85, 0.92), PackedVector2Array([
-		Vector2(-11, -38), Vector2(-14, -35), Vector2(-14, -30), Vector2(-11, -31),
+	# 등 마운트(어깨 뒤 -x) — 크게
+	_filled(w, Color(0.28, 0.44, 0.54), PackedVector2Array([
+		Vector2(-10, -42), Vector2(-6, -40), Vector2(-7, -28), Vector2(-11, -29),
 	]))
 	if tier >= 2:
-		# 삼단점프 — 보조 벤트(분사구) 추가
-		_filled(w, Color(0.60, 0.88, 0.97, 0.7), PackedVector2Array([
-			Vector2(-12, -34), Vector2(-14, -33), Vector2(-14, -31), Vector2(-12, -31),
+		# 펼쳐진 큰 윙 (뒤·위로 길게) — T2 삼단점프부터 전개
+		_filled(w, Color(0.45, 0.74, 0.88, 0.95), PackedVector2Array([
+			Vector2(-9, -42), Vector2(-15, -46), Vector2(-15, -28), Vector2(-9, -30),
 		]))
+		var edge := Polygon2D.new()
+		edge.color = Color(0.65, 0.95, 1.0, 0.9)
+		edge.polygon = PackedVector2Array([Vector2(-14.4, -45), Vector2(-15, -45), Vector2(-15, -29), Vector2(-14.4, -29)])
+		w.add_child(edge)
+	else:
+		# 접힌 윙 (T1, 작게)
+		_filled(w, Color(0.42, 0.68, 0.82, 0.92), PackedVector2Array([
+			Vector2(-9, -40), Vector2(-13, -38), Vector2(-13, -30), Vector2(-9, -31),
+		]))
+		var edge := Polygon2D.new()
+		edge.color = Color(0.62, 0.92, 1.0, 0.85)
+		edge.polygon = PackedVector2Array([Vector2(-12.5, -37), Vector2(-13, -37), Vector2(-13, -31), Vector2(-12.5, -31)])
+		w.add_child(edge)
+	if tier >= 3:
+		# 유도 사격 — 윙 끝 분사 벤트 글로우 (공중 제압 표시)
+		var vent := Polygon2D.new()
+		vent.color = Color(0.6, 0.95, 1.0, 0.55)
+		vent.polygon = PackedVector2Array([Vector2(-15, -34), Vector2(-18, -33), Vector2(-18, -30), Vector2(-15, -31)])
+		w.add_child(vent)
 
-static func _attach_ankle_jet(torso: Node2D, pos: Vector2) -> void:
+static func _attach_ankle_jet(torso: Node2D, pos: Vector2, tier: int) -> void:
 	var j := Node2D.new()
 	j.add_to_group(SKILL_PART_GROUP)
 	j.position = pos
 	torso.add_child(j)
-	# 발 뒤 작은 노즐
-	_filled(j, Color(0.28, 0.52, 0.62), PackedVector2Array([
-		Vector2(-5, -3), Vector2(-2, -3), Vector2(-2, 2), Vector2(-5, 2),
+	# 발 뒤 노즐 (티어별 크기)
+	var nl: float = 6.5 if tier >= 2 else 5.0
+	_filled(j, Color(0.26, 0.50, 0.60), PackedVector2Array([
+		Vector2(-nl, -3.5), Vector2(-2, -3.5), Vector2(-2, 2.5), Vector2(-nl, 2.5),
 	]))
-	# 청록 분사 글로우 (stroke 없음)
+	# 청록 분사 글로우 (티어별 길이·밝기, stroke 없음)
 	var glow := Polygon2D.new()
-	glow.color = Color(0.55, 0.90, 1.0, 0.6)
-	glow.polygon = PackedVector2Array([Vector2(-5, -1), Vector2(-8, 0), Vector2(-5, 1)])
+	var gl_len: float = 12.0 if tier >= 3 else (8.5 if tier >= 2 else 5.0)
+	var gl_a: float = 0.85 if tier >= 3 else 0.62
+	glow.color = Color(0.55, 0.90, 1.0, gl_a)
+	glow.polygon = PackedVector2Array([Vector2(-nl, -1.6), Vector2(-nl - gl_len, 0), Vector2(-nl, 1.6)])
 	j.add_child(glow)
 
-static func _attach_revive_module(torso: Node2D) -> void:
+static func _attach_revive_module(torso: Node2D, tier: int) -> void:
 	var m := Node2D.new()
 	m.add_to_group(SKILL_PART_GROUP)
 	torso.add_child(m)
-	# 앞가슴 코어 모듈 + 녹청 LED
-	_filled(m, Color(0.18, 0.32, 0.30), PackedVector2Array([
-		Vector2(2, -39), Vector2(7, -38), Vector2(7, -33), Vector2(2, -34),
+	# 앞가슴 코어 모듈 (크게) + 녹청 LED
+	_filled(m, Color(0.16, 0.34, 0.31), PackedVector2Array([
+		Vector2(1, -40), Vector2(8, -39), Vector2(8, -31), Vector2(1, -32),
 	]))
-	_filled_circle(m, Vector2(4.5, -36), 1.6, Color(0.50, 0.95, 0.80), 10)
+	var led_r: float = 2.4 if tier >= 2 else 1.9
+	_filled_circle(m, Vector2(4.5, -35.5), led_r, Color(0.50, 0.95, 0.80), 12)
+	if tier >= 3:
+		# 재충전 — 코어 주위 링(재무장 가능 표시)
+		var ring := Line2D.new()
+		var rpts: PackedVector2Array = []
+		for i in 16:
+			var a: float = float(i) * TAU / 16.0
+			rpts.append(Vector2(4.5, -35.5) + Vector2(cos(a) * 4.2, sin(a) * 4.2))
+		ring.points = rpts
+		ring.closed = true
+		ring.width = 0.9
+		ring.default_color = Color(0.55, 0.95, 0.82, 0.85)
+		ring.antialiased = true
+		m.add_child(ring)
 
 static func _attach_armor_plates(torso: Node2D, tier: int) -> void:
 	var a := Node2D.new()
 	a.add_to_group(SKILL_PART_GROUP)
 	torso.add_child(a)
-	# 좌우 어깨 장갑 (기존 어깨패드 위에 덧댐)
-	_filled(a, Color(0.62, 0.66, 0.74), PackedVector2Array([
-		Vector2(-13, -43), Vector2(-6, -43), Vector2(-7, -39), Vector2(-13, -38),
+	# 좌우 어깨 장갑 (기존 어깨패드 위에 덧댐, 크게)
+	_filled(a, Color(0.64, 0.68, 0.76), PackedVector2Array([
+		Vector2(-14, -44), Vector2(-5, -44), Vector2(-7, -38), Vector2(-14, -37),
 	]))
-	_filled(a, Color(0.62, 0.66, 0.74), PackedVector2Array([
-		Vector2(6, -43), Vector2(13, -43), Vector2(13, -38), Vector2(7, -39),
+	_filled(a, Color(0.64, 0.68, 0.76), PackedVector2Array([
+		Vector2(5, -44), Vector2(14, -44), Vector2(14, -37), Vector2(7, -38),
 	]))
 	if tier >= 2:
 		# 가슴 중앙 장갑판
-		_filled(a, Color(0.55, 0.60, 0.68), PackedVector2Array([
-			Vector2(-5, -40), Vector2(5, -40), Vector2(4, -31), Vector2(-4, -31),
+		_filled(a, Color(0.56, 0.61, 0.70), PackedVector2Array([
+			Vector2(-6, -40), Vector2(6, -40), Vector2(5, -30), Vector2(-5, -30),
 		]))
+	if tier >= 3:
+		# 피격 슬로모 — 헬멧 보강 밴드 + 가슴 코어
+		_filled(a, Color(0.70, 0.74, 0.82), PackedVector2Array([
+			Vector2(-7, -54), Vector2(7, -54), Vector2(7, -51), Vector2(-7, -51),
+		]))
+		_filled_circle(a, Vector2(0, -34), 1.9, Color(0.85, 0.95, 1.0), 12)
 
 static func _circle_pts(radius: float, n: int, center: Vector2 = Vector2.ZERO) -> PackedVector2Array:
 	var pts: PackedVector2Array = []

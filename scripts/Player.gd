@@ -415,6 +415,40 @@ func _on_skills_changed() -> void:
 	_refresh_skill_charges()
 	if torso != null:
 		CharacterArt.attach_player_skill_parts(torso, GameState.skills)
+		_play_skill_acquire_flash()
+
+# 스킬 획득/티어업 순간을 눈에 띄게 — 캐릭터에 밝은 확산 링 + 본체 섬광.
+# 레벨업은 일시정지 중 skills_changed가 오므로, 일반(pausable) tween이면 오버레이가
+# 닫히고 게임이 재개되는 순간 자연히 재생된다(부착물 변화에 시선을 끈다).
+func _play_skill_acquire_flash() -> void:
+	var ring := Node2D.new()
+	ring.name = "SkillAcquireFlash"
+	ring.position = Vector2(0, -28)
+	ring.z_index = 6
+	add_child(ring)
+	var line := Line2D.new()
+	var pts: PackedVector2Array = []
+	for i in 20:
+		var ang: float = float(i) * TAU / 20.0
+		pts.append(Vector2(cos(ang) * 22.0, sin(ang) * 30.0))
+	line.points = pts
+	line.closed = true
+	line.width = 3.0
+	line.default_color = Color(0.75, 0.95, 1.0, 0.95)
+	line.antialiased = true
+	ring.add_child(line)
+	ring.scale = Vector2(0.45, 0.45)
+	var tw := ring.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(ring, "scale", Vector2(1.7, 1.7), 0.45).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tw.tween_property(line, "default_color:a", 0.0, 0.45)
+	tw.set_parallel(false)
+	tw.tween_callback(ring.queue_free)
+	# 본체 섬광 — torso.modulate는 다른 곳에서 안 건드려 충돌 없음(피격은 visual.modulate).
+	if torso != null:
+		var ft := torso.create_tween()
+		ft.tween_property(torso, "modulate", Color(1.6, 1.6, 1.8), 0.08)
+		ft.tween_property(torso, "modulate", Color(1, 1, 1), 0.34)
 
 func _spawn_explosion() -> void:
 	var center: Vector2 = global_position + Vector2(0, -28)
