@@ -4,6 +4,8 @@ extends Node
 # UI hint 라벨/키캡 표지가 이 값에 따라 실시간 swap된다.
 # 변경 시 input_kind_changed 시그널 → 각 UI가 _refresh_hints 갱신.
 signal input_kind_changed(kind: String)
+# 스킬 티어가 바뀔 때 — Player가 캐릭터 부착물(파우치·윙 등) 외형을 갱신하는 데 사용.
+signal skills_changed
 const PAD_AXIS_DEADZONE: float = 0.4
 var last_input_kind: String = "kb"  # "kb" | "pad"
 
@@ -385,6 +387,7 @@ func add_skill(id: String) -> void:
 			if new_tier == 1 or new_tier == 2:
 				player_max_hp += 1
 				player_hp = min(player_hp + 1, player_max_hp)
+	emit_signal("skills_changed")
 
 func damage_player(amount: int) -> void:
 	# 스토리 모드는 체력 무제한 — 피격 자체를 무시. (Player.take_hit의 invuln 등은 그대로 동작)

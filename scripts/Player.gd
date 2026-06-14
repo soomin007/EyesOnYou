@@ -95,6 +95,10 @@ func _ready() -> void:
 		leg_l = torso.get_node_or_null("LegL")
 		leg_r = torso.get_node_or_null("LegR")
 	_refresh_skill_charges()
+	# 스킬 부착물(파우치·윙 등) — 초기 1회 + 스킬 변경 시 갱신(성장 가시화).
+	CharacterArt.attach_player_skill_parts(torso, GameState.skills)
+	if not GameState.skills_changed.is_connected(_on_skills_changed):
+		GameState.skills_changed.connect(_on_skills_changed)
 	muzzle_flash = ColorRect.new()
 	muzzle_flash.name = "MuzzleFlash"
 	muzzle_flash.color = Color(1.0, 0.92, 0.45, 1.0)
@@ -333,6 +337,7 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	var fb_tier: int = GameState.get_skill_tier("fire_boost")
 	b.damage = 2 if fb_tier >= 1 else 1  # T0=1, T1+=2 고정
 	b.pierce = fb_tier >= 3
+	b.style_tier = fb_tier               # 총알 외형 분기용 (성장 가시화)
 	# multishot T3 — 약한 추적
 	b.tracking = GameState.get_skill_tier("multishot") >= 3
 	# glide T3 — 활강 중(공중 낙하) 사격 관통 + 추적 + 데미지. 재설계(2026-06-13): 관통샷을 T3로 통합
@@ -404,6 +409,12 @@ func _refresh_skill_charges() -> void:
 		# T3로 막 진입했으면 충전 1개 추가 보장(이전엔 1/1 상태)
 		if new_max == 2 and skill_charges < new_max and skill_cd <= 0.0:
 			skill_charges = new_max
+
+# 스킬 티어 변경(레벨업) 시 — 충전 수와 캐릭터 부착물 외형을 함께 갱신.
+func _on_skills_changed() -> void:
+	_refresh_skill_charges()
+	if torso != null:
+		CharacterArt.attach_player_skill_parts(torso, GameState.skills)
 
 func _spawn_explosion() -> void:
 	var center: Vector2 = global_position + Vector2(0, -28)

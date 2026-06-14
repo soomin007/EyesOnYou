@@ -10,6 +10,8 @@ const BASE_LIFETIME: float = 0.55
 var dir: int = 1
 var damage: int = 1
 var pierce: bool = false
+# fire_boost 티어 — 총알 외형(크기·색·잔상)으로 사격 성장 가시화. Player._spawn_bullet에서 전달.
+var style_tier: int = 0
 var speed_mult: float = 1.0
 var lifetime_mult: float = 1.0
 var lifetime: float = BASE_LIFETIME
@@ -36,19 +38,43 @@ func _ready() -> void:
 	col.shape = shape
 	add_child(col)
 
+	# ── 외형: fire_boost 티어 + 관통 여부로 탄/잔상 모양 변화 (스킬 성장 가시화) ──
+	# T0 노랑 → T1 더 크고 밝은 주황 → T2 긴 잔상 → 관통(T3/활강) 길쭉한 트레이서.
+	var col_body: Color = Color(1.0, 0.95, 0.55, 1.0)
+	var col_trail: Color = Color(1.0, 0.92, 0.45, 0.55)
+	var body_w: float = 10.0
+	var body_h: float = 4.0
+	var trail_w: float = 20.0
+	var trail_h: float = 2.0
+	if style_tier >= 1:                       # 사격 강화 — 더 크고 밝은 주황 탄
+		col_body = Color(1.0, 0.72, 0.32, 1.0)
+		col_trail = Color(1.0, 0.62, 0.28, 0.6)
+		body_w = 12.0
+		body_h = 5.0
+	if style_tier >= 2:                       # 속사 — 긴 잔상
+		trail_w = 32.0
+		col_trail.a = 0.7
+	if pierce:                                # 관통 — 길쭉한 트레이서
+		body_w = 18.0
+		body_h = 3.0
+		trail_w = max(trail_w, 34.0)
+	if pierce and tracking:                   # 활강 유도 관통 — 시안 틴트로 구분
+		col_body = Color(0.6, 0.95, 1.0, 1.0)
+		col_trail = Color(0.5, 0.88, 1.0, 0.65)
+
 	var trail := ColorRect.new()
-	trail.color = Color(1.0, 0.92, 0.45, 0.55)
-	trail.size = Vector2(20.0, 2.0)
+	trail.color = col_trail
+	trail.size = Vector2(trail_w, trail_h)
 	if dir > 0:
-		trail.position = Vector2(-20.0, -1.0)
+		trail.position = Vector2(-trail_w, -trail_h * 0.5)
 	else:
-		trail.position = Vector2(0.0, -1.0)
+		trail.position = Vector2(0.0, -trail_h * 0.5)
 	add_child(trail)
 
 	var bullet := ColorRect.new()
-	bullet.color = Color(1.0, 0.95, 0.55, 1.0)
-	bullet.size = Vector2(10.0, 4.0)
-	bullet.position = Vector2(-5.0, -2.0)
+	bullet.color = col_body
+	bullet.size = Vector2(body_w, body_h)
+	bullet.position = Vector2(-body_w * 0.5, -body_h * 0.5)
 	add_child(bullet)
 
 func _process(delta: float) -> void:
