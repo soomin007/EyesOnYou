@@ -789,6 +789,11 @@ func _first_focusable(node: Node) -> Control:
 func _input(event: InputEvent) -> void:
 	# 캡쳐 중엔 아래 분기만. 그 외엔 Q/E or LB/RB로 탭 전환 가능.
 	if capturing_action == "":
+		# ESC/뒤로 = 닫기 (최우선). 캡쳐 중 ESC는 아래에서 캡쳐 취소로 처리되므로 여기선 제외.
+		if event.is_action_pressed("ui_cancel"):
+			get_viewport().set_input_as_handled()
+			_on_close_pressed()
+			return
 		var tab_dir: int = 0
 		if event is InputEventKey:
 			var ke := event as InputEventKey

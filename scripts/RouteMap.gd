@@ -20,10 +20,16 @@ var skill_rec_panel: PanelContainer = null
 var skill_rec_icon: SkillIcon = null
 var skill_rec_name: Label = null
 var skill_rec_reason: Label = null
+# ESC 일시정지 메뉴 — Stage와 동일 패턴(계속/스킬트리/설정/처음으로).
+var pause_overlay: CanvasLayer = null
+var settings_overlay: Control = null
 
 func _ready() -> void:
 	# 안전망: 이전 scene에서 paused가 carry되어 메뉴가 freeze되는 패턴 차단.
 	get_tree().paused = false
+	# 자체 일시정지(ESC) 중에도 입력을 받아 ESC로 열고 닫기가 모두 되게 — RouteMap엔
+	# _process 게임로직이 없어 ALWAYS여도 안전(PAUSABLE이면 paused 중 ESC를 못 받아 못 닫힘).
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	stage_label.text = "STAGE %d / %d  —  루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	subtitle_label.text = "● 위험도 / 보상   —   ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
@@ -421,6 +427,9 @@ func _update_risk_reward_panel(route: Dictionary) -> void:
 	risk_reward_panel.visible = true
 
 func _input(event: InputEvent) -> void:
+	# 일시정지 중엔 SPACE 소비 안 함 — 일시정지 메뉴 버튼의 ui_accept(SPACE)를 막지 않게.
+	if pause_overlay != null:
+		return
 	# 스페이스(점프 키)로는 맵 확정 금지 — 플레이 중 점프 습관 탓에 맵이 뜨자마자 의도치 않게
 	# 카드가 선택돼버리는 것 방지(사용자). _input은 GUI·_unhandled_input보다 먼저 처리되므로
 	# 여기서 소비하면 버튼 ui_accept와 아래 jump 분기 양쪽 다 막힌다. Enter·W·클릭으로는 정상 확정.
@@ -428,8 +437,59 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
+	# ESC는 최우선 — 선택 화면에서도 일시정지 메뉴를 연다(이전엔 ESC가 아무 반응 없었음).
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		if pause_overlay == null:
+			_show_pause()
+		else:
+			_hide_pause()
+		return
+	if pause_overlay != null:
+		return  # 일시정지 중엔 카드 확정 입력 무시(점프/스킵으로 뒤에서 결정되는 사고 방지).
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
 		_on_button_pressed(hovered_idx)
+
+func _show_pause() -> void:
+	get_tree().paused = true
+	SfxPlayer.play("ui_pause_open")
+	pause_overlay = PauseHelper.build(self, _on_pause_resume, _on_pause_settings, _on_pause_to_title)
+	add_child(pause_overlay)
+
+func _hide_pause() -> void:
+	if pause_overlay != null:
+		SfxPlayer.play("ui_cancel")
+		pause_overlay.queue_free()
+		pause_overlay = null
+	get_tree().paused = false
+
+func _on_pause_resume() -> void:
+	_hide_pause()
+
+func _on_pause_settings() -> void:
+	if settings_overlay != null:
+		return
+	var packed := load(SceneRouter.SETTINGS) as PackedScene
+	if packed == null:
+		return
+	settings_overlay = packed.instantiate()
+	settings_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	if pause_overlay != null:
+		pause_overlay.add_child(settings_overlay)
+	else:
+		add_child(settings_overlay)
+	if settings_overlay.has_signal("closed"):
+		settings_overlay.closed.connect(_on_settings_closed)
+
+func _on_settings_closed() -> void:
+	if settings_overlay != null:
+		settings_overlay.queue_free()
+		settings_overlay = null
+
+func _on_pause_to_title() -> void:
+	get_tree().paused = false
+	GameState.reset()
+	get_tree().change_scene_to_file(SceneRouter.TITLE)
 
 func _on_button_pressed(idx: int) -> void:
 	if idx < 0 or idx >= pool.size():

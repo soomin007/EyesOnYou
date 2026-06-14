@@ -86,6 +86,12 @@ func _process(delta: float) -> void:
 		text_label.text = full.substr(0, revealed_chars)
 
 func _unhandled_input(event: InputEvent) -> void:
+	# ESC는 최우선 — 입력 락아웃과 무관하게 브리핑 전체를 건너뛰고 루트 선택으로.
+	# (오프닝/브리핑에서 ESC가 안 먹던 문제. 어떤 화면에서도 ESC는 즉시 반응.)
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		get_tree().change_scene_to_file(SceneRouter.ROUTE_MAP)
+		return
 	if input_lockout_t > 0.0:
 		# 보스 클리어 후 잔여 점프 연타 차단.
 		return

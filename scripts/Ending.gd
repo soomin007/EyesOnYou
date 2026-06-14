@@ -279,6 +279,16 @@ func _on_sequence_done() -> void:
 		(hold_progress_bar.get_parent() as Control).visible = true
 
 func _unhandled_input(event: InputEvent) -> void:
+	# ESC는 최우선 — 결말 연출을 건너뛴다(입력 락아웃 무관). 선택지(있어요/없어요)는
+	# 서사 분기라 ESC로 건너뛰지 않는다(그 경우 버튼으로만 진행).
+	if event.is_action_pressed("ui_cancel") and not waiting_choice:
+		get_viewport().set_input_as_handled()
+		if sequence_complete:
+			get_tree().change_scene_to_file(SceneRouter.CREDITS)  # 종료 프롬프트 → 바로 크레딧
+		else:
+			line_idx = lines.size()   # 내러티브 즉시 종료
+			_on_sequence_done()       # 종료 프롬프트 노출
+		return
 	if waiting_choice:
 		return
 	# 시퀀스 완료 후엔 SPACE 단발은 무시 — 길게 누르기로만 타이틀 이동 (process에서 처리).

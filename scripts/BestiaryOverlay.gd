@@ -88,6 +88,15 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	btn.text = "확인"
 	btn.process_mode = Node.PROCESS_MODE_ALWAYS
 	btn.pressed.connect(func() -> void: _close(layer))
+	# ESC로도 닫히게 — 단축키(ui_cancel) 부여. 모달+일시정지 중이라 충돌 없음.
+	# (단축키는 _unhandled_input보다 먼저 소비 → Stage의 pause 토글로 새지 않음.)
+	var sc := Shortcut.new()
+	var esc_ev := InputEventAction.new()
+	esc_ev.action = "ui_cancel"
+	var evs: Array[InputEvent] = []
+	evs.append(esc_ev)
+	sc.events = evs
+	btn.shortcut = sc
 	v.add_child(btn)
 
 	host.add_child(layer)

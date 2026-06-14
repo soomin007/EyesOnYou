@@ -180,8 +180,7 @@ func _process(delta: float) -> void:
 			_show_end_menu()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _input_lockout_t > 0.0:
-		return
+	# ESC는 최우선 — 입력 락아웃과 무관하게 즉시 반응(락아웃은 점프 연타 차단용이라 ESC엔 불필요).
 	if event.is_action_pressed("ui_cancel"):
 		if _is_overlay:
 			# 오버레이 — 짧게 페이드 후 닫기.
@@ -193,6 +192,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			# 메뉴에서 ESC — 메인으로.
 			_on_exit_pressed()
 		get_viewport().set_input_as_handled()
+		return
+	if _input_lockout_t > 0.0:
+		return
 
 # fade_long=true — 자동 종료(긴 1.5s 페이드, 여운). false — 수동 ESC(짧은 0.3s).
 func _finish(fade_long: bool) -> void:
