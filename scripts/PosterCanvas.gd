@@ -2,7 +2,7 @@ class_name PosterCanvas
 extends Control
 
 # 과제 제출용 게임 소개 포스터 — 인엔진 렌더. 게임의 실제 색·폰트·VEIL 눈(BriefingVisual 모티프)과
-# 실제 게임 스크린샷을 함께 써서 화면 아이덴티티와 일치시킨다. _draw로 그래픽(눈/프레임/스샷/구분선),
+# 실제 게임 스크린샷을 함께 써서 화면 아이덴티티와 일치시킨다. _draw로 그래픽(눈/프레임/스샷/엔딩박스/구분선),
 # Label 자식으로 텍스트. 세로 포스터(A4 비율 근사, 1240×1754). Poster.gd가 SubViewport로 PNG 캡처.
 # 스크린샷은 Screenshotter.gd가 res://poster_out/shots/ 에 미리 저장해 둔 것을 런타임 로드.
 
@@ -19,12 +19,24 @@ const COL_COMBAT: Color = Color(0.97, 0.58, 0.48)     # 전투
 const COL_MOBI: Color = Color(0.55, 0.82, 0.97)       # 이동
 const COL_SURV: Color = Color(0.58, 0.92, 0.68)       # 생존
 
-const M: float = 100.0
-const EYE_C: Vector2 = Vector2(620.0, 288.0)
-const EYE_R: float = 146.0
+const M: float = 100.0          # 콘텐츠 좌우 마진 (프레임/코너 안쪽)
+const FM: float = 44.0          # 프레임 오프셋
+const EYE_C: Vector2 = Vector2(620.0, 262.0)
+const EYE_R: float = 148.0
 
-# 스크린샷 스트립 (3장, 16:9)
-const SHOT_Y: float = 794.0
+# ── 엔딩 행 (수용률 FOLLOW × 전투 FIGHT → 4결말. EndingResolver.gd 진실) ──
+const END_Y: float = 760.0
+const END_H: float = 86.0
+const END_GAP: float = 18.0
+const ENDINGS: Array = [
+	["A", "완벽한 도구"],
+	["B", "혼자였던 사람"],
+	["C", "공생"],
+	["D", "유령 임무"],
+]
+
+# ── 스크린샷 스트립 (3장, 16:9) ──
+const SHOT_Y: float = 910.0
 const SHOT_W: float = 336.0
 const SHOT_H: float = 189.0
 const SHOT_GAP: float = 16.0
@@ -34,13 +46,13 @@ const SHOTS: Array = [
 	["res://poster_out/shots/shot_route_datacenter.png", "전투 — 데이터 센터"],
 ]
 
-const DIV1_Y: float = 1018.0
-const DIV2_Y: float = 1452.0
+const DIV1_Y: float = 1140.0
+const DIV2_Y: float = 1500.0
 # 특징 2×2 그리드
 const FX_L: float = 100.0
 const FX_R: float = 648.0
-const FY_1: float = 1118.0
-const FY_2: float = 1280.0
+const FY_1: float = 1208.0
+const FY_2: float = 1356.0
 const FCW: float = 494.0
 
 var _shot_tex: Array = []  # [{tex, rect}]
@@ -64,6 +76,11 @@ func _load_shots() -> void:
 		_shot_tex.append({"tex": tex, "rect": rect})
 		x += SHOT_W + SHOT_GAP
 
+func _ending_rect(i: int) -> Rect2:
+	var bw: float = (W - 2.0 * M - 3.0 * END_GAP) / 4.0
+	var x: float = M + float(i) * (bw + END_GAP)
+	return Rect2(x, END_Y, bw, END_H)
+
 func _draw() -> void:
 	draw_rect(Rect2(0.0, 0.0, W, H), COL_BG, true)
 	# 미세 스캔라인 — CRT/감시화면 질감
@@ -71,12 +88,13 @@ func _draw() -> void:
 	while y < H:
 		draw_line(Vector2(0.0, y), Vector2(W, y), Color(0.46, 0.86, 1.0, 0.016), 1.0)
 		y += 5.0
-	# 프레임 + 코너 브래킷 (감시 UI)
-	var fm: float = 44.0
-	draw_rect(Rect2(fm, fm, W - 2.0 * fm, H - 2.0 * fm), COL_VEIL * Color(1, 1, 1, 0.10), false, 1.0)
-	_corner_brackets(fm)
+	# 프레임 + 코너 브래킷 (감시 UI) — 콘텐츠(M=100)보다 바깥이라 텍스트와 안 겹침
+	draw_rect(Rect2(FM, FM, W - 2.0 * FM, H - 2.0 * FM), COL_VEIL * Color(1, 1, 1, 0.10), false, 1.0)
+	_corner_brackets(FM)
 	# 키 비주얼 — VEIL 눈
 	_draw_eye(EYE_C, EYE_R)
+	# 엔딩 행 박스
+	_draw_endings()
 	# 스크린샷 스트립
 	_draw_shots()
 	# 구분선
@@ -84,6 +102,15 @@ func _draw() -> void:
 	_divider(DIV2_Y)
 	# 특징 셀 강조 사각형
 	_feat_accents()
+
+func _draw_endings() -> void:
+	for i in ENDINGS.size():
+		var r: Rect2 = _ending_rect(i)
+		draw_rect(r, Color(0.07, 0.08, 0.10), true)
+		draw_rect(r, COL_VEIL * Color(1, 1, 1, 0.40), false, 1.5)
+		# 좌상 코너 틱 (스샷과 동일 모티프)
+		draw_line(r.position, r.position + Vector2(12, 0), COL_VEIL, 2.0)
+		draw_line(r.position, r.position + Vector2(0, 12), COL_VEIL, 2.0)
 
 func _draw_shots() -> void:
 	for item in _shot_tex:
@@ -143,7 +170,7 @@ func _ring(center: Vector2, radius: float, width: float, col: Color) -> void:
 
 func _corner_brackets(fm: float) -> void:
 	var col: Color = COL_VEIL * Color(1, 1, 1, 0.55)
-	var ln: float = 58.0
+	var ln: float = 40.0
 	var wd: float = 2.0
 	draw_line(Vector2(fm, fm), Vector2(fm + ln, fm), col, wd)
 	draw_line(Vector2(fm, fm), Vector2(fm, fm + ln), col, wd)
@@ -174,16 +201,25 @@ func _feat_accents() -> void:
 # ── 텍스트 (Label 자식) ──
 func _build_text() -> void:
 	_label("ARCTURUS DYNAMICS   ·   현장 작전 기록   ·   OPERATION PALIMPSEST",
-		Vector2(M, 86.0), W - 2.0 * M, 18, COL_VEIL * Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_CENTER, false)
-	_label("EYES ON YOU", Vector2(M, 452.0), W - 2.0 * M, 110, COL_WHITE, HORIZONTAL_ALIGNMENT_CENTER, false)
-	_label("누군가, 당신을 보고 있다.", Vector2(M, 612.0), W - 2.0 * M, 32, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false)
+		Vector2(M, 90.0), W - 2.0 * M, 18, COL_VEIL * Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_CENTER, false)
+	# 타이틀 — outline 강화(faux-bold)로 엔진 기본 폰트의 가는 획을 보강.
+	_label("EYES ON YOU", Vector2(M, 406.0), W - 2.0 * M, 128, COL_WHITE, HORIZONTAL_ALIGNMENT_CENTER, false, 9)
+	_label("누군가, 당신을 보고 있다.", Vector2(M, 568.0), W - 2.0 * M, 32, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false)
 	_label("근미래 보안기업의 현장 요원. 상황실 AI 'VEIL'의 조언을 들으며, 혹은 무시하며 임무를 클리어한다.\n그 선택이 쌓여 — 마지막에, VEIL이 누구였는지 드러난다.",
-		Vector2((W - 960.0) * 0.5, 672.0), 960.0, 23, COL_GRAY, HORIZONTAL_ALIGNMENT_CENTER, true)
-	# 스크린샷 캡션
+		Vector2((W - 960.0) * 0.5, 626.0), 960.0, 23, COL_GRAY, HORIZONTAL_ALIGNMENT_CENTER, true)
+	# ── 엔딩 행 ──
+	_label("FOUR ENDINGS · ONE MISSION", Vector2(M, 732.0), W - 2.0 * M, 15,
+		COL_VEIL * Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_LEFT, false)
+	_label("FOLLOW × FIGHT", Vector2(M, 732.0), W - 2.0 * M, 15,
+		COL_DIM, HORIZONTAL_ALIGNMENT_RIGHT, false)
+	_ending_labels()
+	# ── 스크린샷 섹션 ──
+	_label("IN-GAME · 12 ROUTES, ONE MISSION", Vector2(M, 882.0), W - 2.0 * M, 15,
+		COL_VEIL * Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_LEFT, false)
 	_shot_captions(SHOT_Y + SHOT_H + 8.0)
 	# 정보 칩
 	_label("횡스크롤 로그라이트     ·     8–15분     ·     4종 결말     ·     Godot 4.6",
-		Vector2(M, 1040.0), W - 2.0 * M, 21, COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
+		Vector2(M, 1160.0), W - 2.0 * M, 21, COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
 	# 특징 4 (2×2)
 	_feat_cell(FX_L, FY_1, 36.0, "VEIL — 당신을 보는 AI",
 		"위협을 미리 짚어주는 상황실 AI 파트너. 그 조언을 따른 정도가 네 개의 결말을 가른다.")
@@ -195,12 +231,21 @@ func _build_text() -> void:
 		"스테이지마다 추첨되는 루트. 위험을 감수할수록 보상이 커진다.")
 	# VEIL 인용
 	_label("“당신은 앞만 봐요. 뒤는, 제가 보고 있을 테니까.”",
-		Vector2(M, 1488.0), W - 2.0 * M, 28, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false)
-	_label("— VEIL", Vector2(M, 1532.0), W - 2.0 * M, 19, COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
+		Vector2(M, 1526.0), W - 2.0 * M, 28, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_label("— VEIL", Vector2(M, 1570.0), W - 2.0 * M, 19, COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
 	# 푸터
-	_label("▶  soomin007.github.io/EyesOnYou", Vector2(M, 1618.0), W - 2.0 * M, 23, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false)
+	_label("▶  soomin007.github.io/EyesOnYou", Vector2(M, 1624.0), W - 2.0 * M, 23, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false)
 	_label("Godot 4.6 · GL Compatibility · 개인 프로젝트 / 전시 데모",
-		Vector2(M, 1654.0), W - 2.0 * M, 16, COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
+		Vector2(M, 1664.0), W - 2.0 * M, 16, COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
+
+func _ending_labels() -> void:
+	for i in ENDINGS.size():
+		var pair: Array = ENDINGS[i]
+		var r: Rect2 = _ending_rect(i)
+		_label(str(pair[0]), Vector2(r.position.x, r.position.y + 8.0), r.size.x, 40,
+			COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false)
+		_label(str(pair[1]), Vector2(r.position.x, r.position.y + 60.0), r.size.x, 14,
+			COL_GRAY, HORIZONTAL_ALIGNMENT_CENTER, false)
 
 func _shot_captions(cy: float) -> void:
 	var i: int = 0
@@ -214,7 +259,7 @@ func _feat_cell(x: float, y: float, head_off: float, head: String, desc: String)
 	_label(head, Vector2(x + head_off, y - 3.0), FCW - head_off, 24, COL_WHITE, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_label(desc, Vector2(x, y + 40.0), FCW, 18, COL_GRAY, HORIZONTAL_ALIGNMENT_LEFT, true)
 
-func _label(txt: String, pos: Vector2, w: float, font_size: int, col: Color, align: int, wrap: bool) -> Label:
+func _label(txt: String, pos: Vector2, w: float, font_size: int, col: Color, align: int, wrap: bool, outline: int = 4) -> Label:
 	var l: Label = Label.new()
 	l.text = txt
 	l.position = pos
@@ -223,7 +268,7 @@ func _label(txt: String, pos: Vector2, w: float, font_size: int, col: Color, ali
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", col)
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
-	l.add_theme_constant_override("outline_size", 4)
+	l.add_theme_constant_override("outline_size", outline)
 	l.horizontal_alignment = align
 	if wrap:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

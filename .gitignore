@@ -23,6 +23,9 @@ export.cfg
 export_credentials.cfg
 *.tmp
 
+# 포스터 렌더 임시 로그
+poster_out/_*.txt
+
 # Build outputs
 builds/
 exports/
