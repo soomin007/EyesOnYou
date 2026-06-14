@@ -31,9 +31,6 @@ func _draw() -> void:
 	_corners(22.0, 26.0)
 	# VEIL 눈
 	_draw_eye(EYE_C, EYE_R)
-	# 구분선 (EYES ON YOU 아래)
-	var hw: float = 150.0
-	draw_line(Vector2(SZ * 0.5 - hw, DIV_Y), Vector2(SZ * 0.5 + hw, DIV_Y), COL_VEIL * Color(1, 1, 1, 0.45), 1.0, true)
 
 func _corners(fm: float, ln: float) -> void:
 	var col: Color = COL_VEIL * Color(1, 1, 1, 0.55)
@@ -90,9 +87,8 @@ func _ring(center: Vector2, radius: float, width: float, col: Color) -> void:
 	draw_arc(center, radius, 0.0, TAU, 64, col, width, true)
 
 func _build_text() -> void:
-	_label("EYES ON YOU", Vector2(0.0, 398.0), SZ, 60, COL_WHITE, HORIZONTAL_ALIGNMENT_CENTER)
-	_label("S U R V E I L L A N C E   R O G U E L I T E", Vector2(0.0, 488.0), SZ, 18,
-		COL_VEIL * Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_CENTER)
+	# 아이콘(VEIL 눈) + 제목만. 부제는 군더더기라 제거.
+	_label("EYES ON YOU", Vector2(0.0, 424.0), SZ, 64, COL_WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _label(txt: String, pos: Vector2, w: float, font_size: int, col: Color, align: int) -> void:
 	var l: Label = Label.new()

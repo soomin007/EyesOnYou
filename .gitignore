@@ -23,8 +23,8 @@ export.cfg
 export_credentials.cfg
 *.tmp
 
-# 포스터 렌더 임시 로그
-poster_out/_*.txt
+# 포스터 렌더 임시 파일(로그·크롭 미리보기 등)
+poster_out/_*
 
 # Build outputs
 builds/
