@@ -15,6 +15,11 @@ var buttons: Array = []
 # 고위험/고보상 별도 패널 (사용자 피드백: 본 멘트에 겹치면 너무 많아짐).
 var risk_reward_panel: PanelContainer = null
 var risk_reward_label: Label = null
+# 권장 스킬 칩 — VEIL 평문에 묻히던 추천을 좌측 아이콘 칩으로 분리(가독성).
+var skill_rec_panel: PanelContainer = null
+var skill_rec_icon: SkillIcon = null
+var skill_rec_name: Label = null
+var skill_rec_reason: Label = null
 
 func _ready() -> void:
 	# 안전망: 이전 scene에서 paused가 carry되어 메뉴가 freeze되는 패턴 차단.
@@ -35,6 +40,7 @@ func _ready() -> void:
 	_setup_trust_gauge()
 	_build_progress_strip()
 	_build_risk_reward_panel()
+	_build_skill_rec_panel()
 	_build_node_buttons()
 	_update_veil_comment()
 	_refresh_hint()
@@ -71,6 +77,60 @@ func _build_risk_reward_panel() -> void:
 	risk_reward_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.65))
 	risk_reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	risk_reward_panel.add_child(risk_reward_label)
+
+# 권장 스킬 칩 — VeilBox 좌측 위(risk/reward 패널과 좌우 대칭). 아이콘 + 이름 + 사유.
+func _build_skill_rec_panel() -> void:
+	skill_rec_panel = PanelContainer.new()
+	# 좌측 마진(카드 왼쪽 빈 공간)에 배치 — 우측 risk/reward 패널과 좌우 대칭.
+	# 풀은 최대 3장이라 가운데 정렬된 카드 왼쪽에 마진이 남는다(카드와 안 겹치게 폭 제한).
+	skill_rec_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	skill_rec_panel.anchor_left = 0.025
+	skill_rec_panel.anchor_top = 0.54
+	skill_rec_panel.anchor_right = 0.205
+	skill_rec_panel.anchor_bottom = 0.66
+	skill_rec_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.08, 0.11, 0.14, 0.9)
+	sb.border_color = Color(0.45, 0.7, 0.9, 0.55)
+	sb.set_border_width_all(1)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 10
+	sb.content_margin_bottom = 10
+	sb.corner_radius_top_left = 4
+	sb.corner_radius_top_right = 4
+	sb.corner_radius_bottom_left = 4
+	sb.corner_radius_bottom_right = 4
+	skill_rec_panel.add_theme_stylebox_override("panel", sb)
+	skill_rec_panel.visible = false
+	add_child(skill_rec_panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	skill_rec_panel.add_child(row)
+	skill_rec_icon = SkillIcon.new()
+	skill_rec_icon.custom_minimum_size = Vector2(46, 46)
+	skill_rec_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	skill_rec_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(skill_rec_icon)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 1)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(col)
+	var head := Label.new()
+	head.text = "권장 스킬"
+	head.add_theme_font_size_override("font_size", 12)
+	head.add_theme_color_override("font_color", Color(0.6, 0.66, 0.74))
+	col.add_child(head)
+	skill_rec_name = Label.new()
+	skill_rec_name.add_theme_font_size_override("font_size", 17)
+	col.add_child(skill_rec_name)
+	skill_rec_reason = Label.new()
+	skill_rec_reason.add_theme_font_size_override("font_size", 12)
+	skill_rec_reason.add_theme_color_override("font_color", Color(0.75, 0.82, 0.9))
+	col.add_child(skill_rec_reason)
 
 func _on_input_kind_changed(_kind: String) -> void:
 	_refresh_hint()
@@ -297,28 +357,49 @@ func _update_veil_comment() -> void:
 		msg += "★ 베일 추천\nVEIL  —  " + recommended_reason
 	else:
 		msg += "VEIL  —  " + str(route.get("veil_comment", ""))
-	# 권장 스킬(상성) — 이 맵 적에 잘 듣는 스킬을 가르친다(보유 여부 무관).
-	var rs: String = _recommended_skill_line(str(route.get("id", "")))
-	if rs != "":
-		msg += "\n\n" + rs
 	veil_text.text = msg
-	# 고위험/고보상 경고는 별도 우측 패널로 — 본 멘트와 시각 분리.
+	# 고위험/고보상 경고는 별도 우측 패널, 권장 스킬은 별도 좌측 칩 — 본 멘트와 시각 분리.
 	_update_risk_reward_panel(route)
+	_update_skill_rec_panel(route)
 
 const _SKILL_DISPLAY: Dictionary = {"explosive": "폭발물", "barrier": "방어막", "glide": "글라이드", "fire_boost": "사격 강화", "multishot": "다중사격"}
 const _ENEMY_DISPLAY: Dictionary = {"shield": "방패병", "sniper": "저격수", "drone": "드론", "bomber": "폭격기", "patrol": "정찰병"}
 
-# 이 맵 적 구성에 가장 잘 듣는 상성 스킬 한 줄(SkillTreeData.MATCHUP 우선순위순).
-func _recommended_skill_line(route_id: String) -> String:
+# 이 맵 적 구성에 가장 잘 듣는 상성 스킬(SkillTreeData.MATCHUP 우선순위순).
+# 스포일러 방지: 아직 안 만난 적은 추천 근거로 쓰지 않는다(루트 카드의 ? 아이콘과 일관).
+# → 본 적이 없으면 추천도 안 뜬다. {skill_id, enemy} 또는 빈 Dictionary.
+func _recommended_skill_for_route(route_id: String) -> Dictionary:
 	var kinds: Array = _route_enemy_kinds(route_id)
 	if kinds.is_empty():
-		return ""
+		return {}
 	for m in SkillTreeData.MATCHUP:
 		var en: String = str(m.get("enemy", ""))
-		if en in kinds:
-			var sid: String = str(m.get("skill", ""))
-			return "권장 스킬 — %s (%s에 강해요)" % [str(_SKILL_DISPLAY.get(sid, sid)), str(_ENEMY_DISPLAY.get(en, en))]
-	return ""
+		if en in kinds and en in GameState.seen_enemies:
+			return {"skill_id": str(m.get("skill", "")), "enemy": en}
+	return {}
+
+# 좌측 권장 스킬 칩 갱신 — 본 적이 없거나 hidden/challenge 맵이면 숨김.
+func _update_skill_rec_panel(route: Dictionary) -> void:
+	if skill_rec_panel == null:
+		return
+	if bool(route.get("hidden", false)) or bool(route.get("challenge", false)):
+		skill_rec_panel.visible = false
+		return
+	var rec: Dictionary = _recommended_skill_for_route(str(route.get("id", "")))
+	if rec.is_empty():
+		skill_rec_panel.visible = false
+		return
+	var sid: String = str(rec.get("skill_id", ""))
+	var en: String = str(rec.get("enemy", ""))
+	var fam: String = str(SkillTreeData.find_line(sid).get("family", ""))
+	skill_rec_icon.skill_id = sid
+	skill_rec_icon.family = fam
+	skill_rec_icon.queue_redraw()
+	skill_rec_name.text = str(_SKILL_DISPLAY.get(sid, sid))
+	var fam_col: Color = SkillTreeData.FAMILY_COLORS.get(fam, Color(0.9, 0.93, 0.97))
+	skill_rec_name.add_theme_color_override("font_color", fam_col)
+	skill_rec_reason.text = "%s에 강해요" % str(_ENEMY_DISPLAY.get(en, en))
+	skill_rec_panel.visible = true
 
 func _update_risk_reward_panel(route: Dictionary) -> void:
 	if risk_reward_panel == null or risk_reward_label == null:
