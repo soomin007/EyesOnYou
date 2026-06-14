@@ -102,7 +102,8 @@ func _ready() -> void:
 	_scroll = VBoxContainer.new()
 	_scroll.add_theme_constant_override("separation", 6)
 	_scroll.position = Vector2(0, TOP_GAP)
-	_scroll.size = Vector2(1280, 0)
+	# 화면 폭에 맞춤 — 라인은 SIZE_EXPAND_FILL+CENTER라 화면 가로 중앙 정렬(적응형).
+	_scroll.size = Vector2(get_viewport().get_visible_rect().size.x, 0)
 	_scroll.alignment = BoxContainer.ALIGNMENT_BEGIN
 	add_child(_scroll)
 	_build_lines()
@@ -111,8 +112,9 @@ func _ready() -> void:
 	_hint_label.text = _hint_text()
 	_hint_label.add_theme_font_size_override("font_size", 12)
 	_hint_label.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
-	_hint_label.position = Vector2(960, 686)
+	_hint_label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_hint_label.size = Vector2(300, 18)
+	_hint_label.position = Vector2(-300.0 - 20.0, -18.0 - 16.0)
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(_hint_label)
 	GameState.input_kind_changed.connect(_on_input_kind_changed)

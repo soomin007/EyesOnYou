@@ -1377,11 +1377,15 @@ func _ambience_sewers() -> void:
 	var vignette := CanvasLayer.new()
 	vignette.layer = 1
 	add_child(vignette)
-	for side in [Vector2(0, 0), Vector2(1, 0)]:  # 좌/우 어두운 띠
+	for side in [0, 1]:  # 0=좌, 1=우 어두운 띠 — 화면 가장자리에 앵커(화면비 무관)
 		var v := ColorRect.new()
 		v.color = Color(0, 0, 0, 0.45)
-		v.size = Vector2(180, 720)
-		v.position = Vector2(side.x * (1280 - 180), 0)
+		if side == 0:
+			v.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+			v.offset_right = 180.0
+		else:
+			v.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+			v.offset_left = -180.0
 		vignette.add_child(v)
 
 func _ambience_rooftops() -> void:
@@ -1488,11 +1492,15 @@ func _ambience_ward() -> void:
 	var vignette := CanvasLayer.new()
 	vignette.layer = 1
 	add_child(vignette)
-	for side in [Vector2(0, 0), Vector2(1, 0)]:
+	for side in [0, 1]:  # 0=좌, 1=우 — 화면 가장자리 앵커(화면비 무관)
 		var v := ColorRect.new()
 		v.color = Color(0, 0, 0, 0.55)
-		v.size = Vector2(220, 720)
-		v.position = Vector2(side.x * (1280 - 220), 0)
+		if side == 0:
+			v.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+			v.offset_right = 220.0
+		else:
+			v.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+			v.offset_left = -220.0
 		vignette.add_child(v)
 	# 비상등 — 붉은 점멸
 	var rng := RandomNumberGenerator.new()
@@ -2019,8 +2027,9 @@ func _build_camera() -> void:
 			camera.limit_top = 0
 			camera.limit_bottom = int(_world_size.y)
 			camera.position_smoothing_enabled = false
-			# 1280×720 viewport에 _world_size 전체가 맞게 zoom out.
-			var zoom_fit: float = min(1280.0 / _world_size.x, 720.0 / _world_size.y)
+			# 현재 화면(visible_rect)에 _world_size 전체가 맞게 zoom out — 화면비 무관.
+			var vp_size: Vector2 = get_viewport().get_visible_rect().size
+			var zoom_fit: float = min(vp_size.x / _world_size.x, vp_size.y / _world_size.y)
 			camera.zoom = Vector2(zoom_fit, zoom_fit)
 			add_child(camera)
 			camera.global_position = _world_size * 0.5
@@ -2077,8 +2086,10 @@ func _build_hud() -> void:
 	# 시야 붕괴(veil_degraded) 시 BriefingVisual이 알아서 글리치(드롭아웃·지터·흐려짐).
 	var eye := Control.new()
 	eye.set_script(load("res://scripts/BriefingVisual.gd"))
+	# 우상단 앵커 — 어떤 화면비/해상도에서도 우측 위 모서리에 고정 (offset은 우측 기준 음수).
+	eye.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	eye.size = Vector2(54.0, 54.0)
-	eye.position = Vector2(1280.0 - 54.0 - 18.0, 14.0)
+	eye.position = Vector2(-54.0 - 18.0, 14.0)
 	eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(eye)
 	var eye_cap := Label.new()
@@ -2088,8 +2099,9 @@ func _build_hud() -> void:
 	eye_cap.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	eye_cap.add_theme_constant_override("outline_size", 3)
 	eye_cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	eye_cap.position = Vector2(1280.0 - 54.0 - 18.0, 70.0)
+	eye_cap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	eye_cap.size = Vector2(54.0, 14.0)
+	eye_cap.position = Vector2(-54.0 - 18.0, 70.0)
 	hud.add_child(eye_cap)
 
 	var bottom := MarginContainer.new()
@@ -3648,18 +3660,28 @@ func _build_challenge_blackout() -> void:
 	full_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	full_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	challenge_dark_root.add_child(full_dim)
-	# 가장자리 비네트 (좌/우/상/하 각각 짙은 띠 — 두껍게)
+	# 가장자리 비네트 (상/하/좌/우 각각 짙은 띠 — 화면 가장자리에 앵커, 화면비 무관)
 	for side_data in [
-		{"pos": Vector2(0, 0), "size": Vector2(1280, 140)},               # 상
-		{"pos": Vector2(0, 580), "size": Vector2(1280, 140)},             # 하
-		{"pos": Vector2(0, 0), "size": Vector2(220, 720)},                # 좌
-		{"pos": Vector2(1060, 0), "size": Vector2(220, 720)},             # 우
+		{"preset": Control.PRESET_TOP_WIDE, "thick": 140.0},      # 상
+		{"preset": Control.PRESET_BOTTOM_WIDE, "thick": 140.0},   # 하
+		{"preset": Control.PRESET_LEFT_WIDE, "thick": 220.0},     # 좌
+		{"preset": Control.PRESET_RIGHT_WIDE, "thick": 220.0},    # 우
 	]:
 		var d: Dictionary = side_data
 		var v := ColorRect.new()
 		v.color = Color(0, 0, 0, 0.72)
-		v.position = d["pos"]
-		v.size = d["size"]
+		var preset: int = d["preset"]
+		var thick: float = d["thick"]
+		v.set_anchors_preset(preset)
+		match preset:
+			Control.PRESET_TOP_WIDE:
+				v.offset_bottom = thick
+			Control.PRESET_BOTTOM_WIDE:
+				v.offset_top = -thick
+			Control.PRESET_LEFT_WIDE:
+				v.offset_right = thick
+			Control.PRESET_RIGHT_WIDE:
+				v.offset_left = -thick
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		challenge_dark_root.add_child(v)
 

@@ -606,8 +606,9 @@ func _build_veil_presence() -> void:
 	# 우상단 VEIL 눈 — "당신을 본다"의 시각적 존재(BriefingVisual 재사용, 자체 애니메이션).
 	var eye := Control.new()
 	eye.set_script(load("res://scripts/BriefingVisual.gd"))
+	eye.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	eye.size = Vector2(96.0, 96.0)
-	eye.position = Vector2(1280.0 - 96.0 - 30.0, 30.0)
+	eye.position = Vector2(-96.0 - 30.0, 30.0)
 	eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	veil_layer.add_child(eye)
 	var cap := Label.new()
@@ -616,8 +617,9 @@ func _build_veil_presence() -> void:
 	cap.add_theme_color_override("font_color", Color(0.46, 0.86, 1.0, 0.85))
 	cap.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	cap.add_theme_constant_override("outline_size", 3)
-	cap.position = Vector2(1280.0 - 96.0 - 30.0, 128.0)
+	cap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	cap.size = Vector2(96.0, 18.0)
+	cap.position = Vector2(-96.0 - 30.0, 128.0)
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	veil_layer.add_child(cap)
 	# 하단 중앙 자막 스택 — Stage._show_veil_subtitle과 동일 톤(시안 글자 + 다크 pill).

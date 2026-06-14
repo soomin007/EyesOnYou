@@ -20,8 +20,10 @@ const MARGIN_SIDE: float = 36.0
 const LINE_HEIGHT_BODY: float = 32.0
 const LINE_HEIGHT_TITLE: float = 48.0
 const LINE_HEIGHT_BLANK: float = 18.0
-const VIEWPORT_W: float = 1280.0
-const VIEWPORT_H: float = 720.0
+# 디자인 기준 화면 크기 — show_doc 진입 시 실제 화면(visible_rect)으로 갱신(적응형).
+# const가 아니라 var: 런타임에 현재 해상도/화면비로 덮어쓴다(아래 모든 사용처에 반영).
+var VIEWPORT_W: float = 1280.0
+var VIEWPORT_H: float = 720.0
 const SCROLL_LERP: float = 0.085  # 카메라 부드럽게 따라옴
 
 var layer: CanvasLayer
@@ -59,6 +61,10 @@ func _ready() -> void:
 func show_doc(input_lines: Array) -> void:
 	SfxPlayer.play("arcturus_enter")
 	lines_data = input_lines
+	# 적응형 — 실제 화면 크기로 기준 갱신 (종이 중앙·하단 안내·스크롤 한계가 화면비 무관).
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	VIEWPORT_W = vp.x
+	VIEWPORT_H = vp.y
 	layer = CanvasLayer.new()
 	layer.layer = 25
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
