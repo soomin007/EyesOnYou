@@ -706,6 +706,10 @@ var locked_door_triggered: bool = false
 var arcturus_state: String = "idle"
 var arcturus_lever: LeverInteractable = null
 var arcturus_plate: PressurePlate = null
+# 잠긴 문 시각 — 레버를 당기면 ACCESS DENIED(빨강) → GRANTED(초록)로 전환(사용자 지적).
+var arcturus_door_label: Label = null
+var arcturus_lock_led: ColorRect = null
+var arcturus_lock_pulse: Tween = null
 
 func _build_locked_door() -> void:
 	# 격리 병동에서만 등장 — ??? 맵(stage 5/6)에 대한 시각적 복선 + 이스터에그 트리거.
@@ -729,17 +733,17 @@ func _build_locked_door() -> void:
 	inner.size = Vector2(44.0, 140.0)
 	inner.z_index = 1
 	add_child(inner)
-	# 잠금 표시 — 빨간 LED, 더 크고 펄스
-	var lock := ColorRect.new()
-	lock.color = Color(0.95, 0.30, 0.30, 0.95)
-	lock.position = Vector2(x - 5.0, GROUND_Y - 80.0)
-	lock.size = Vector2(10.0, 10.0)
-	lock.z_index = 3
-	add_child(lock)
-	var pulse := lock.create_tween()
-	pulse.set_loops()
-	pulse.tween_property(lock, "modulate:a", 0.30, 0.7)
-	pulse.tween_property(lock, "modulate:a", 1.0, 0.7)
+	# 잠금 표시 — 빨간 LED, 더 크고 펄스 (잠금 해제 시 초록으로 전환 — 멤버 보관)
+	arcturus_lock_led = ColorRect.new()
+	arcturus_lock_led.color = Color(0.95, 0.30, 0.30, 0.95)
+	arcturus_lock_led.position = Vector2(x - 5.0, GROUND_Y - 80.0)
+	arcturus_lock_led.size = Vector2(10.0, 10.0)
+	arcturus_lock_led.z_index = 3
+	add_child(arcturus_lock_led)
+	arcturus_lock_pulse = arcturus_lock_led.create_tween()
+	arcturus_lock_pulse.set_loops()
+	arcturus_lock_pulse.tween_property(arcturus_lock_led, "modulate:a", 0.30, 0.7)
+	arcturus_lock_pulse.tween_property(arcturus_lock_led, "modulate:a", 1.0, 0.7)
 	# 잠금 주변 어두운 후광 (문이 거기 "있다"는 인지)
 	var halo := ColorRect.new()
 	halo.color = Color(0.95, 0.30, 0.30, 0.07)
@@ -747,16 +751,16 @@ func _build_locked_door() -> void:
 	halo.size = Vector2(160.0, 230.0)
 	halo.z_index = -2
 	add_child(halo)
-	# "ACCESS DENIED" 작은 라벨
-	var label := Label.new()
-	label.text = "ACCESS DENIED"
-	label.add_theme_font_size_override("font_size", 9)
-	label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.55, 0.85))
-	label.position = Vector2(x - 36.0, GROUND_Y - 60.0)
-	label.size = Vector2(72.0, 12.0)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.z_index = 3
-	add_child(label)
+	# "ACCESS DENIED" 작은 라벨 (잠금 해제 시 "ACCESS GRANTED" 초록으로 전환 — 멤버 보관)
+	arcturus_door_label = Label.new()
+	arcturus_door_label.text = "ACCESS DENIED"
+	arcturus_door_label.add_theme_font_size_override("font_size", 9)
+	arcturus_door_label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.55, 0.85))
+	arcturus_door_label.position = Vector2(x - 36.0, GROUND_Y - 60.0)
+	arcturus_door_label.size = Vector2(72.0, 12.0)
+	arcturus_door_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	arcturus_door_label.z_index = 3
+	add_child(arcturus_door_label)
 
 	# 첫 접근 VEIL 라인 트리거 영역 — 문 앞에 한 번 다가가면 한 줄 발화.
 	var approach := Area2D.new()
@@ -803,7 +807,20 @@ func _on_arcturus_lever_pulled(_id: String) -> void:
 	# 레버를 당겼다 — 발판 활성. 이미 발판 위에 서 있으면 PressurePlate.arm()이 즉시 step.
 	if arcturus_plate != null and is_instance_valid(arcturus_plate):
 		arcturus_plate.arm()
+	_unlock_door_visual()
 	_show_veil_subtitle("뭔가 풀렸어요. 잠긴 문 앞 발판 위로.", 3.0)
+
+# 잠긴 문 시각 전환 — ACCESS DENIED(빨강 펄스) → ACCESS GRANTED(초록 고정).
+# 사용자: 레버로 열어도 여전히 DENIED로 떠 의도가 안 보였음 → 잠금 해제 피드백으로 전환.
+func _unlock_door_visual() -> void:
+	if arcturus_lock_pulse != null and arcturus_lock_pulse.is_valid():
+		arcturus_lock_pulse.kill()
+	if arcturus_lock_led != null and is_instance_valid(arcturus_lock_led):
+		arcturus_lock_led.modulate.a = 1.0
+		arcturus_lock_led.color = Color(0.45, 0.92, 0.55, 0.95)
+	if arcturus_door_label != null and is_instance_valid(arcturus_door_label):
+		arcturus_door_label.text = "ACCESS GRANTED"
+		arcturus_door_label.add_theme_color_override("font_color", Color(0.55, 0.95, 0.6, 0.95))
 
 func _on_arcturus_plate_stepped(_id: String) -> void:
 	if arcturus_state != "idle":
