@@ -1,58 +1,43 @@
 # Eyes on You — 문서 인덱스
 
-외부 협업자/Claude 인계용 한 페이지 안내. 깊이 있는 내용은 각 문서 본문.
+외부 협업자/Claude 인계용 한 페이지 안내. **모든 문서의 단일 진입점이자, 무엇이 어디서 단일 진실인지의 지도.**
+내용이 겹칠 땐 아래 "단일 소스 지도"의 담당 문서만 고치고, 나머지는 그 문서를 링크한다.
 
-## 어디서 시작할까
+## 단일 소스 지도 (이 주제는 이 문서가 진실)
 
-| 만약... | 이 문서를 먼저 |
+| 주제 | 단일 소스 |
 |---|---|
-| 게임이 뭔지부터 알고 싶다 | [`../README.md`](../README.md) |
-| 제품 결정·우선순위가 궁금하다 | [`../PRD.md`](../PRD.md) |
-| 코드/씬 구조부터 보고 싶다 | [`SPEC.md`](SPEC.md) |
-| 스토리 캐논·인게임 텍스트 | [`STORY.md`](STORY.md) |
-| 스킬 트리·성장 시스템 | [`design/growth_system.md`](design/growth_system.md) |
-| 맵 형태·보스·이스터에그 메커닉 | [`design/world_layout.md`](design/world_layout.md) |
-| 맵 현황 감사·폴리시 우선순위 | [`design/map_audit.md`](design/map_audit.md) |
-| 텍스트 톤·"체험으로 체득" 원칙 | [`design/show_dont_tell.md`](design/show_dont_tell.md) |
-| 환경 퍼즐(레버·발판) 현황 | [`design/puzzle_ideas.md`](design/puzzle_ideas.md) |
-| 효과음 작업 목록 | [`design/sfx_list.md`](design/sfx_list.md) |
-| 효과음 ElevenLabs 프롬프트 | [`design/sfx_elevenlabs_prompts.md`](design/sfx_elevenlabs_prompts.md) |
-| 효과음 trim/후처리 가이드 | [`design/sfx_trim_guide.md`](design/sfx_trim_guide.md) |
-| 배포·Pages 셋업 | [`../DEPLOY.md`](../DEPLOY.md) |
-| 최근 작업 흐름 | [`../session_logs/`](../session_logs/) (날짜별) |
+| 게임 개요·조작·구조 요약(공개용) | [`../README.md`](../README.md) |
+| 제품 결정·비목표·성공 기준·UX 원칙 | [`../PRD.md`](../PRD.md) |
+| 코드/씬 구조·게임플레이 사양·시스템 수치 | [`SPEC.md`](SPEC.md) |
+| 스토리 캐논·인게임 텍스트 전량 | [`STORY.md`](STORY.md) |
+| 스킬 트리·스킬-적 상성·글라이드/폭발물 밸런스·XP | [`design/growth_system.md`](design/growth_system.md) |
+| 맵 좌표·4템플릿·보스/웨이브·이스터에그·도전방 | [`design/world_layout.md`](design/world_layout.md) |
+| VEIL 어투(신뢰 COLD/THAW/WARM)·엔딩 점수 축·취약함 게이트 | [`design/veil_trust_arc.md`](design/veil_trust_arc.md) |
+| └ VEIL 밴드×진행 대사 grid(설계 스냅샷) | [`design/veil_pool_remap.md`](design/veil_pool_remap.md) |
+| 톤 원칙 "글로 명시 < 체험으로 체득" | [`design/show_dont_tell.md`](design/show_dont_tell.md) |
+| 레버·발판·비밀칸 배치 인덱스 | [`design/puzzle_ideas.md`](design/puzzle_ideas.md) |
+| 난이도 정량 분석(누가 얼마나 어려운가) | [`design/difficulty_analysis.md`](design/difficulty_analysis.md) |
+| 효과음 전수(id·트리거·prompt·상태) + 후처리 | [`design/sfx_list.md`](design/sfx_list.md) · [`design/sfx_trim_guide.md`](design/sfx_trim_guide.md) |
+| 사람 vs AI 기여 분담(크레딧) | [`contributions.md`](contributions.md) |
+| 포스터 비주얼 아이덴티티(색·모티프·카피) | [`poster_brief.md`](poster_brief.md) |
+| 배포(GitHub Pages 자동) | [`../DEPLOY.md`](../DEPLOY.md) |
+| **다음 작업·미착수 (진행상태 단일 소스)** | [`design/backlog.md`](design/backlog.md) |
+| 반복 방지 함정·오류 이력 | [`design/known_issues.md`](design/known_issues.md) |
+| 세션별 변경 흐름 | [`../session_logs/`](../session_logs/) (최근 + `SESSION_LOG_ARCHIVE.md`) |
+| 운영 규칙(세션 루틴·커밋·로그) | [`../CLAUDE.md`](../CLAUDE.md) |
 
-## 최근 시스템 (한눈에)
-
-- **VeilSight 시야 마킹**: VEIL이 위협을 HUD로 짚어준다 — 화면 안은 은은한 시안 표식,
-  화면 밖 새 위협은 VEIL이 *말로* 방향을 짚는다. ACT3 진입에 마커가 일제히 무너지고 일부는
-  영영 꺼진다 = "시야=신뢰"의 역전을 플레이로 실연. (`scripts/VeilSight.gd`)
-- **스킬-적 상성**: 적별 약점 스킬(shield→폭발물 / sniper→방어막 / drone→글라이드 / bomber→사격강화).
-  현재 맵에 등장하는 적 중 카운터를 아직 안 가진 스킬을 레벨업 추천·출현 가중으로 가르친다.
-  단일 진실은 `SkillTreeData.MATCHUP`, 맵별 정리는 `design/world_layout.md` §2.12.
-- **글라이드 라인 재설계(2026-06-13, 06-15 갱신)**: T1 활강 / T2 삼단점프 / T3 **유도 사격**. 상성은
-  **드론 카운터**(떠서 폭탄 회피·처리). 저격수 카운터는 방어막으로 이관. *관통* 키워드는 사격강화 T3로
-  단일화(중복 정리). 폭발물은 광역 너프 유지.
-- **UI 시각화(텍스트→그래픽)**: 맵 진행 노드맵(`RouteMap`), 전체 스킬 트리 오버레이(`SkillTreeOverlay`,
-  라인별 스킬 아이콘), 레벨업 카드 스킬 아이콘(`SkillIcon.gd`), 오프닝 VEIL 감시 눈(`BriefingVisual.gd`)
-  + 미션 목표물 아이콘(`MissionObjective.gd`). 설정에 해상도/창모드. 텍스트 검정 아웃라인으로 선명도.
-  스킬을 얻으면 캐릭터/총기 외형이 변해 성장이 눈에 보인다(`CharacterArt`/`Bullet`, 획득 플래시).
-- **VEIL 적응형 추천**: 최근 스테이지 피격/죽음으로 실력 판정(`GameState.competence_tier`) → 맵을
-  안전/가성비/고보상으로 추천, 사유를 VEIL 대사로(`RouteData`). 시야 붕괴(degradation)는 맵 간 지속.
-- **VEIL 어투 아크 (신뢰+사망 구동, 2026-06-13)**: 말투가 진행도가 아니라 **신뢰**로 변한다 —
-  COLD(격식)→THAW→WARM(`veil_register_band`). 신뢰는 0에서 climbing(추천 따라 클리어 +2/함께 고비 +2),
-  WARM은 취약함 게이트(같이 고비 넘긴 적 필요 → 무사망 고수는 COLD 유지). 엔딩은 추천 수용률로 분리.
-  설계: `docs/design/veil_trust_arc.md` / 대사 grid: `veil_pool_remap.md`.
+> **코드가 항상 최종 진실** — 문서의 구체 수치(HP·XP·좌표 등)가 코드와 어긋나면 코드를 따른다.
 
 ## 단일 진실의 원칙
 
-- **PRD vs SPEC**: 제품 의사결정은 PRD 우선, 구현 디테일은 SPEC 우선.
-- **STORY**: 모든 인게임 텍스트와 스토리 캐논의 단일 진실. 코드의 대사 풀(VeilDialogue 등)이 STORY와 어긋나면 STORY를 따른다.
-- **design/world_layout**: 맵 좌표·보스·웨이브 메커닉의 단일 진실. MapData.gd / Stage.gd / BossSentinel.gd 가 이 문서를 참조해 동작.
-- **design/show_dont_tell**: 모든 텍스트/연출 의사결정의 상위 기준 (글로 명시 < 체험으로 체득).
+- **PRD vs SPEC**: 제품 의사결정은 PRD, 구현 디테일은 SPEC 우선.
+- **STORY**: 인게임 텍스트·스토리 캐논의 단일 진실. 코드 대사 풀(VeilDialogue 등)이 어긋나면 STORY를 따른다.
+- **growth_system / world_layout**: 스킬·맵 메커닉의 단일 진실. 다른 문서는 요약을 복제하지 말고 이 문서를 링크한다.
+- **show_dont_tell**: 텍스트/연출 의사결정의 상위 기준.
 
-## 외부 작업자 인계 시
+## 인계·정리 규칙
 
-- 의뢰서·답변 형태(BRIEF_*/DESIGN_*)는 작업 완료 후 본 문서들로 통합·정리하고 의뢰 문서는 폐기한다.
-  - 통합 후에도 설계 흐름을 남길 가치가 있으면 폐기 대신 [`archive/`](archive/)로 이동(이력 보존, 참조 금지).
-- 새 디자인 문서는 `docs/design/<topic>.md`로. 파일명은 `snake_case`.
-- 큰 변경은 commit 단위로 끊고 `session_logs/YYYY-MM-DD.md`에 기록.
+- 의뢰서·답변(BRIEF_*/DESIGN_*)·완료된 작업 계획·일회성 분석 스냅샷은 정리 후 [`archive/`](archive/)로 이동(이력 보존, 참조 금지).
+- 새 디자인 문서는 `docs/design/<topic>.md`(snake_case). 큰 변경은 commit 단위로 끊고 `session_logs/`에 기록.
+- **같은 내용이 두 문서에 생기면** "단일 소스 지도"의 담당 문서로 합치고, 다른 쪽은 한 줄+링크로 바꾼다.
