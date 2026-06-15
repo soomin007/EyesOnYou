@@ -2,7 +2,7 @@
 
 > 본 문서는 초기 v2 구현 계획서를 베이스로 P0~P2-α 완료 시점의 실제 구현을 반영해 갱신한 사양이다.
 > 외부 API 없음. 모든 텍스트와 로직은 코드 안에 완결.
-> 우선순위/제품 결정은 [`../PRD.md`](../PRD.md), 스토리 캐논은 [`STORY.md`](STORY.md), 성장 시스템 설계는 [`design/growth_system.md`](design/growth_system.md), 맵 명세는 [`design/world_layout.md`](design/world_layout.md), 톤 원칙은 [`design/show_dont_tell.md`](design/show_dont_tell.md) 참조.
+> 진행·다음 작업은 [`design/backlog.md`](design/backlog.md), 게임 개요는 [`../README.md`](../README.md), 스토리 캐논은 [`STORY.md`](STORY.md), 성장 시스템 설계는 [`design/growth_system.md`](design/growth_system.md), 맵 명세는 [`design/world_layout.md`](design/world_layout.md), 톤 원칙은 [`design/show_dont_tell.md`](design/show_dont_tell.md) 참조.
 
 ---
 
@@ -411,7 +411,7 @@ VEIL: 응답 없음.
 ```
 res://
 ├── project.godot              # AutoLoad: GameState · BgmPlayer · SfxPlayer, physics_interpolation 활성
-├── README.md / PRD.md / DEPLOY.md / CLAUDE.md
+├── README.md / DEPLOY.md / CLAUDE.md
 ├── docs/SPEC.md / docs/STORY.md / docs/design/{growth_system, world_layout, show_dont_tell}.md
 ├── scenes/
 │   ├── main.tscn              # 진입점 — Settings 로드 후 Title 전환

@@ -166,7 +166,6 @@ EoY/
 ├── README.md                   이 문서 (게임 소개·구조 요약)
 ├── CLAUDE.md                   에이전트(Claude Code) 작업 규칙
 ├── DEPLOY.md                   GitHub Pages 자동 배포 가이드
-├── PRD.md                      제품 요구사항 (제품 결정·우선순위·성공 기준)
 ├── project.godot               Godot 4.6 프로젝트 설정 (AutoLoad: GameState)
 ├── icon.svg
 ├── docs/
