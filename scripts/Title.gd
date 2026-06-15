@@ -134,6 +134,9 @@ func _set_state(new_state: int) -> void:
 			var b_settings := _make_button("설정")
 			b_settings.pressed.connect(_on_settings_pressed)
 			buttons_box.add_child(b_settings)
+			var b_feedback := _make_button("피드백 보내기")
+			b_feedback.pressed.connect(_on_feedback_pressed)
+			buttons_box.add_child(b_feedback)
 			var b_quit := _make_button("게임 종료")
 			b_quit.pressed.connect(_on_quit_pressed)
 			buttons_box.add_child(b_quit)
@@ -297,6 +300,9 @@ func _on_settings_closed() -> void:
 		var first := buttons_box.get_child(0) as Button
 		if first != null:
 			first.grab_focus.call_deferred()
+
+func _on_feedback_pressed() -> void:
+	GameState.open_feedback()
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()

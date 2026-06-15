@@ -65,9 +65,9 @@ const AI_ROWS: Array = [
 # ── 피드백 + 푸터 ──
 const DIR_Y: float = 1576.0
 const FOOT_Y: float = 1612.0
-const QR_SZ: float = 72.0
-# 구글 폼 설문 링크를 받으면 채운다(예: "forms.gle/XXXXXXXX"). 비어 있으면 "준비 중" 표기.
-const FEEDBACK_URL: String = ""
+const QR_SZ: float = 84.0
+# 구글 폼 설문 링크. 비어 있으면 "준비 중" 표기.
+const FEEDBACK_URL: String = "forms.gle/byS8EABJitB9r6z88"
 # 실제 QR PNG가 있으면 로드(없으면 placeholder 그림). 링크 확정 후 생성해 넣는다.
 const FEEDBACK_QR_PATH: String = "res://poster_out/feedback_qr.png"
 
@@ -222,9 +222,11 @@ func _draw_feedback() -> void:
 	var qx: float = W - M - QR_SZ
 	var qy: float = FOOT_Y - 8.0
 	var rect: Rect2 = Rect2(qx, qy, QR_SZ, QR_SZ)
-	draw_rect(rect, Color(0.93, 0.95, 0.97, 1.0), true)
+	# 흰 배경(quiet zone) + QR을 살짝 안쪽으로 — 스캔 안정성.
+	draw_rect(rect, Color(0.96, 0.97, 0.98, 1.0), true)
 	if _qr_tex != null:
-		draw_texture_rect(_qr_tex, rect, false)
+		var pad: float = QR_SZ * 0.06
+		draw_texture_rect(_qr_tex, Rect2(rect.position + Vector2(pad, pad), rect.size - Vector2(pad * 2.0, pad * 2.0)), false)
 	else:
 		_qr_placeholder(rect)
 	draw_rect(rect, COL_VEIL * Color(1, 1, 1, 0.6), false, 1.5)

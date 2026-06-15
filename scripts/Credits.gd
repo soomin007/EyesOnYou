@@ -243,6 +243,9 @@ func _show_end_menu() -> void:
 	_replay_btn.mouse_entered.connect(_on_replay_focus)
 	_replay_btn.mouse_exited.connect(_on_replay_unfocus)
 	vb.add_child(_replay_btn)
+	var feedback_btn := _make_credit_button("피드백 보내기")
+	feedback_btn.pressed.connect(_on_feedback_pressed)
+	vb.add_child(feedback_btn)
 	var exit_btn := _make_credit_button("메인 화면으로 나가기")
 	exit_btn.pressed.connect(_on_exit_pressed)
 	vb.add_child(exit_btn)
@@ -300,6 +303,9 @@ func _on_replay_pressed() -> void:
 	GameState.replaying = true
 	GameState.reset()
 	get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+
+func _on_feedback_pressed() -> void:
+	GameState.open_feedback()
 
 func _on_exit_pressed() -> void:
 	GameState.replaying = false

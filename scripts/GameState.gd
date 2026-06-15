@@ -12,6 +12,8 @@ var last_input_kind: String = "kb"  # "kb" | "pad"
 const TOTAL_STAGES: int = 7
 const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
+# 플레이 피드백 설문(구글 폼). 타이틀·크레딧 끝 메뉴의 "피드백 보내기"가 연다.
+const FEEDBACK_URL: String = "https://forms.gle/byS8EABJitB9r6z88"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
 # 모든 플레이어가 기본 보유하는 베이스라인 스킬 (트리 외)
 # 자료형: Dictionary[String, int] — line_id → 보유 티어 (베이스라인은 항상 1).
@@ -551,3 +553,11 @@ func apply_display_settings() -> void:
 	var screen_pos: Vector2i = DisplayServer.screen_get_position(screen_idx)
 	var screen_size: Vector2i = DisplayServer.screen_get_size(screen_idx)
 	DisplayServer.window_set_position(screen_pos + (screen_size - sz) / 2)
+
+# 피드백 설문을 외부 브라우저(데스크톱) / 새 탭(웹)으로 연다.
+# 버튼 pressed에서 호출 — 웹의 window.open이 팝업 차단되지 않도록 사용자 제스처 컨텍스트 유지.
+func open_feedback() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.open('%s', '_blank')" % FEEDBACK_URL, true)
+	else:
+		OS.shell_open(FEEDBACK_URL)
