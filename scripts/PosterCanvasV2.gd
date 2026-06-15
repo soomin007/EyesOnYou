@@ -327,8 +327,6 @@ func _build_text() -> void:
 	# AI 강조 — 배지 + 부제
 	_label("FULLY  AI-GENERATED", Vector2((W - BADGE_W) * 0.5, BADGE_Y + 8.0), BADGE_W, 26,
 		COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false, 5)
-	_label("코드 · 그래픽 · 음악 · 효과음 — 전부 생성형 AI가 만들고, 사람이 방향을 잡았다",
-		Vector2(M, BADGE_Y + BADGE_H + 8.0), W - 2.0 * M, 19, COL_GRAY, HORIZONTAL_ALIGNMENT_CENTER, false)
 	_ai_row_text()
 	# Direction (정직한 분담) — AI 행 바로 아래 한 줄
 	_label("DIRECTION  ·  기획 · 창작 방향 · 모든 설계 결정 · 검수  —  김수민 (자유전공학부)",
