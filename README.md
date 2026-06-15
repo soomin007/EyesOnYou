@@ -251,4 +251,7 @@ VEIL 어투 아크(신뢰 구동), UI 시각화(텍스트→그래픽), 음악·
 
 ## 라이선스
 
-미정 (개인 프로젝트, 부스/전시 데모용).
+- **코드** (`scripts/`·`scenes/`·셰이더·프로젝트 설정): [MIT](LICENSE) © 2026 Soomin Kim
+- **자산**: 폰트 Pretendard는 [SIL OFL 1.1](assets/fonts/OFL.txt), 음악은 Suno·효과음은 ElevenLabs 생성물로 각 툴 약관을 따른다. 엔진 Godot는 별도 MIT. 자세한 건 [`LICENSE`](LICENSE) 하단 "BUNDLED THIRD-PARTY ASSETS" 참조.
+
+개인 프로젝트(부스/전시 데모)라 코드만 MIT로 열고, 번들된 폰트·오디오는 원 출처 라이선스를 유지한다.
