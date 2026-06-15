@@ -75,17 +75,10 @@
 
 `map_scene`은 폐기 — 모든 stage가 `stage.tscn` 단일 씬에서 절차적으로 빌드된다 (§5 참조).
 
-### 6개 루트 + Stage 분배
-| 루트 | id | available_stages | risk | reward |
-|---|---|---|---|---|
-| 뒷골목 | route_back_alley | 0~1 | 1 | 1 |
-| 옥상 | route_rooftops | 0~2 | 1 | 2 |
-| 하수도 | route_sewers | 1~3 | 2 | 3 |
-| 지하철 | route_subway | 2~4 | 2 | 2 |
-| 연구실 | route_lab | 3~4 | 3 | 3 |
-| ??? | route_hidden | 4 | 2 | 3 (hidden) |
-
-흐름: 도시 외곽 → 지하 진입 → 핵심부 → 비밀.
+### 루트 + Stage 분배
+전체 12맵 목록·id·risk/reward·`available_stages`는 [`design/growth_system.md`](design/growth_system.md) §3 ·
+[`design/world_layout.md`](design/world_layout.md) §2가 단일 진실(Dead Cells식 — 스테이지마다 후보 추첨).
+아래는 그 risk/reward가 *게임플레이에 미치는 효과*(SPEC 고유)만 정리한다.
 
 ### Risk/Reward 게임플레이 효과 (게임에 실제 반영)
 | Risk | 효과 |
@@ -225,14 +218,8 @@
 ### 6.1 스킬-적 상성 시스템 (신규)
 맵 적 구성을 분석해 그 적의 **약점 스킬**을 레벨업에서 콕 집어 가르친다. "이 적엔 이 스킬"을 학습시키는 채널.
 
-- **상성 테이블** (`SkillTreeData.MATCHUP`, 위협 우선순위 순):
-
-  | 적 | 약점 스킬 | 이유 |
-  |---|---|---|
-  | shield | explosive | 방향 무시 AoE로 방패 관통 |
-  | sniper | barrier | 방어막으로 한 발 막고 사선 통과 (둥지 저격수=회피 대상) |
-  | drone | glide | 떠서 폭탄 피하고 활강 관통샷으로 처리 |
-  | bomber | fire_boost | 붙기 전에 빠른 처치 |
+- **상성 테이블** — 단일 진실은 [`design/growth_system.md`](design/growth_system.md) §4.1 (`SkillTreeData.MATCHUP`).
+  요약: shield→explosive / sniper→barrier / drone→glide / bomber→fire_boost. (아래는 이를 쓰는 *구현 로직*.)
 
 - **맵 적 구성 분석** (`matchup_skill_for_route`): `MapData.get_layout`의 `enemies`(고정 배치) + `waves`(ARENA) 적 수를 합산. 등장하는 적 중 플레이어가 카운터를 아직 안 가진 최우선 약점 스킬 id를 반환.
 - **레벨업 추천 ★** (`VeilDialogue.get_levelup_advice` → `LevelUpOverlay`): 상성 스킬을 1순위로, **skill_id 단위로 콕 집어** ★ 표시 + 전용 멘트(`_matchup_line`, 예 "방패병이 정면을 막아요. 폭발물이면 방패째 뚫어요."). 상성이 없으면 기존 route_tags 기반 family 추천으로 폴백.
@@ -501,11 +488,11 @@ var current_route_reward: int = 1
 
 # 스킬 / HP / XP
 var skills: Array = []           # STARTING_SKILLS = ["dash", "double_jump"]
-var player_max_hp: int = 5
-var player_hp: int = 5
+var player_max_hp: int = 3
+var player_hp: int = 3
 var player_xp: int = 0
 var player_level: int = 1
-const XP_PER_LEVEL: int = 5
+const XP_PER_LEVEL: int = 8
 
 # 영속 플래그 (settings.cfg)
 var tutorial_done: bool = false
