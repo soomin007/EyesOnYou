@@ -11,7 +11,7 @@
 - **엔진**: Godot 4.6 (GL Compatibility, physics interpolation 활성)
 - **장르**: 횡스크롤 액션 어드벤처 + 로그라이트
 - **플레이 시간**: 8~15분 / 1회
-- **배포 목표**: itch.io Web Export (QR 접근)
+- **플랫폼**: 브라우저(웹, 위 링크) · 데스크톱 · 키보드 / 게임패드
 - **외부 의존성**: 없음 (API/서버/계정 없음, 모든 텍스트 하드코딩)
 
 ---
@@ -163,7 +163,7 @@ VEIL의 **말투가 관계에 따라 변한다.** 진행도가 아니라 *신뢰
 
 ```
 EoY/
-├── README.md                   이 문서 (게임 소개·진행 상태·구조 요약)
+├── README.md                   이 문서 (게임 소개·구조 요약)
 ├── CLAUDE.md                   에이전트(Claude Code) 작업 규칙
 ├── DEPLOY.md                   GitHub Pages 자동 배포 가이드
 ├── PRD.md                      제품 요구사항 (제품 결정·우선순위·성공 기준)
@@ -240,35 +240,13 @@ EoY/
 
 ---
 
-## 진행 상태
+## 개발 현황
 
-- ✅ **P0 (MVP)** — 플레이/사망/클리어 풀 흐름, 루트 선택, 레벨업, 두 점수 축, 결말 분기
-- ✅ **P1 (VEIL 연출)** — VeilDialogue 풀, 4상황 발화, EndingResolver, 4종 결말 연출
-- ✅ **P2-α (적/난이도 시스템 보강)**
-  - 적 3종 행동 보강 (정찰병 돌진, 저격수 LOS, 드론 폭탄)
-  - 도감 시스템 (첫 조우 카드, 영속화)
-  - 6개 맵 정체성 (루트별 layout + 환경 효과)
-  - 가시 기믹 (함정 태그 자동 배치)
-  - Stage 분배 (Dead Cells 스타일 진행)
-  - Risk/Reward 게임플레이 반영
-- ✅ **디버그 도구** — 연습장 모드 (스테이지/루트/난이도 즉시 전환)
-- ✅ **튜토리얼** — 5단계 점진 학습
-- ✅ **P2-β (스토리/콘텐츠)** — SILO-7 컨텍스트 6개 맵, ACT별 VEIL 대사 풀, ??? 단말기 시퀀스, 결말 4종 갱신
-- ✅ **P2-γ (적 확장)** — 자폭병/방패병 추가 (총 5종), 기본 HP 3 정책, 적 수 미세 상향
-- ✅ **P2-δ (성장 시스템 + 7스테이지 확장)** — 3계열×3티어 스킬 트리, 12개 루트, TOTAL_STAGES=7. [`docs/design/growth_system.md`](docs/design/growth_system.md) 참조
-- ✅ **P2-ε (맵 세계 구조 v2)** — 4 템플릿(HORIZONTAL/VERTICAL_UP/VERTICAL_DOWN/ARENA), 11맵 좌표, 카메라/골/월드 차원 동적. [`docs/design/world_layout.md`](docs/design/world_layout.md) 참조
-- ✅ **P2-ε P1 (특수 방 메커닉)** — 보스 SENTINEL 3페이즈+자폭, datacenter 웨이브, 이스터에그 ARCTURUS 문서, 도전 방 "블랙아웃 런", ??? 단말기 다회차 풀
-- ✅ **P3 배포 자동화** — GitHub Pages Actions 워크플로. main 푸시 → 자동 빌드 → 배포. [`DEPLOY.md`](DEPLOY.md)
-- ✅ **한글 폰트 번들** — Pretendard Regular OTF (1.5MB, OFL)
-- ✅ **show-don't-tell 톤 적용** — 도감/오프닝/보스 알림 단순화. [`docs/design/show_dont_tell.md`](docs/design/show_dont_tell.md)
-- ✅ **Xbox 컨트롤러 지원** — project.godot 모든 액션에 패드 매핑 + Settings 보존. 입력 모드 자동 감지로 모든 화면의 키 안내가 키보드/패드 실시간 swap
-- ✅ **스토리 모드** — HP 무제한 / 5 스테이지 / 보스 단순화 / 드론 없음. 키보드/패드가 어색한 사람용 짧은 코스. Title의 다단계 메뉴(시작/모드 선택/튜토리얼 prompt)에서 진입
-- ✅ **UI 시각화 (텍스트→그래픽)** — 스킬 트리 오버레이, 맵 진행 노드맵, 오프닝 VEIL 눈/목표물 비주얼, 절차적 스킬·적 아이콘, 전역 텍스트 아웃라인, 비네트 셰이더
-- ✅ **맵 폴리시** — 발사 함정(BulletTrap/LaserTripwire), 둥지 저격수 + VEIL "못 잡는 적" 안내, VeilSight 시야 마킹·ACT3 붕괴, 글라이드 게이트 숨은 보상, 해상도/창모드 옵션
-- ✅ **VEIL 어투 아크 (신뢰+사망 구동)** — 말투가 신뢰에 따라 COLD→THAW→WARM. 0에서 벌어 올리는 trust, 취약함 게이트(무사망 고수는 COLD 유지), 엔딩은 추천 수용률로 분리. [`docs/design/veil_trust_arc.md`](docs/design/veil_trust_arc.md)
-- 🚧 **잔여** — 배경 이미지, SFX, itch.io 별도 배포, 플레이테스트 튜닝(어투 trust 임계·수용률 0.5·후반 트랩/둥지 난이도·무스킬 첫 전투 완충)
+핵심 시스템은 완성 단계 — 플레이→4종 결말, 12개 맵 분기, 3계열×3티어 스킬 트리, 5종 적·보스 SENTINEL,
+VEIL 어투 아크(신뢰 구동), UI 시각화(텍스트→그래픽), 음악·효과음(전부 AI 생성), Xbox 컨트롤러, 웹 자동 배포.
 
-상세 우선순위는 [`PRD.md`](PRD.md) §6, 구현 디테일은 [`docs/SPEC.md`](docs/SPEC.md), 스토리 캐논은 [`docs/STORY.md`](docs/STORY.md) 참조.
+**다음 작업·미착수는 [`docs/design/backlog.md`](docs/design/backlog.md)** (단일 소스), 변경 이력은 [`session_logs/`](session_logs/),
+구현 디테일은 [`docs/SPEC.md`](docs/SPEC.md), 스토리 캐논은 [`docs/STORY.md`](docs/STORY.md) 참조.
 
 ---
 

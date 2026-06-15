@@ -23,8 +23,9 @@ export.cfg
 export_credentials.cfg
 *.tmp
 
-# 포스터 렌더 임시 파일(로그·크롭 미리보기 등)
-poster_out/_*
+# 포스터/스크린샷 산출물 — 게임 빌드·배포와 무관. 소스(scripts/Poster*.gd, Screenshotter.gd)가
+# 진실이고 PNG는 --gen으로 재생성 가능. QR 등 입력 PNG도 로컬에만 두고 git엔 안 올림.
+poster_out/
 
 # Build outputs
 builds/
