@@ -30,16 +30,16 @@ const LOG_Y: float = 430.0
 
 # ── hero 스크린샷 (큰 한 컷) ──
 const HERO_X: float = 120.0
-const HERO_Y: float = 512.0
+const HERO_Y: float = 510.0
 const HERO_W: float = 1000.0
-const HERO_H: float = 512.0
+const HERO_H: float = 506.0
 const HERO_SHOT: String = "res://poster_out/shots/shot_route_subway.png"
 const HERO_CAP: String = "실제 플레이 화면 — VEIL이 위협을 짚어주는 횡스크롤 침투전"
 
 # ── 보조 스크린샷 3컷 ──
-const SUP_Y: float = 1050.0
+const SUP_Y: float = 1052.0
 const SUP_W: float = 300.0
-const SUP_H: float = 169.0
+const SUP_H: float = 160.0
 const SUP_GAP: float = 20.0
 const SUPS: Array = [
 	["res://poster_out/shots/shot_routemap.png", "맵 선택 · 12개 루트"],
@@ -48,24 +48,24 @@ const SUPS: Array = [
 ]
 
 # ── AI 강조 섹션 (스크린샷 아래 — 메인 메시지) ──
-const BADGE_Y: float = 1258.0
+const BADGE_Y: float = 1246.0
 const BADGE_W: float = 470.0
 const BADGE_H: float = 46.0
-const AIROW_Y: float = 1334.0
-const AIROW_H: float = 52.0
-const AIROW_GAP: float = 8.0
+const AIROW_Y: float = 1332.0
+const AIROW_H: float = 58.0
+const AIROW_GAP: float = 6.0
 # [accent키, 부문, 상세, "숫자단위"(한 줄), 생성 AI]
 const AI_ROWS: Array = [
-	["code", "코드", "GDScript 게임 로직 · 시스템 · 세이브 전부", "17,132줄", "Claude (Anthropic)"],
-	["graphic", "그래픽", "캐릭터 · 적 · UI · 이펙트 전부 코드로 그린 벡터", "이미지 0장", "Claude (Anthropic)"],
+	["code", "코드", "게임 로직 · 시스템 · 세이브 전부", "17,132줄", "Claude (Anthropic)"],
+	["graphic", "그래픽", "캐릭터 · 적 · UI · 이펙트 전부 코드 벡터", "이미지 0장", "Claude (Anthropic)"],
 	["music", "음악", "메인 테마 · 스테이지 · 4종 엔딩", "9곡", "Suno"],
 	["sound", "효과음", "사격 · 폭발 · 보스 · UI · 환경", "59개", "ElevenLabs"],
 ]
 
 # ── 피드백 + 푸터 ──
-const DIR_Y: float = 1576.0
-const FOOT_Y: float = 1612.0
-const QR_SZ: float = 84.0
+const DIR_Y: float = 1590.0
+const FOOT_Y: float = 1616.0
+const QR_SZ: float = 94.0
 # 구글 폼 설문 링크. 비어 있으면 "준비 중" 표기.
 const FEEDBACK_URL: String = "forms.gle/byS8EABJitB9r6z88"
 # 실제 QR PNG가 있으면 로드(없으면 placeholder 그림). 링크 확정 후 생성해 넣는다.
@@ -220,7 +220,7 @@ func _icon_speaker(c: Vector2, r: float, col: Color) -> void:
 func _draw_feedback() -> void:
 	# 우하단 코너에 설문 QR + 안내. (FEEDBACK_QR_PATH 있으면 실제 QR, 없으면 placeholder)
 	var qx: float = W - M - QR_SZ
-	var qy: float = FOOT_Y - 8.0
+	var qy: float = FOOT_Y - 12.0
 	var rect: Rect2 = Rect2(qx, qy, QR_SZ, QR_SZ)
 	# 흰 배경(quiet zone) + QR을 살짝 안쪽으로 — 스캔 안정성.
 	draw_rect(rect, Color(0.96, 0.97, 0.98, 1.0), true)
@@ -363,13 +363,14 @@ func _ai_row_text() -> void:
 		var accent: Color = _accent_for(str(row[0]))
 		var r: Rect2 = _row_rect(i)
 		var x: float = r.position.x
-		# 부문명 + 상세 (좌)
-		_label(str(row[1]), Vector2(x + 62.0, r.position.y + 7.0), 360.0, 22, COL_WHITE, HORIZONTAL_ALIGNMENT_LEFT, false)
-		_label(str(row[2]), Vector2(x + 62.0, r.position.y + 33.0), 420.0, 13, COL_GRAY, HORIZONTAL_ALIGNMENT_LEFT, false)
-		# 숫자단위 (가운데, 한 줄)
-		_label(str(row[3]), Vector2(x + 520.0, r.position.y + 10.0), 210.0, 30, COL_WHITE, HORIZONTAL_ALIGNMENT_LEFT, false, 5)
-		# 생성 AI 모델명 (우, 크게)
-		_label(str(row[4]), Vector2(x + 740.0, r.position.y + 14.0), (W - 2.0 * M) - 740.0 - 14.0, 22,
+		var cy: float = r.position.y
+		# 부문명 (색강조, 큰) + 상세 (같은 줄, 회색)
+		_label(str(row[1]), Vector2(x + 58.0, cy + 14.0), 112.0, 25, accent, HORIZONTAL_ALIGNMENT_LEFT, false, 5)
+		_label(str(row[2]), Vector2(x + 174.0, cy + 21.0), 372.0, 17, COL_GRAY, HORIZONTAL_ALIGNMENT_LEFT, false)
+		# 숫자단위 (색강조, 가장 큰, 한 줄)
+		_label(str(row[3]), Vector2(x + 560.0, cy + 11.0), 200.0, 30, accent, HORIZONTAL_ALIGNMENT_LEFT, false, 5)
+		# 생성 AI 모델명 (색강조, 우측)
+		_label(str(row[4]), Vector2(x + 770.0, cy + 17.0), (W - 2.0 * M) - 770.0 - 14.0, 22,
 			accent, HORIZONTAL_ALIGNMENT_RIGHT, false)
 
 func _label(txt: String, pos: Vector2, w: float, font_size: int, col: Color, align: int, wrap: bool, outline: int = 4) -> Label:
