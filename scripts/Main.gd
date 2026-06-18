@@ -10,7 +10,9 @@ func _ready() -> void:
 	GameState.apply_display_settings()
 	Accessibility.apply()
 	GameState.reset()
-	get_tree().change_scene_to_file(SceneRouter.TITLE)
+	# call_deferred로 미룸: _ready 중 부트스트랩 노드가 아직 트리에 붙는 중에 씬을 교체하면
+	# "Parent node is busy adding/removing children" 경고가 난다. 한 프레임 미뤄 안전하게 전환.
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.TITLE)
 
 # 마우스 좌/우 클릭을 attack/skill의 기본 이벤트로 보강(이미 있으면 그대로). load_settings 뒤에 호출 —
 # 좌클릭 사격·우클릭 스킬은 핵심 조작이라 cfg가 잃어버려도 항상 살아 있게 한다.

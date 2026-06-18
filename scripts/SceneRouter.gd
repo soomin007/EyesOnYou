@@ -6,7 +6,8 @@ const TUTORIAL: String  = "res://scenes/tutorial.tscn"
 const BRIEFING: String  = "res://scenes/briefing.tscn"
 const ROUTE_MAP: String = "res://scenes/route_map.tscn"
 const STAGE: String     = "res://scenes/stage.tscn"
-const LEVELUP: String   = "res://scenes/levelup.tscn"
+# (LEVELUP 제거 — 레벨업은 levelup.tscn 씬이 아니라 LevelUpOverlay 오버레이 방식이라 미사용.
+#  존재하지 않는 res://scenes/levelup.tscn을 가리키던 죽은 상수였음.)
 const DEATH: String     = "res://scenes/death.tscn"
 const ENDING: String    = "res://scenes/ending.tscn"
 const SETTINGS: String  = "res://scenes/settings.tscn"

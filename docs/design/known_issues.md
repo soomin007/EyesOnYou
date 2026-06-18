@@ -40,6 +40,17 @@
   Read 출력의 들여쓰기를 그대로 세어 old_string을 만들면 탭 수가 1 어긋나 "String not found"가 반복된다.
   → 들여쓰기가 안 맞으면 `sed -n 'N,Mp' file | cat -A`로 실제 탭(^I) 수를 확인하고 맞춘다(GDScript는 탭 들여쓰기).
 
+- **`export_filter="all_resources"`는 `.gitignore`를 무시하고 프로젝트 폴더 안 임포트 리소스를 전부 패킹.**
+  `poster_out/`을 git에선 빼놔도 export는 파일시스템을 보므로 로컬 빌드(web/win pck)에 포스터·스크린샷·QR이
+  들어가 용량이 부풀었다(codex 리뷰, 2026-06-18 — pck ~58MB). → 빌드 무관 산출물은 두 preset 모두
+  `exclude_filter="poster_out/*"`로 제외. export 후 `--verbose` 또는 pck 크기로 실제 제외를 검증.
+
+- **스킬/맵 재설계 시 README·MapData 주석의 티어 표기가 코드와 어긋난 채 남는다.**
+  글라이드 T3을 '관통·추적'→'유도'로 재설계(2026-06-15)했으나 README는 옛 문구를, 삼단점프 티어는
+  T1/T2가 파일마다 뒤섞여 있었다(codex 리뷰, 2026-06-18). 게이트 맵 목록도 강등/제거된 rooftops·watchtower가
+  남아 있었다. → 스킬 정의의 단일 소스는 `SkillTreeData.gd`. 티어/효과를 바꾸면 README 스킬표·기믹표와
+  MapData 주석을 같은 커밋에서 동기화하고, "실제 게이트=gate_orbs 채워진 맵"만 문서에 적는다.
+
 ---
 
 ## 게임 설계 함정
@@ -195,3 +206,8 @@
   `godot --headless -s test.gd`로 `GameState` 등 오토로드를 직접 식별자로 쓰면 "Identifier not found"
   컴파일 에러(2026-06-15). 오토로드가 필요한 런타임 검증은 **래퍼 .tscn(Control)을 창모드로 실행**하면
   오토로드가 정상 초기화된다. `Input.parse_input_event`로 ESC 등 액션을 주입해 동작을 관찰할 수 있다.
+
+- **부트스트랩 노드의 `_ready()`에서 `change_scene_to_file()` 직접 호출 → "Parent node is busy adding/removing children".**
+  main 씬(Main.gd)이 트리에 붙는 중에 같은 프레임에 씬을 교체하려 해 SceneTree가 충돌 경고를 낸다(codex 리뷰,
+  2026-06-18 헤드리스 재현). 게임은 동작하나 콘솔에 에러. → `change_scene_to_file.call_deferred(path)`로
+  한 프레임 미뤄 전환. `--quit-after 30` 헤드리스 부팅으로 경고 소멸 확인 가능.
