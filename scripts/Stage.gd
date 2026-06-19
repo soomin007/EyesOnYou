@@ -3036,16 +3036,15 @@ func _build_back_alley_secret() -> void:
 # ── cooling 비밀칸 (후반 맵 레버 강화 — back_alley 인과를 한 번 더) ──────────────
 # 레버 바로 위에 해치를 둬 인과가 한 화면에 또렷. 증기 분출구(x1380) 우측 안전 지대.
 func _build_cooling_secret() -> void:
-	var lever := _spawn_lever(Vector2(1450.0, 548.0), "cooling_vent")
-	var hatch := _spawn_closed_hatch(Vector2(1450.0, 300.0), Vector2(80.0, 50.0), Color(0.55, 0.85, 0.95))
-	var drop_platform := _spawn_drop_platform(Vector2(1450.0, 220.0), Vector2(1450.0, 400.0), 100.0)
+	# 레버를 증기 분출구(x1380/1760) 사이 안전한 발판(1560,380) 위로 옮긴다. 당기면 솟는
+	# 발판·해치 없이 XP 3을 그 발판 위에 직접 떨어뜨린다(사용자 피드백 2026-06-19: 레버가
+	# 증기 분출구 옆 지면에 있어 위험했고, 당겨 솟는 발판 연출이 불필요했음).
+	var lever := _spawn_lever(Vector2(1560.0, 360.0), "cooling_vent")
 	lever.pulled.connect(func(_id: String) -> void:
-		_open_hatch(hatch)
-		_descend_drop_platform(drop_platform)
-		var spots: Array = [Vector2(1420.0, 270.0), Vector2(1450.0, 258.0), Vector2(1480.0, 270.0)]
+		var spots: Array = [Vector2(1510.0, 354.0), Vector2(1560.0, 348.0), Vector2(1610.0, 354.0)]
 		for p in spots:
 			_spawn_orb(p, true)
-		_show_veil_subtitle("여기도 잠긴 칸이 있었네요. 바로 위로 올라가 봐요.", 3.0)
+		_show_veil_subtitle("여기도 잠긴 칸이었네요. 발밑 보급품을 챙겨요.", 3.0)
 	)
 
 # ── rooftops 비밀칸 ───────────────────────────────────────────

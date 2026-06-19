@@ -228,6 +228,10 @@ func _show_end_menu() -> void:
 	_menu_shown = true
 	if is_instance_valid(_hint_label):
 		_hint_label.visible = false
+	# 스크롤 중 ESC로 메뉴를 띄우면 _process가 _menu_shown에서 멈춰 크레딧 본문이 그 자리에
+	# 정지 → 메뉴 버튼과 겹친다(끝까지 자동 스크롤된 경우엔 위로 올라가 안 보임). 본문을 숨겨 분리.
+	if is_instance_valid(_scroll):
+		_scroll.visible = false
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
