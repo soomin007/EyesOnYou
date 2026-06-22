@@ -196,6 +196,15 @@
   체감 선명도는 **텍스트 검정 아웃라인**(outline_size)으로 더 끌어올림(faux-bold보다 가볍고 또렷).
   (2026-06-08 플레이테스트.)
 
+- **런타임에 창 크기를 바꾸면 canvas_items content_scale이 카메라 프레이밍에 안 먹는다.**
+  스크린샷 하니스(IgShotter)에서 `_ready`에 창을 1920x1080으로 키웠더니, UI(Control/CanvasLayer)는
+  정상 스케일됐는데 **Camera2D(월드)만 설계(1280폭)보다 넓게(≈1920폭) 잡혀** 캐릭터가 작게 나왔다.
+  원인: 런타임 리사이즈가 `content_scale_size`를 자동 갱신하지 않아 2D 카메라 변환 기준이 어긋남.
+  → 창 리사이즈와 함께 `get_window().content_scale_size = Vector2i(1280,720)`(+mode/aspect)을 **명시
+  설정**하면 월드+HUD가 1.5배 균일 확대되며 설계 프레이밍이 유지된다(IgShotter._set_high_res).
+  추가로 임팩트가 필요한 클로즈업은 `camera.zoom`/`camera.offset`로 따로 당긴다. FIXED(ARENA) 카메라는
+  `get_visible_rect()` 기준 zoom_fit이 자기일관적이라 영향 없음. (2026-06-22 IG 스크린샷 작업.)
+
 ## 런타임 (상세: 메모리 project-runtime-safety)
 
 - **paused / Engine.time_scale carry로 인한 freeze.**
