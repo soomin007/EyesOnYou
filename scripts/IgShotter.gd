@@ -191,19 +191,26 @@ func _spawn_blast(stage: Node, pos: Vector2, radius: float, scl: float = 0.75) -
 	core.z_index = 7
 	stage.add_child(core)
 
-# 머즐 글로우 — 작은 기본 머즐 플래시를 보강.
-func _spawn_muzzle_glow(stage: Node, pos: Vector2) -> void:
-	var g := Polygon2D.new()
-	g.color = Color(1.0, 0.9, 0.5, 0.85)
-	var pts: Array = []
-	for i in 12:
-		var a: float = float(i) * TAU / 12.0
-		var r: float = 22.0 if (i % 2 == 0) else 9.0
-		pts.append(Vector2(cos(a) * r, sin(a) * r))
-	g.polygon = PackedVector2Array(pts)
-	g.global_position = pos
-	g.z_index = 6
-	stage.add_child(g)
+# 캡처 직전 고정 — 무적 점멸로 플레이어가 반투명하게 나오는 걸 막고(invuln 점멸은
+# _update_visual이 alpha를 0.4↔1.0로 흔든다), 적/적탄/플레이어를 정지시켜 피격(점멸 재발)도 차단.
+# 물리 보간 OFF와 합쳐 또렷한 정지 프레임을 만든다.
+func _freeze_for_capture(stage: Node) -> void:
+	for e in _enemies():
+		if is_instance_valid(e):
+			(e as Node).set_physics_process(false)
+			(e as Node).set_process(false)
+	# 적탄 정지(스테이지 직속 자식). 날아가던 탄이 플레이어를 맞히지 않게.
+	for n in stage.get_children():
+		if n is EnemyBullet:
+			(n as Node).set_physics_process(false)
+			(n as Node).set_process(false)
+	var p: Node2D = _player()
+	if p != null and is_instance_valid(p):
+		p.set("invuln", 0.0)            # 점멸 종료 → _update_visual이 alpha=1.0로 둠
+		var vis: Variant = p.get("visual")
+		if vis != null:
+			(vis as CanvasItem).modulate.a = 1.0
+		p.set_physics_process(false)    # 재점멸/포즈 변화 방지로 또렷하게 고정
 
 # ─── 1. 교전 액션 (클로즈업 — 큰 캐릭터) ──────────────────────
 func _shot_combat_close() -> void:
@@ -227,13 +234,12 @@ func _shot_combat_close() -> void:
 	_aim_all_snipers(true)
 	# 부채꼴 사격 두 번 — 탄이 두 거리대에 흩어지게.
 	p.call("_try_attack")
-	_spawn_muzzle_glow(stage, p.global_position + Vector2(34.0, -34.0))
 	await _wait(5)
 	p.call("_try_attack")
-	_spawn_muzzle_glow(stage, p.global_position + Vector2(34.0, -34.0))
 	# 폭발 — 적 무리 한가운데.
 	_spawn_blast(stage, Vector2(px + 235.0, gy - 26.0), 50.0, 0.8)
 	await _wait(3)
+	_freeze_for_capture(stage)
 	await _capture("combat_hero", stage)
 
 # ─── 1b. 교전 액션 (와이드 아레나 — 여러 명) ──────────────────
@@ -256,12 +262,12 @@ func _shot_combat_arena() -> void:
 	# 저격수들이 실제로 발사(사선 트인 것만) → 탄이 날아다니는 난전.
 	_aim_all_snipers(true)
 	p.call("_try_attack")
-	_spawn_muzzle_glow(stage, p.global_position + Vector2(30.0, -30.0))
 	await _wait(5)
 	# 적 밀집 지점 두 곳에 폭발.
 	_spawn_blast(stage, Vector2(1200.0, 760.0), 58.0, 0.8)
 	_spawn_blast(stage, Vector2(960.0, 200.0), 46.0, 0.7)
 	await _wait(3)
+	_freeze_for_capture(stage)
 	await _capture("combat_arena", stage)
 
 # ─── 2. VEIL 경고 순간 ───────────────────────────────────────
@@ -284,6 +290,7 @@ func _shot_veil_warning() -> void:
 	await _wait(2)
 	stage.call("_show_veil_subtitle", "위, 저격이에요. 제가 표시해 둘게요 — 요원은 앞만 봐요.", 6.0, false, true)
 	await _wait(12)
+	_freeze_for_capture(stage)
 	await _capture("veil_warning_sniper", stage)
 
 # ─── 3a. 외벽 옥상 — 하늘/별 + 높이 + 저격 감시선 ─────────────
@@ -301,10 +308,10 @@ func _shot_map_rooftops() -> void:
 	p.set("velocity", Vector2(120.0, -300.0))
 	p.set("jumps_used", 1)
 	await _wait(6)
-	# 공중 사격 — 머즐 + 부채꼴 탄이 별 깔린 하늘로 뻗어나간다.
+	# 공중 사격 — 부채꼴 탄이 별 깔린 하늘로 뻗어나간다.
 	p.call("_try_attack")
-	_spawn_muzzle_glow(stage, p.global_position + Vector2(34.0, -34.0))
 	await _wait(3)
+	_freeze_for_capture(stage)
 	await _capture("map_rooftops", stage)
 
 # ─── 3b. 폐쇄 지하철 — 어두운 터널 + 하향 포탑 + 형광등 ───────
@@ -320,9 +327,9 @@ func _shot_map_subway() -> void:
 	await _wait(8)
 	var p: Node2D = _player()
 	p.call("_try_attack")  # 패트롤 쪽으로 사격
-	_spawn_muzzle_glow(stage, p.global_position + Vector2(34.0, -34.0))
 	_purge_subs(stage)  # 지연 자막 잔상 제거
 	await _wait(4)
+	_freeze_for_capture(stage)
 	await _capture("map_subway", stage)
 
 # ─── 3c. 데이터 센터 — 드론(위) + 저격(같은 층) 동시 고위험 ───
@@ -344,9 +351,9 @@ func _shot_map_datacenter() -> void:
 	# 같은 층 저격수가 양쪽에서 실제 발사 → 저격탄 streak + 위 드론 + 플레이어 응사.
 	_aim_all_snipers(true)
 	p.call("_try_attack")
-	_spawn_muzzle_glow(stage, p.global_position + Vector2(-34.0, -34.0))
 	_purge_subs(stage)
 	await _wait(4)
+	_freeze_for_capture(stage)
 	await _capture("map_datacenter", stage)
 
 # ─── 3d. 감시탑 — 붉은 스캔라인 + 둥지 저격 감시선 ────────────
@@ -362,6 +369,7 @@ func _shot_map_watchtower() -> void:
 	# 사선 트인 둥지 저격수가 실제 발사 → 감시선 + 날아오는 저격탄.
 	_aim_all_snipers(true)
 	await _wait(4)
+	_freeze_for_capture(stage)
 	await _capture("map_watchtower", stage)
 
 # ─── 4. 루트 분기 — 스토리 stage1 (지하철 vs 감시탑, 위험 대비) ─
@@ -401,8 +409,8 @@ func _shot_boss() -> void:
 		cam.reset_smoothing()
 	await _wait(8)
 	p.call("_try_attack")
-	_spawn_muzzle_glow(stage, p.global_position + Vector2(30.0, -30.0))
 	await _wait(4)
+	_freeze_for_capture(stage)
 	await _capture("boss_sentinel", stage)
 
 # ─── 캡처/유틸 ────────────────────────────────────────────────
