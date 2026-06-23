@@ -14,6 +14,7 @@
 | 맵 좌표·4템플릿·보스/웨이브·이스터에그·도전방 | [`design/world_layout.md`](design/world_layout.md) |
 | VEIL 어투(신뢰 COLD/THAW/WARM)·엔딩 점수 축·취약함 게이트 | [`design/veil_trust_arc.md`](design/veil_trust_arc.md) |
 | └ VEIL 밴드×진행 대사 grid(설계 스냅샷) | [`design/veil_pool_remap.md`](design/veil_pool_remap.md) |
+| └ 다회차 리플레이 대사 변형(제안·검토) | [`design/veil_replay_dialogue.md`](design/veil_replay_dialogue.md) |
 | 톤 원칙 "글로 명시 < 체험으로 체득" | [`design/show_dont_tell.md`](design/show_dont_tell.md) |
 | 레버·발판·비밀칸 배치 인덱스 | [`design/puzzle_ideas.md`](design/puzzle_ideas.md) |
 | 난이도 정량 분석(누가 얼마나 어려운가) | [`design/difficulty_analysis.md`](design/difficulty_analysis.md) |

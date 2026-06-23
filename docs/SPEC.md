@@ -497,6 +497,8 @@ const XP_PER_LEVEL: int = 8
 # 영속 플래그 (settings.cfg)
 var tutorial_done: bool = false
 var seen_enemies: Array = []     # 도감 영속 — 한 번 본 적은 다음 런에도 안 뜸
+var endings_seen: Array = []     # 본 엔딩 A/B/C/D (영속, 다회차 신호)
+var playthrough_count: int = 0   # 완주 횟수 (영속, 다회차 신호)
 var bgm_volume: float = 1.0  # (구 master_volume — 2026-05-08 rename, audio.bgm 키)
 var sfx_volume: float = 1.0
 
@@ -513,11 +515,18 @@ var playground_active: bool = false
 - `add_xp(amount) -> bool` — leveled_up 반환
 
 ### 영속화
-`user://settings.cfg` (ConfigFile, version 3):
-- `flags/tutorial_done`, `flags/seen_enemies`
+**메타** `user://settings.cfg` (ConfigFile, version 3) — 런과 무관, `reset()`에서 보존:
+- `flags/tutorial_done`, `flags/seen_enemies`(도감)
 - `flags/hidden_visit_count`, `flags/visited_arcturus`
+- `flags/endings_seen`(본 엔딩 A/B/C/D), `flags/playthrough_count`(완주 횟수) — 다회차 신호
 - `audio/bgm`, `audio/sfx` (구 `audio/master`는 fallback으로 1회 더 읽힘)
 - `input/<action>` — 키바인드 (key/mouse/joypad 통합 스키마, version 3)
+
+**런 진행(이어하기)** `user://run.cfg` (ConfigFile, version 1) — 단일 자동저장:
+- `save_run()`이 RouteMap 진입(스테이지 사이)마다 런 상태(current_stage·route_history·skills·trust/aggr·HP·
+  story_mode·veil_* 등)를 저장. `has_run()`이면 타이틀에 "이어하기"(`load_run()` → ROUTE_MAP 복귀).
+- `clear_run()`: 엔딩 도달(`record_ending`) + 새 게임 시작 시. 죽음→타이틀은 유지(직전 체크포인트 복귀).
+- 웹: `user://`는 브라우저 IndexedDB에 영속(도메인별). 닫았다 열어도 유지. 새 게임은 덮어쓰기 경고 확인 후 진행.
 
 ---
 

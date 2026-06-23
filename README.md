@@ -223,7 +223,8 @@ EoY/
 - **Physics interpolation**: 60Hz 물리 + 고주사율 모니터에서 떨림 없도록 활성화.
 - **VEIL은 가끔 틀린다**: 조언을 늘 따르는 게 정답이 되지 않도록 의도적으로 빗나간 조언을 풀에 넣음. `trust`와 `aggression`이 직교하도록 설계됨.
 - **도감 트리거**: 적 첫 조우 시 자동으로 카드 표시. seen_enemies는 settings.cfg에 영속화돼서 다음 런에선 안 뜸.
-- **디버그 연습장**: 설정 → "연습장으로 진입". HUD에 토글 패널이 떠서 stage/route/risk/reward·스킬 티어(8라인 0~3)·기본(대시·이중점프)·시야붕괴를 그 자리에서 바꾸고 즉시 reload. **맵을 누르면 그 맵의 기본 risk/reward/stage가 자동 설정**되고, 시야붕괴 토글로 ACT3 경고·붕괴 톤 대사를 연습장에서도 테스트할 수 있다.
+- **디버그 연습장**: 설정 → "연습장으로 진입". HUD에 토글 패널이 떠서 stage/route/risk/reward·스킬 티어(3계열 8라인 0~3)·기본(대시·이중점프)·시야붕괴를 그 자리에서 바꾸고 즉시 reload. **맵을 누르면 그 맵의 기본 risk/reward/stage가 자동 설정**되고, 시야붕괴 토글로 ACT3 경고·붕괴 톤 대사를 연습장에서도 테스트할 수 있다.
+- **자동저장/이어하기**: 스테이지 사이마다 `user://run.cfg`에 자동저장. 타이틀 "이어하기"로 닫았다 와도 직전 체크포인트로 복귀(웹은 브라우저 IndexedDB에 영속, 도메인별). 도감·본 엔딩·완주 횟수도 누적 영속이며, 완주 1회 이상이면 오프닝 VEIL 대사가 다회차 변형으로 바뀐다.
 
 ---
 
@@ -242,7 +243,7 @@ EoY/
 ## 개발 현황
 
 핵심 시스템은 완성 단계 — 플레이→4종 결말, 12개 맵 분기, 3계열×3티어 스킬 트리, 5종 적·보스 SENTINEL,
-VEIL 어투 아크(신뢰 구동), UI 시각화(텍스트→그래픽), 음악·효과음(전부 AI 생성), Xbox 컨트롤러, 웹 자동 배포.
+VEIL 어투 아크(신뢰 구동), UI 시각화(텍스트→그래픽), 음악·효과음(전부 AI 생성), 자동저장/이어하기·다회차 오프닝 변형, Xbox 컨트롤러, 웹 자동 배포.
 
 **다음 작업·미착수는 [`docs/design/backlog.md`](docs/design/backlog.md)** (단일 소스), 변경 이력은 [`session_logs/`](session_logs/),
 구현 디테일은 [`docs/SPEC.md`](docs/SPEC.md), 스토리 캐논은 [`docs/STORY.md`](docs/STORY.md) 참조.
@@ -254,4 +255,4 @@ VEIL 어투 아크(신뢰 구동), UI 시각화(텍스트→그래픽), 음악·
 - **코드** (`scripts/`·`scenes/`·셰이더·프로젝트 설정): [MIT](LICENSE) © 2026 Soomin Kim
 - **자산**: 폰트 Pretendard는 [SIL OFL 1.1](assets/fonts/OFL.txt), 음악은 Suno·효과음은 ElevenLabs 생성물로 각 툴 약관을 따른다. 엔진 Godot는 별도 MIT. 자세한 건 [`LICENSE`](LICENSE) 하단 "BUNDLED THIRD-PARTY ASSETS" 참조.
 
-개인 프로젝트(부스/전시 데모)라 코드만 MIT로 열고, 번들된 폰트·오디오는 원 출처 라이선스를 유지한다.
+개인 프로젝트(웹 배포 데모)라 코드만 MIT로 열고, 번들된 폰트·오디오는 원 출처 라이선스를 유지한다.
