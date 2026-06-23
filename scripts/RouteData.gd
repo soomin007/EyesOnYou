@@ -34,7 +34,7 @@ const ALL_ROUTES: Array = [
 		"min_stage": 0, "max_stage": 1,
 		"tags": ["원거리", "노출", "이동"],
 		"veil_comment": "옥상으로 갈래요? 시야는 트이지만 그만큼 노출돼요.",
-		"entry_comment": "옥상이 출구예요. 다 상대하지 않아도 돼요 — 멈추지 말고 빠져요.",
+		"entry_comment": "옥상이 출구예요. 다 상대하지 않아도 돼요. 멈추지 말고 빠져요.",
 		"stage_color": Color(0.10, 0.13, 0.20),
 	},
 	{

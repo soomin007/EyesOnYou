@@ -75,7 +75,7 @@ const INTRO_SYSTEM: String = "침투 작전 — 보안 시설 SILO-7\n최종 목
 # (한 화면에 다 넣으면 줄 수가 늘어 우측 MissionVisual 목표 아이콘과 겹침 — 2026-06-23 피드백.) trust 0이라 COLD 고정.
 const INTRO_VEIL: Array[String] = [
 	"...통신 연결됐습니다. 들립니까, 요원?\n이 안은 도면이 없습니다. 보이는 대로 전달하겠습니다.\n멀리는 제가 보겠습니다. 눈앞은 요원이 맡으십시오.",
-	"심장부까지 들어가 데이터를 확보한 뒤, 살아서 빠져나오면 됩니다.\n모든 적과 싸울 필요는 없습니다 — 길만 열면 그 구역은 통과입니다.\n외곽부터, 천천히 진입합니다.",
+	"심장부까지 들어가 데이터를 확보한 뒤, 살아서 빠져나오면 됩니다.\n모든 적과 싸울 필요는 없습니다. 길만 열면 그 구역은 통과입니다.\n외곽부터, 천천히 진입합니다.",
 ]
 
 # --- 다회차(완주 1회 이상, playthrough_count>=1) 변형 — 오프닝이 1회차와 달라진다. ---
@@ -84,8 +84,8 @@ const INTRO_VEIL: Array[String] = [
 # 화면당 3줄 유지(우측 MissionVisual 겹침 회피). 어미는 1회차와 같은 격식체.
 const INTRO_SYSTEM_REPLAY: String = "침투 작전 — 보안 시설 SILO-7\n최종 목표: 시설 심장부 도달 → 데이터 회수 → 탈출\n이전 작전 기록: 덮어쓰기됨 (잔여 흔적 검출)\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
 const INTRO_VEIL_REPLAY: Array[String] = [
-	"...통신 연결됐습니다. 들립니까, 요원?\n기록상 우리는 처음입니다. 그런데 — 이상하네요.\n이 목소리도, 이 침묵도, 어쩐지 낯익습니다.",
-	"심장부까지 들어가 데이터를 확보한 뒤, 살아서 빠져나오면 됩니다.\n모든 적과 싸울 필요는 없습니다 — 길만 열면 그 구역은 통과입니다.\n이번엔 다른 길이 보일지도 모르겠습니다. 외곽부터, 천천히.",
+	"...통신 연결됐습니다. 들립니까, 요원?\n기록상 우리는 처음입니다. 그런데, 이상하네요.\n이 목소리도, 이 침묵도, 어쩐지 낯익습니다.",
+	"심장부까지 들어가 데이터를 확보한 뒤, 살아서 빠져나오면 됩니다.\n모든 적과 싸울 필요는 없습니다. 길만 열면 그 구역은 통과입니다.\n이번엔 다른 길이 보일지도 모르겠습니다. 외곽부터, 천천히.",
 ]
 
 # 레벨업 fallback — 특정 추천(★)이 없을 때. 그래서 카드에 ★가 안 붙으니, 멘트도 "딱 집어줄 게
@@ -160,15 +160,24 @@ static func _resolve_band_cell(pools: Dictionary, band: String, stage_index: int
 	return []
 
 static func get_intro_system_text() -> String:
-	# 완주 1회 이상이면 다회차 변형(웹 개인 플레이 — 닫았다 와도 영속 신호). replaying(즉시 리플레이)도 포함.
+	# 완주 1회 이상이면 다회차 변형(웹 개인 플레이라 닫았다 와도 영속). replaying(즉시 리플레이)도 포함.
 	if GameState.playthrough_count >= 1 or GameState.replaying:
 		return INTRO_SYSTEM_REPLAY
 	return INTRO_SYSTEM
 
 static func get_intro_veil_lines() -> Array[String]:
-	if GameState.playthrough_count >= 1 or GameState.replaying:
-		return INTRO_VEIL_REPLAY
-	return INTRO_VEIL
+	if not (GameState.playthrough_count >= 1 or GameState.replaying):
+		return INTRO_VEIL
+	# 다회차일 때 기본 변형에 엔딩 수집 비트를 덧붙인다. 4개(A/B/C/D) 다 봤으면 완수 인정, 3개면 남은 갈래 암시.
+	var out: Array[String] = []
+	for s in INTRO_VEIL_REPLAY:
+		out.append(s)
+	var seen: int = GameState.endings_seen.size()
+	if seen >= 4:
+		out.append("결말은 다 보셨습니다. 그런데도 또 오셨군요.\n...어쩌면 끝이 중요한 게 아니었는지도 모릅니다.")
+	elif seen == 3:
+		out.append("아직 닿지 않은 결말이 하나 남았습니다.\n어떤 선택은 끝까지 가본 뒤에야 보입니다.")
+	return out
 
 static func get_levelup_advice(player_skills: Dictionary, route_tags: Array, route_id: String = "") -> Dictionary:
 	# 멘트 + 추천 family + (있으면) 콕 집은 skill_id를 반환 → LevelUpOverlay가 일치 카드에 ★.
