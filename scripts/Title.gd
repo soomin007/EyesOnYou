@@ -141,9 +141,12 @@ func _set_state(new_state: int) -> void:
 			var b_feedback := _make_button("피드백 보내기")
 			b_feedback.pressed.connect(_on_feedback_pressed)
 			buttons_box.add_child(b_feedback)
-			var b_quit := _make_button("게임 종료")
-			b_quit.pressed.connect(_on_quit_pressed)
-			buttons_box.add_child(b_quit)
+			# 웹(브라우저)에선 get_tree().quit()이 탭을 못 닫고 페이지만 멈춤(브라우저 보안: 스크립트가
+			# 사용자가 직접 연 탭을 못 닫음) → 종료 버튼을 숨긴다(탭은 사용자가 닫음). 데스크톱만 종료 제공.
+			if not OS.has_feature("web"):
+				var b_quit := _make_button("게임 종료")
+				b_quit.pressed.connect(_on_quit_pressed)
+				buttons_box.add_child(b_quit)
 			b_start.grab_focus.call_deferred()
 		STATE_MODE:
 			var b_normal := _make_button("일반 모드")

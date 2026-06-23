@@ -14,8 +14,10 @@
   도감·본 엔딩(`endings_seen`)·완주 카운트(`playthrough_count`) 영속(settings.cfg). **단일 자동저장
   이어하기** — `user://run.cfg`에 RouteMap 진입마다 자동저장, 타이틀 "이어하기"로 RouteMap 복귀
   (`save_run`/`load_run`/`has_run`/`clear_run`). 엔딩 도달 시 메타 적립 + run 삭제, 새 게임 시 run 삭제.
-  **남음**: 웹 빌드 실측(itch/GitHub Pages **도메인별 저장**·iframe 영속 확인) + 호스트 단일화 결정.
-  다회차 리플레이 대사 차별화(아래)는 별도 — 이제 `playthrough_count`/`endings_seen`이 신호로 준비됨.
+  **실측 현황**: 영속은 **GitHub Pages(github.io)에서 사용자 확인 완료**(브라우저 완전 종료 후 스킬·레벨·
+  도감 유지). 메인 호스트 = github.io. 웹에선 종료 버튼 숨김(브라우저가 탭을 못 닫음). **남은 점검**: 웹 전용
+  이슈(오디오 autoplay 정책·입력·캔버스 크기·성능) 정도. 다회차 리플레이 대사 차별화(아래)는 별도 —
+  이제 `playthrough_count`/`endings_seen`이 신호로 준비됨.
 - **VEIL 시야 붕괴 onset**: (데모 ✅ 적용) 보스/탈출 직전 첫 전투 맵(일반 stage>=4 / 스토리 stage2~3)을
   **"진입부터 붕괴"**로 — `record_route_choice`가 onset에서 `veil_degraded`+`veil_reversal_pending`을 켜
   VeilSight가 시작부터 어둡고, 진입 시 역전 멘트 1회(`Stage._setup_veil_mistakes`). 중간 글리치·자막 겹침
