@@ -23,6 +23,7 @@
 | 포스터 비주얼 아이덴티티(색·모티프·카피) | [`poster_brief.md`](poster_brief.md) |
 | 배포(GitHub Pages 자동) | [`../DEPLOY.md`](../DEPLOY.md) |
 | **다음 작업·미착수 (진행상태 단일 소스)** | [`design/backlog.md`](design/backlog.md) |
+| 본편 확장 전략(에셋 기반) | [`design/expansion_plan.md`](design/expansion_plan.md) |
 | 반복 방지 함정·오류 이력 | [`design/known_issues.md`](design/known_issues.md) |
 | 세션별 변경 흐름 | [`../session_logs/`](../session_logs/) (최근 + `SESSION_LOG_ARCHIVE.md`) |
 | 운영 규칙(세션 루틴·커밋·로그) | [`../CLAUDE.md`](../CLAUDE.md) |
