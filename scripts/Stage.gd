@@ -78,6 +78,8 @@ func _ready() -> void:
 	_build_lever_puzzles()
 	if GameState.playground_active:
 		add_child(PlaygroundOverlay.new())
+	# 시야 역전 onset 멘트/연출은 이번 _ready에서 1회 소비 — 이후(재시도·다음 맵)엔 일반 degraded 처리.
+	GameState.veil_reversal_pending = false
 
 # 맵 → BGM 트랙 매핑.
 # BPM 점진 증가 (Glass→Cold Gear→Cold Wire→Chrome Grit) 순서를 stage 진행과 매칭.
@@ -136,16 +138,20 @@ func _setup_veil_mistakes() -> void:
 		_arm_ward_foreshadow_at(900.0)
 	# 진입 직후 한 줄 안내 — 모든 루트가 RouteData.entry_comment를 가짐.
 	# "어디로 가야 하나" "이 맵의 위협이 뭔가"를 단숨에 통보. 사용자: 맵 진입 멘트 리뉴얼.
-	var entry: String = ""
-	for r in RouteData.ALL_ROUTES:
-		if r.get("id", "") == GameState.current_route_id:
-			entry = str(r.get("entry_comment", ""))
-			break
-	if entry != "":
-		# 맵 진입 첫 멘트 — 빠른 fade-in(0.12s) + 긴 표시(4.5s)로 진입 직후 바로/오래 인지되게
-		# (사용자: 맵 들어갔을 때 첫 멘트가 늦게 뜨는 느낌).
-		_show_veil_subtitle(entry, 4.5, false, true)
-	# ACT3 시야 역전 최고조 — 플레이 *중* 결정론적으로 한 번 더 박는다 (v3 §4 ★).
+	# 시야 역전 onset 맵은 "진입부터 붕괴" — 일반 entry_comment 대신 역전 멘트 한 줄만 진입에 띄워 자막
+	# 겹침 없이 깔끔하게(VeilSight는 이미 degraded로 시작). 그 외 맵은 평소대로 entry_comment.
+	if GameState.veil_reversal_pending:
+		_show_veil_subtitle(_act3_vision_line(GameState.current_stage), 4.4, false, true)
+	else:
+		var entry: String = ""
+		for r in RouteData.ALL_ROUTES:
+			if r.get("id", "") == GameState.current_route_id:
+				entry = str(r.get("entry_comment", ""))
+				break
+		if entry != "":
+			# 맵 진입 첫 멘트 — 빠른 fade-in(0.12s) + 긴 표시(4.5s)로 진입 직후 바로/오래 인지되게.
+			_show_veil_subtitle(entry, 4.5, false, true)
+	# ACT3 시야 역전 — onset은 위 진입 멘트로 소비(아래는 veil_degraded 가드로 early-return되는 fallback).
 	_arm_act3_vision_subtitle()
 
 func _arm_ward_foreshadow_at(trigger_x: float) -> void:
@@ -301,6 +307,9 @@ func _act3_vision_line(stage: int) -> String:
 # 잡으므로, 여기선 *처음부터* 붕괴 상태로 들어온 맵에서만 발화(중복 방지).
 func _arm_degraded_hazard_warning() -> void:
 	if not GameState.veil_degraded:
+		return
+	# 시야 역전 onset 맵은 _setup_veil_mistakes가 역전 멘트를 띄우므로 함정 경고는 생략(중복 방지).
+	if GameState.veil_reversal_pending:
 		return
 	var traps: Array = _map_data.get("traps", [])
 	var tripwires: Array = _map_data.get("tripwires", [])

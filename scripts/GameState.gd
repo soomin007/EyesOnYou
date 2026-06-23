@@ -49,6 +49,9 @@ var followed_veil_last_choice: bool = false
 # VEIL 시야 붕괴(ACT3 degradation)가 한 번 시작되면 이후 맵에서도 계속 어두운 상태 유지.
 # VeilSight.begin_degradation()에서 켜고, VeilSight._ready가 이 값을 보고 시작부터 degraded.
 var veil_degraded: bool = false
+# 시야 역전 onset 맵에서 "진입부터 붕괴" 처리를 위한 1회용 신호 — record_route_choice가 켜고
+# Stage._ready가 진입 역전 멘트 1회 소비 후 끈다(중간 글리치·자막 겹침 제거, 사용자 보고).
+var veil_reversal_pending: bool = false
 
 var skills: Dictionary = {}
 var current_route_id: String = ""
@@ -182,6 +185,7 @@ func reset() -> void:
 	player_level = 1
 	story_mode = false
 	veil_degraded = false
+	veil_reversal_pending = false
 	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
 	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
@@ -215,6 +219,7 @@ func start_main_game() -> void:
 	player_level = 1
 	skills = STARTING_SKILLS.duplicate()
 	veil_degraded = false
+	veil_reversal_pending = false
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()
 
@@ -236,11 +241,18 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	current_route_reward = int(route.get("reward", 1))
 	current_route_challenge = bool(route.get("challenge", false))
 	current_route_hidden = bool(route.get("hidden", false))
-	# 비상 탈출로 선택 시 시야 붕괴(degradation) 해제 — 보스 직전에서 켜진 veil_degraded가 마지막 탈출
-	# 맵까지 끌려와 화면이 어둡게(축소 비네트 + "안 보임" 톤) 나오던 문제(사용자 보고). 탈출=종착(엔딩
-	# 직행)이라 이후 맵·엔딩 영향 없음. Stage._arm_act3_vision_subtitle의 escape 제외와 함께 탈출로를 아크에서 뺀다.
+	# 비상 탈출로: 시야 붕괴 해제(끌려온 degradation 끔). 탈출=종착이라 이후 맵·엔딩 영향 없음.
+	# 그 외, 보스/탈출 직전 첫 전투 맵(일반 stage>=4 / 스토리 stage2~3, 아직 안 붕괴)은 "진입부터 붕괴"
+	# onset으로: VeilSight가 시작부터 어둡고 진입 시 역전 멘트 1회(Stage가 pending으로 처리). 중간 글리치·
+	# 자막 겹침을 없애 "갑자기 와다닥" 느낌 제거(사용자 보고).
 	if rid == "route_escape":
 		veil_degraded = false
+		veil_reversal_pending = false
+	elif not veil_degraded:
+		var reversal_onset: bool = (current_stage == 2 or current_stage == 3) if story_mode else (current_stage >= 4)
+		if reversal_onset:
+			veil_degraded = true
+			veil_reversal_pending = true
 	followed_veil_last_choice = (rid == recommended_id and recommended_id != "")
 	# 엔딩 도덕 축 = 추천 수용률(§3.3). 선택 시점에 1회만 집계 — 죽음 재시도엔 record가
 	# 재호출되지 않으므로 한 맵당 한 번. (어투 trust는 클리어 시점에 적립 — on_stage_clear.)
