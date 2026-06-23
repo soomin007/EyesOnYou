@@ -216,6 +216,10 @@ func _on_veil_mistake_zone(body: Node, area: Area2D) -> void:
 # 진입 멘트가 가신 뒤 지연 자막으로. ACT3에서만(일반 stage5+/스토리 s3), 회당 1회.
 func _arm_act3_vision_subtitle() -> void:
 	var stage: int = GameState.current_stage
+	# 비상 탈출로는 "탈출" 비트 — 시야 붕괴 아크에서 제외(스토리 stage4는 아래 조건으로 이미 빠지지만,
+	# 일반 모드 stage6은 stage>=5에 걸려 여기서 재발동되므로 route로 명시 차단). 사용자: 탈출 맵은 붕괴 꺼져야 함.
+	if GameState.current_route_id == "route_escape":
+		return
 	# 스토리 ACT3 = 보스 직전(ward/sewers, stage 2) + 보스(lab, stage 3). escape(4)는 탈출이라 제외.
 	# 보스전(stage 3)은 ARENA라 마킹할 잡몹이 없어 시야 역전이 실연되지 않음 → stage 2에서 먼저
 	# degradation을 보여준다(사용자: "보스전이라 마커가 무의미, 하나 더 전부터 시작").

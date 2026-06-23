@@ -236,6 +236,11 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	current_route_reward = int(route.get("reward", 1))
 	current_route_challenge = bool(route.get("challenge", false))
 	current_route_hidden = bool(route.get("hidden", false))
+	# 비상 탈출로 선택 시 시야 붕괴(degradation) 해제 — 보스 직전에서 켜진 veil_degraded가 마지막 탈출
+	# 맵까지 끌려와 화면이 어둡게(축소 비네트 + "안 보임" 톤) 나오던 문제(사용자 보고). 탈출=종착(엔딩
+	# 직행)이라 이후 맵·엔딩 영향 없음. Stage._arm_act3_vision_subtitle의 escape 제외와 함께 탈출로를 아크에서 뺀다.
+	if rid == "route_escape":
+		veil_degraded = false
 	followed_veil_last_choice = (rid == recommended_id and recommended_id != "")
 	# 엔딩 도덕 축 = 추천 수용률(§3.3). 선택 시점에 1회만 집계 — 죽음 재시도엔 record가
 	# 재호출되지 않으므로 한 맵당 한 번. (어투 trust는 클리어 시점에 적립 — on_stage_clear.)
