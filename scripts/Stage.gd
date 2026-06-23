@@ -220,10 +220,15 @@ func _arm_act3_vision_subtitle() -> void:
 	# 일반 모드 stage6은 stage>=5에 걸려 여기서 재발동되므로 route로 명시 차단). 사용자: 탈출 맵은 붕괴 꺼져야 함.
 	if GameState.current_route_id == "route_escape":
 		return
-	# 스토리 ACT3 = 보스 직전(ward/sewers, stage 2) + 보스(lab, stage 3). escape(4)는 탈출이라 제외.
-	# 보스전(stage 3)은 ARENA라 마킹할 잡몹이 없어 시야 역전이 실연되지 않음 → stage 2에서 먼저
-	# degradation을 보여준다(사용자: "보스전이라 마커가 무의미, 하나 더 전부터 시작").
-	var is_act3: bool = (stage == 2 or stage == 3) if GameState.story_mode else (stage >= 5)
+	# 시야 역전(reversal)은 딱 한 번만 발동 — 이미 붕괴된 뒤 후속 맵은 _arm_degraded_hazard_warning이
+	# "여기 잘 못 봐요" 경고를 맡는다. 여기서 또 reversal 자막+begin_degradation을 내면 중복이라 가드.
+	if GameState.veil_degraded:
+		return
+	# 일반 모드: 보스(lab=ARENA, 잡몹 없어 마커 무의미)·탈출 직전의 *잡몹 전투 맵*(데이터센터 등, index 4)에서
+	# 역전을 실연한다. 기존 stage>=5는 보스/탈출에서만 떠 시각이 전투 맵에 안 내려앉고 대사 아크(stage4~)와
+	# 어긋났음(사용자 보고). → stage>=4로 당겨 첫 후보 전투 맵에서 1회 발동(위 veil_degraded 가드로 중복 없음).
+	# 스토리 ACT3 = 보스 직전(ward/sewers, stage 2)에서 먼저 — 보스(stage 3, ARENA)는 마커 무의미라 제외.
+	var is_act3: bool = (stage == 2 or stage == 3) if GameState.story_mode else (stage >= 4)
 	if not is_act3:
 		return
 	var line: String = _act3_vision_line(stage)
