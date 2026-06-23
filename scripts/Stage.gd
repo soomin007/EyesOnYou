@@ -317,9 +317,9 @@ func _arm_degraded_hazard_warning() -> void:
 	var has_nest: bool = bool(_map_data.get("nest_snipers", false))
 	if not (has_traps or has_nest):
 		return
-	var line: String = "여기, 제가 잘 못 봐요. 함정이 있어도 못 짚어줄 수 있어요 — 직접 살펴요."
+	var line: String = "여기, 제가 잘 못 봐요. 함정이 있어도 못 짚어줄 수 있어요. 직접 살펴요."
 	if has_nest and not has_traps:
-		line = "여기, 제가 잘 못 봐요. 매복이 있어도 못 짚어줄 수 있어요 — 직접 살펴요."
+		line = "여기, 제가 잘 못 봐요. 매복이 있어도 못 짚어줄 수 있어요. 직접 살펴요."
 	# 진입 멘트(4.5s)가 가신 뒤 한 박자 늦게 — 겹쳐서 줄줄이 뜨지 않게.
 	var tw := create_tween()
 	tw.tween_interval(6.0)
@@ -3422,7 +3422,7 @@ func _tick_trap_warning() -> void:
 				_trap_warned = true
 				# 시야 붕괴(ACT3) 후엔 마커로 못 짚어주니 "잘 안 보인다"는 톤으로.
 				if GameState.veil_degraded:
-					_show_veil_subtitle("앞에 함정이 있는 것 같아요. 잘 안 보여요 — 발밑·천장 조심해요.", 3.4)
+					_show_veil_subtitle("앞에 함정이 있는 것 같아요. 잘 안 보여요. 발밑·천장 조심해요.", 3.4)
 				else:
 					_show_veil_subtitle("저 포탑은 못 부숴요. 타이밍 보고 지나가요.", 3.2)
 				return
