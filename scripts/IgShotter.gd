@@ -1,24 +1,30 @@
 extends Node
 
-# 인스타 홍보용 임팩트 스크린샷 캡처 하니스 (포스터용 Screenshotter와 별개).
-#  - 1920x1080 borderless 창에 메인 뷰포트를 직접 캡처 → canvas_items stretch가 월드+HUD를
-#    균일 1.5배로 선명하게 렌더(창 장식 손실 없음, 모니터 1920x1080에 딱 맞음).
-#  - "가만히 선 평범한 순간"이 아니라 교전/경고/맵 개성/시스템 화면을 연출해 담는다.
+# 인스타 홍보용 스크린샷 하니스 v2 — "게임의 본질"을 자연스러운 프레이밍으로 잡는다.
+#  설계 철학(사용자 피드백):
+#   - 줌인 없음. 게임 기본 카메라 그대로(캐릭터는 맥락 속 작게, 레벨/HUD 전체가 보이게).
+#   - VEIL 자막은 지우지 않고 화면의 주인공으로 — 이 게임의 정체성은 VEIL과의 관계다.
+#   - 억지 액션을 지어내지 말고, 게임 고유 시스템/서사 모먼트를 포착한다:
+#       VEIL 위협 콜아웃 / 첫 조우 도감 카드 / 시야 붕괴(역전) / 보스 / 엔딩 단말기 / 맵 분위기.
+#   - 풀 HUD(스킬 목록·진행도·VEIL 게이지)도 구도의 일부.
 # 실행: Godot_..._console.exe --path . res://scenes/ig_shotter.tscn --gen
-#  (--gen 없으면 캡처만 하고 창을 닫지 않음 — 수동 확인용)
 
 const STAGE_SCENE: String = "res://scenes/stage.tscn"
 const OUT_DIR: String = "res://poster_out/ig"
-
 const SHOT_W: int = 1920
 const SHOT_H: int = 1080
 
-# kind 코드 (Stage._spawn_enemy 기준)
 const K_PATROL: int = 0
 const K_SNIPER: int = 1
 const K_DRONE: int = 2
 const K_BOMBER: int = 3
 const K_SHIELD: int = 4
+
+# 풍부한 HUD를 위한 대표 빌드(SKILL 목록이 꽉 차게). 시작 스킬(대시·이중점프)에 더해진다.
+const RICH_SKILLS: Dictionary = {
+	"fire_boost": 2, "multishot": 2, "explosive": 1,
+	"glide": 2, "dash_boost": 1, "hp": 1, "shield": 1, "barrier": 1,
+}
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
@@ -26,52 +32,43 @@ func _ready() -> void:
 	_run.call_deferred()
 
 func _set_high_res() -> void:
-	# 창 장식 없이 정확히 1920x1080 — get_viewport().get_texture()가 그 크기로 나온다.
 	var win: Window = get_window()
 	win.mode = Window.MODE_WINDOWED
 	win.borderless = true
-	# content_scale를 설계 기준(1280x720)으로 고정 → 월드/HUD가 1.5배 균일 확대(선명),
-	# 카메라는 설계와 동일한 프레이밍을 유지(런타임 리사이즈로 풀리던 것 명시 고정).
+	# content_scale를 설계 기준(1280x720)으로 고정 → 게임 기본 프레이밍 그대로, 1.5배 선명.
 	win.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 	win.content_scale_size = Vector2i(1280, 720)
 	win.size = Vector2i(SHOT_W, SHOT_H)
 	win.position = Vector2i(0, 0)
-	# 물리 보간 OFF — 텔레포트/이동 중인 바디가 물리틱 사이를 보간하며 캡처 순간 잔상(흐릿)이
-	# 생기는 걸 막는다. 보간을 끄면 매 프레임이 정확한 물리 위치로 렌더 → 캐릭터·탄이 또렷.
+	# 물리 보간 OFF — 캡처 순간 잔상(반투명/흐릿) 방지.
 	get_tree().root.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 
 func _run() -> void:
-	# 창 리사이즈가 뷰포트에 반영될 시간.
 	await _wait(8)
-
-	# 1) 교전 액션 — 커버 후보 둘 (클로즈업 + 와이드 아레나).
-	await _shot_combat_close()
-	await _shot_combat_arena()
-	# 2) VEIL 경고 순간.
-	await _shot_veil_warning()
-	# 3) 4개 맵 극적 컷.
-	await _shot_map_rooftops()
-	await _shot_map_subway()
+	# VEIL과의 만남 → 위협 마킹(도움) → 도감 → 시야 붕괴(역전)·보스 → 맵 분위기 → 시스템 → 엔딩.
+	await _shot_veil_intro()
+	await _shot_veil_threat()
+	await _shot_enemy_card()
+	await _shot_boss_degradation()
 	await _shot_map_datacenter()
-	await _shot_map_watchtower()
-	# 4) 루트 분기 + 5) 스킬트리 + (선택) 보스.
+	await _shot_map_cooling()
+	await _shot_map_rooftops()
 	await _shot_route_fork()
 	await _shot_skilltree()
-	await _shot_boss()
-
+	await _shot_ending_terminal()
 	print("IG SHOTS DONE")
 	if "--gen" in OS.get_cmdline_args():
 		await get_tree().create_timer(0.3).timeout
 		get_tree().quit()
 
-# ─── 공통 셋업 ────────────────────────────────────────────────
+# ─── 공통 ─────────────────────────────────────────────────────
 
 func _new_game(stage_idx: int, skills: Dictionary, story: bool = false) -> void:
+	get_tree().paused = false  # 이전 도감 카드 등에서 carry된 pause 차단
 	GameState.start_main_game()
 	GameState.story_mode = story
 	GameState.current_stage = stage_idx
-	# 첫 조우 도감 카드가 화면을 가리지 않게 미리 본 것으로.
 	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield"]
 	for k in skills.keys():
 		GameState.skills[k] = int(skills[k])
@@ -88,7 +85,7 @@ func _load_stage(rid: String, stage_idx: int, skills: Dictionary, story: bool = 
 		return null
 	var stage: Node = packed.instantiate()
 	add_child(stage)
-	await _wait(30)  # 빌드 + 카메라 정착
+	await _wait(30)
 	return stage
 
 func _player() -> Node2D:
@@ -97,14 +94,14 @@ func _player() -> Node2D:
 func _enemies() -> Array:
 	return get_tree().get_nodes_in_group("enemy")
 
-# 플레이어를 옮기고 카메라(자식)를 즉시 스냅. 정적 컷용.
+# 플레이어를 자연 위치로 옮기고 카메라(자식)를 줌 변경 없이 스냅. 줌은 게임 기본값 유지.
 func _place_player(stage: Node, pos: Vector2, facing: int = 1) -> void:
 	var p: Node2D = _player()
 	if p == null:
 		return
 	p.set("facing", facing)
 	p.set("velocity", Vector2.ZERO)
-	p.set("invuln", 999.0)  # 피격 깜빡임 방지
+	p.set("invuln", 999.0)
 	p.global_position = pos
 	p.reset_physics_interpolation()
 	var cam: Camera2D = stage.get("camera")
@@ -112,34 +109,14 @@ func _place_player(stage: Node, pos: Vector2, facing: int = 1) -> void:
 		cam.position_smoothing_enabled = false
 		cam.reset_smoothing()
 		cam.reset_physics_interpolation()
-	await _wait(8)  # 발판에 안착
+	await _wait(8)
 
-# 카메라 줌인(클로즈업) + 시선 오프셋 — HORIZONTAL/VERTICAL(플레이어 자식) 카메라용.
-# 줌>1 = 확대(월드 적게 보임 → 캐릭터 큼). 오프셋은 월드 단위로 시선 중심을 옮긴다.
-func _frame_cam(stage: Node, zoom: float, offset: Vector2 = Vector2.ZERO) -> void:
-	var cam: Camera2D = stage.get("camera")
-	if cam == null or not is_instance_valid(cam):
-		return
-	cam.zoom = Vector2(zoom, zoom)
-	cam.offset = offset
-	cam.position_smoothing_enabled = false
-	cam.reset_smoothing()
-	cam.reset_physics_interpolation()
-
-# 화면에 떠 있는 모든 자막을 비운다(겹침 정리).
-func _purge_subs(stage: Node) -> void:
+# VEIL 자막 한 줄(서사). 기존 자동 자막을 비우고 의도한 한 줄만 — 깔끔하게 VEIL을 살린다.
+func _say(stage: Node, text: String) -> void:
 	stage.call("_purge_subtitles")
+	stage.call("_show_veil_subtitle", text, 8.0, false, true)
 
-# 모든 적의 AI를 멈춰 포즈 고정(정적 컷). 조준선 등 기존 상태는 유지된다.
-func _freeze_enemies() -> void:
-	for e in _enemies():
-		if is_instance_valid(e):
-			(e as Node).set_physics_process(false)
-			(e as Node).set_process(false)
-
-# 저격수 조준 — 실제 게임처럼 **사선(LoS)이 트인 경우에만** 붉은 조준선을 그린다(벽 관통 금지).
-# do_fire=true면 실제 EnemyBullet을 한 발 발사(탄이 날아가는 박진감). LoS 없으면 아무것도 안 함.
-# 반환: 조준선을 그렸는지 여부.
+# 저격수 조준 — 실제 게임처럼 사선(LoS) 트인 경우에만 붉은 조준선(벽 관통 금지).
 func _aim_if_los(sniper: Node, do_fire: bool = false) -> bool:
 	if sniper == null or not is_instance_valid(sniper):
 		return false
@@ -147,16 +124,15 @@ func _aim_if_los(sniper: Node, do_fire: bool = false) -> bool:
 	if p == null:
 		return false
 	if not bool(sniper.call("_has_line_of_sight", p)):
-		return false  # 벽 뒤 — 실제 게임처럼 조준 안 함
+		return false
 	sniper.set("aim_los_clear", true)
 	sniper.call("_start_aim")
 	sniper.call("_update_aim")
 	if do_fire:
-		sniper.call("_fire_at_player")  # 실제 적 탄 발사 → 탄이 플레이어로 날아감
-	sniper.set_physics_process(false)  # 다음 틱에 _clear_aim 되지 않게 고정
+		sniper.call("_fire_at_player")
+	sniper.set_physics_process(false)
 	return true
 
-# 화면의 모든 저격수에 LoS 게이트 조준 적용. 그린 수를 반환.
 func _aim_all_snipers(do_fire: bool = false) -> int:
 	var n: int = 0
 	for e in _enemies():
@@ -165,216 +141,138 @@ func _aim_all_snipers(do_fire: bool = false) -> int:
 				n += 1
 	return n
 
-# 폭발 섬광 — Bomb의 blast를 모사(데미지/큐프리 없이 한 프레임 연출용).
-func _spawn_blast(stage: Node, pos: Vector2, radius: float, scl: float = 0.75) -> void:
-	var blast := Polygon2D.new()
-	blast.color = Color(0.98, 0.6, 0.28, 0.9)
-	blast.z_index = 6
-	var pts: Array = []
-	for i in 24:
-		var a: float = float(i) * TAU / 24.0
-		pts.append(Vector2(cos(a) * radius, sin(a) * radius))
-	blast.polygon = PackedVector2Array(pts)
-	blast.global_position = pos
-	blast.scale = Vector2(scl, scl)
-	stage.add_child(blast)
-	# 흰 코어 — 폭심 강조.
-	var core := Polygon2D.new()
-	core.color = Color(1.0, 0.95, 0.8, 0.95)
-	var cpts: Array = []
-	for i in 16:
-		var a: float = float(i) * TAU / 16.0
-		cpts.append(Vector2(cos(a) * radius * 0.45, sin(a) * radius * 0.45))
-	core.polygon = PackedVector2Array(cpts)
-	core.global_position = pos
-	core.scale = Vector2(scl, scl)
-	core.z_index = 7
-	stage.add_child(core)
-
-# 캡처 직전 고정 — 무적 점멸로 플레이어가 반투명하게 나오는 걸 막고(invuln 점멸은
-# _update_visual이 alpha를 0.4↔1.0로 흔든다), 적/적탄/플레이어를 정지시켜 피격(점멸 재발)도 차단.
-# 물리 보간 OFF와 합쳐 또렷한 정지 프레임을 만든다.
+# 캡처 직전 고정 — 무적 점멸로 인한 반투명 차단 + 투사체 정지로 또렷한 프레임.
 func _freeze_for_capture(stage: Node) -> void:
-	for e in _enemies():
-		if is_instance_valid(e):
-			(e as Node).set_physics_process(false)
-			(e as Node).set_process(false)
-	# 적탄 정지(스테이지 직속 자식). 날아가던 탄이 플레이어를 맞히지 않게.
+	var p: Node2D = _player()
 	for n in stage.get_children():
-		if n is EnemyBullet:
+		if n == p:
+			continue
+		if n is CollisionObject2D:
 			(n as Node).set_physics_process(false)
 			(n as Node).set_process(false)
-	var p: Node2D = _player()
 	if p != null and is_instance_valid(p):
-		p.set("invuln", 0.0)            # 점멸 종료 → _update_visual이 alpha=1.0로 둠
+		p.set("invuln", 0.0)
 		var vis: Variant = p.get("visual")
 		if vis != null:
 			(vis as CanvasItem).modulate.a = 1.0
-		p.set_physics_process(false)    # 재점멸/포즈 변화 방지로 또렷하게 고정
+		p.set_physics_process(false)
 
-# ─── 1. 교전 액션 (클로즈업 — 큰 캐릭터) ──────────────────────
-func _shot_combat_close() -> void:
-	var stage: Node = await _load_stage("route_subway", 3, {"multishot": 2, "fire_boost": 3})
+# ─── 1. VEIL과의 만남 — 튜토리얼 인트로(레이더 눈 + 통신 연결 자막) ──
+func _shot_veil_intro() -> void:
+	get_tree().paused = false
+	GameState.start_main_game()
+	var packed: PackedScene = load("res://scenes/tutorial.tscn") as PackedScene
+	if packed == null:
+		return
+	var tut: Node = packed.instantiate()
+	add_child(tut)
+	# VEIL 눈 등장 이징(~0.9s) + 인트로 자막 페이드인.
+	await _wait(95)
+	await _capture("veil_intro", tut)
+
+# ─── 2. VEIL이 위협을 짚어준다 — 감시탑, 실제 저격 사선 + VEIL 콜아웃 ──
+func _shot_veil_threat() -> void:
+	var stage: Node = await _load_stage("route_watchtower", 2, RICH_SKILLS)
 	if stage == null:
 		return
-	# 플레이어 앞에 적 무리 — 패트롤 둘 + 방패병 + 지붕 저격수(교차사격). 클로즈업이라 밀착.
-	var px: float = 1900.0
-	var gy: float = 420.0
-	_place_player(stage, Vector2(px, gy - 2.0), 1)
-	stage.call("_spawn_enemy", K_PATROL, Vector2(px + 150.0, gy))
-	stage.call("_spawn_enemy", K_PATROL, Vector2(px + 270.0, gy))
-	stage.call("_spawn_enemy", K_SHIELD, Vector2(px + 380.0, gy))
-	stage.call("_spawn_enemy", K_SNIPER, Vector2(px - 50.0, 200.0))  # 열차 지붕(1250~1950) 위 — 사선 확보
-	# 카메라 — 줌인 + 무리 쪽으로 시선 이동. 깨끗한 액션 컷(자막 제거).
-	_frame_cam(stage, 1.7, Vector2(180.0, -40.0))
-	await _wait(10)
-	_purge_subs(stage)
-	var p: Node2D = _player()
-	# 지붕 저격수가 실제로 한 발 발사 → 탄이 플레이어로 날아오는 교차사격(사선 트인 경우만).
-	_aim_all_snipers(true)
-	# 부채꼴 사격 두 번 — 탄이 두 거리대에 흩어지게.
-	p.call("_try_attack")
-	await _wait(5)
-	p.call("_try_attack")
-	# 폭발 — 적 무리 한가운데.
-	_spawn_blast(stage, Vector2(px + 235.0, gy - 26.0), 50.0, 0.8)
-	await _wait(3)
-	_freeze_for_capture(stage)
-	await _capture("combat_hero", stage)
-
-# ─── 1b. 교전 액션 (와이드 아레나 — 여러 명) ──────────────────
-func _shot_combat_arena() -> void:
-	var stage: Node = await _load_stage("route_datacenter", 4, {"multishot": 2, "fire_boost": 1})
-	if stage == null:
-		return
-	# 모든 웨이브 강제 spawn — 아레나를 가득 채운다(드론·저격·방패·폭격기·패트롤).
-	stage.call("_spawn_wave", 1)
-	stage.call("_spawn_wave", 2)
+	# 중층 정찰단 발판 — 좌측 둥지 저격수가 사선을 가로지른다(기본 카메라, 맥락 전체).
+	_place_player(stage, Vector2(620.0, 1148.0), -1)
+	await _wait(8)
+	_aim_all_snipers(false)  # 사선 트인 저격수 조준선
+	_say(stage, "위험한 건 제가 먼저 확인하겠습니다. 화면 끝에 띄워둘 테니, 요원은 전방만 보십시오.")
 	await _wait(14)
-	_purge_subs(stage)  # 진입/웨이브 자막 정리 — 액션만.
-	# 플레이어를 서버 랙 위 중앙에 두고 사격.
+	_freeze_for_capture(stage)
+	await _capture("veil_threat", stage)
+
+# ─── 3. 첫 조우 도감 카드 — 게임이 알아서 띄우는 적 소개 ──────────
+func _shot_enemy_card() -> void:
+	var stage: Node = await _load_stage("route_watchtower", 2, RICH_SKILLS)
+	if stage == null:
+		return
+	_place_player(stage, Vector2(620.0, 1148.0), -1)
+	await _wait(8)
+	_aim_all_snipers(false)  # 배경에 저격 사선
+	# 첫 조우 카드(저격수) — 실제 게임의 도감 시스템.
+	BestiaryOverlay.show_card(stage, "sniper")
+	await _wait(12)
+	await _capture("enemy_card_sniper", stage)
+	get_tree().paused = false  # 카드가 pause했으니 해제
+
+# ─── 4. 시야 붕괴(역전) + 보스 — VEIL이 "이제 안 보여요" ─────────
+func _shot_boss_degradation() -> void:
+	GameState.veil_degraded = true  # 시야 붕괴 — 화면이 어두워지고 마커가 무너진다
+	var stage: Node = await _load_stage("route_lab", 5, RICH_SKILLS)
+	if stage == null:
+		GameState.veil_degraded = false
+		return
+	await _wait(20)  # 보스 호버 안착
+	var boss: Node = get_tree().get_first_node_in_group("boss")
+	if boss != null and is_instance_valid(boss):
+		boss.set("hp", 12)
+		boss.set("phase", 2)
+		boss.call("_summon_minions", 2)
+		var bvis: Variant = boss.get("visual")
+		if bvis != null:
+			(bvis as Node2D).self_modulate = Color(1.2, 0.85, 0.65)
 	var p: Node2D = _player()
 	p.set("invuln", 999.0)
 	p.set("facing", 1)
-	p.global_position = Vector2(640.0, 760.0)
+	p.global_position = Vector2(720.0, 698.0)
 	p.reset_physics_interpolation()
-	await _wait(8)
-	# 저격수들이 실제로 발사(사선 트인 것만) → 탄이 날아다니는 난전.
-	_aim_all_snipers(true)
-	p.call("_try_attack")
-	await _wait(5)
-	# 적 밀집 지점 두 곳에 폭발.
-	_spawn_blast(stage, Vector2(1200.0, 760.0), 58.0, 0.8)
-	_spawn_blast(stage, Vector2(960.0, 200.0), 46.0, 0.7)
-	await _wait(3)
-	_freeze_for_capture(stage)
-	await _capture("combat_arena", stage)
-
-# ─── 2. VEIL 경고 순간 ───────────────────────────────────────
-func _shot_veil_warning() -> void:
-	var stage: Node = await _load_stage("route_subway", 3, {})
-	if stage == null:
-		return
-	GameState.trust_score = 12  # 따뜻한 어투("해요")로 자막이 읽히게
-	var px: float = 1320.0
-	var gy: float = 420.0
-	_place_player(stage, Vector2(px, gy - 2.0), 1)
-	# 지붕 위 저격수 — 조준선이 플레이어를 향하게 강제. 하나만 둬 깔끔하게.
-	stage.call("_spawn_enemy", K_SNIPER, Vector2(px + 210.0, 200.0))
-	_frame_cam(stage, 1.7, Vector2(120.0, -56.0))
-	await _wait(8)
-	# 사선 트인 저격수만 조준선(발사 직전 텔레그래프) — VEIL이 쏘기 전에 짚어주는 순간.
-	_aim_all_snipers(false)
-	# 진입 멘트 등 기존 자막을 비우고 VEIL 경고 한 줄만 — "위협 등장 + 경고" 순간.
-	_purge_subs(stage)
-	await _wait(2)
-	stage.call("_show_veil_subtitle", "위, 저격이에요. 제가 표시해 둘게요 — 요원은 앞만 봐요.", 6.0, false, true)
+	await _wait(14)
+	_say(stage, "오른쪽 어딘가... 저도 잘 안 보여요. 직접 살펴요.")
 	await _wait(12)
 	_freeze_for_capture(stage)
-	await _capture("veil_warning_sniper", stage)
+	await _capture("boss_sentinel", stage)
+	GameState.veil_degraded = false
 
-# ─── 3a. 외벽 옥상 — 하늘/별 + 높이 + 저격 감시선 ─────────────
+# ─── 5. 데이터 센터 — 드론(위) + 저격(같은 층) 동시 고위험 ───────
+func _shot_map_datacenter() -> void:
+	var stage: Node = await _load_stage("route_datacenter", 4, RICH_SKILLS)
+	if stage == null:
+		return
+	stage.call("_spawn_wave", 1)  # 저격 둘 + 드론
+	await _wait(14)
+	var p: Node2D = _player()
+	p.set("invuln", 999.0)
+	p.global_position = Vector2(620.0, 760.0)
+	p.reset_physics_interpolation()
+	await _wait(8)
+	_aim_all_snipers(false)  # 사선 트인 저격수 조준선
+	_say(stage, "데이터 센터예요. 드론·저격 동시에 와요. 한 번에 정리해야 빠져요.")
+	await _wait(14)
+	_freeze_for_capture(stage)
+	await _capture("map_datacenter", stage)
+
+# ─── 6. 냉각 시설 — 증기·드론·게이트·스카이라인(맵 분위기) ───────
+func _shot_map_cooling() -> void:
+	var stage: Node = await _load_stage("route_cooling", 3, RICH_SKILLS)
+	if stage == null:
+		return
+	# XP 발판(1180,440) — 머리 위 드론, 게이트 오브, 도시 배경이 한 화면에.
+	_place_player(stage, Vector2(1180.0, 430.0), 1)
+	await _wait(10)
+	_say(stage, "여긴 서버를 식히는 곳이에요. ...저도 이런 데 어딘가 있겠죠. 바닥 증기 조심해요.")
+	await _wait(14)
+	_freeze_for_capture(stage)
+	await _capture("map_cooling", stage)
+
+# ─── 7. 외벽 옥상 — 밤하늘 아래 수직 등반(맵 분위기) ─────────────
 func _shot_map_rooftops() -> void:
 	var stage: Node = await _load_stage("route_rooftops", 0, {"multishot": 1, "dash_boost": 1})
 	if stage == null:
 		return
-	# 최상층 옥상 슬랩(620,280) 위 — 위로 별 깔린 밤하늘. 옥상 사이를 박차 오르며 사격하는 요원.
-	_place_player(stage, Vector2(560.0, 250.0), 1)
-	_frame_cam(stage, 1.3, Vector2(60.0, 10.0))
-	_purge_subs(stage)
-	await _wait(6)
-	var p: Node2D = _player()
-	# 점프 — 옥상을 박차고 오른 공중 포즈(밤하늘 배경 실루엣).
-	p.set("velocity", Vector2(120.0, -300.0))
-	p.set("jumps_used", 1)
-	await _wait(6)
-	# 공중 사격 — 부채꼴 탄이 별 깔린 하늘로 뻗어나간다.
-	p.call("_try_attack")
-	await _wait(3)
+	# 분기 옥상(640,2040) 부근 — 등반 동선·발판·별 배경이 자연스럽게.
+	_place_player(stage, Vector2(640.0, 2010.0), 1)
+	await _wait(10)
+	_say(stage, "옥상이 출구예요. 멈추면 저격에 잡혀요. 계속 움직여요.")
+	await _wait(14)
 	_freeze_for_capture(stage)
 	await _capture("map_rooftops", stage)
 
-# ─── 3b. 폐쇄 지하철 — 어두운 터널 + 하향 포탑 + 형광등 ───────
-func _shot_map_subway() -> void:
-	var stage: Node = await _load_stage("route_subway", 3, {"multishot": 1})
-	if stage == null:
-		return
-	# 트립와이어/하향 포탑 구간(x≈1550~1780). 좁은 천장과 포탑 텔레그래프 + 돌진하는 패트롤에 사격.
-	_place_player(stage, Vector2(1560.0, 418.0), 1)
-	stage.call("_spawn_enemy", K_PATROL, Vector2(1740.0, 420.0))
-	_frame_cam(stage, 1.5, Vector2(70.0, -70.0))  # 머리 위 하향 포탑이 보이게 시선 위로
-	_purge_subs(stage)
-	await _wait(8)
-	var p: Node2D = _player()
-	p.call("_try_attack")  # 패트롤 쪽으로 사격
-	_purge_subs(stage)  # 지연 자막 잔상 제거
-	await _wait(4)
-	_freeze_for_capture(stage)
-	await _capture("map_subway", stage)
-
-# ─── 3c. 데이터 센터 — 드론(위) + 저격(같은 층) 동시 고위험 ───
-func _shot_map_datacenter() -> void:
-	var stage: Node = await _load_stage("route_datacenter", 4, {"multishot": 2})
-	if stage == null:
-		return
-	# 웨이브 2 = 저격 둘 + 드론 하나. 깨끗한 위협 레이어링(폭격기 없이).
-	stage.call("_spawn_wave", 1)
-	await _wait(12)
-	# 플레이어를 중층 서버 랙 위에 — 양쪽 저격수와 같은 높이라 사선이 트인다(랙 위로 탄이 지나감).
-	var p: Node2D = _player()
-	p.set("invuln", 999.0)
-	p.set("facing", -1)
-	p.global_position = Vector2(1000.0, 578.0)
-	p.reset_physics_interpolation()
-	_purge_subs(stage)
-	await _wait(8)
-	# 같은 층 저격수가 양쪽에서 실제 발사 → 저격탄 streak + 위 드론 + 플레이어 응사.
-	_aim_all_snipers(true)
-	p.call("_try_attack")
-	_purge_subs(stage)
-	await _wait(4)
-	_freeze_for_capture(stage)
-	await _capture("map_datacenter", stage)
-
-# ─── 3d. 감시탑 — 붉은 스캔라인 + 둥지 저격 감시선 ────────────
-func _shot_map_watchtower() -> void:
-	var stage: Node = await _load_stage("route_watchtower", 2, {})
-	if stage == null:
-		return
-	# 중층 정찰단 발판(660,1180) — 좌측 둥지 저격수(120,1172)가 가로질러 내려다봄.
-	_place_player(stage, Vector2(620.0, 1148.0), -1)
-	_frame_cam(stage, 1.35, Vector2(-150.0, 0.0))  # 좌측 둥지 저격수까지 시선 이동
-	_purge_subs(stage)
-	await _wait(8)
-	# 사선 트인 둥지 저격수가 실제 발사 → 감시선 + 날아오는 저격탄.
-	_aim_all_snipers(true)
-	await _wait(4)
-	_freeze_for_capture(stage)
-	await _capture("map_watchtower", stage)
-
-# ─── 4. 루트 분기 — 스토리 stage1 (지하철 vs 감시탑, 위험 대비) ─
+# ─── 8. 루트 분기 — 스토리 stage1(지하철 vs 감시탑, 위험 대비) ──
 func _shot_route_fork() -> void:
-	_new_game(1, {}, true)  # story_mode=true → stage1 = [지하철, 감시탑] 2갈래
+	_new_game(1, {}, true)
 	var packed: PackedScene = load("res://scenes/route_map.tscn") as PackedScene
 	if packed == null:
 		return
@@ -383,7 +281,7 @@ func _shot_route_fork() -> void:
 	await _wait(44)
 	await _capture("route_fork", rm)
 
-# ─── 5. 스킬트리 — 진행된 빌드(빛나는 노드 + 연결선) ──────────
+# ─── 9. 스킬트리 — 진행된 빌드 ──────────────────────────────────
 func _shot_skilltree() -> void:
 	_new_game(3, {
 		"fire_boost": 2, "multishot": 2, "glide": 2,
@@ -393,25 +291,24 @@ func _shot_skilltree() -> void:
 	await _wait(26)
 	await _capture("skilltree", o)
 
-# ─── (선택) 보스 — 핵심부 SENTINEL ──────────────────────────
-func _shot_boss() -> void:
-	var stage: Node = await _load_stage("route_lab", 5, {"multishot": 1})
-	if stage == null:
+# ─── 10. 엔딩 단말기 — ??? 격리 서버실, ONLINE 단말기로 ──────────
+func _shot_ending_terminal() -> void:
+	_new_game(6, RICH_SKILLS)  # STAGE 7/7
+	var route: Dictionary = _find_route("route_hidden")
+	if route.is_empty():
 		return
-	await _wait(12)
-	var p: Node2D = _player()
-	p.set("invuln", 999.0)
-	p.set("facing", 1)
-	p.global_position = Vector2(620.0, 560.0)
-	p.reset_physics_interpolation()
-	var cam: Camera2D = stage.get("camera")
-	if cam != null and is_instance_valid(cam):
-		cam.reset_smoothing()
-	await _wait(8)
-	p.call("_try_attack")
-	await _wait(4)
+	GameState.record_route_choice(route, "")
+	var packed: PackedScene = load(STAGE_SCENE) as PackedScene
+	if packed == null:
+		return
+	var stage: Node = packed.instantiate()
+	add_child(stage)
+	await _wait(34)
+	# 켜진(ONLINE) 첫 단말기(x1500) 앞 — 트리거 전 위치(x1340)에서 안내 문구가 보이게.
+	_place_player(stage, Vector2(1340.0, 540.0), 1)
+	await _wait(56)  # 안내 페이드인(1.0s + 0.6s) 경과
 	_freeze_for_capture(stage)
-	await _capture("boss_sentinel", stage)
+	await _capture("ending_terminal", stage)
 
 # ─── 캡처/유틸 ────────────────────────────────────────────────
 
@@ -425,6 +322,7 @@ func _capture(shot_name: String, node: Node) -> void:
 			var path: String = OUT_DIR + "/" + shot_name + ".png"
 			img.save_png(path)
 			print("IG SAVED: ", ProjectSettings.globalize_path(path), "  ", img.get_width(), "x", img.get_height())
+	get_tree().paused = false
 	if is_instance_valid(node):
 		node.queue_free()
 	await get_tree().process_frame
