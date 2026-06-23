@@ -10,9 +10,12 @@
 > 마감**(다회차·리플레이 포함), **그다음 본편을 실제 게임처럼 분량 확 늘려 제작**.
 
 - **본편 확장(분량 대폭 ↑)**: 스테이지/맵/적/스토리/엔딩을 정식판 규모로 확대. 현재 = EA 데모. *다음 큰 단위.*
-- **웹 개인 플레이 전환**: 부스 가정 코드 제거 — 예) `Title._ready`의 `seen_enemies.clear()` +
-  "매 타이틀 진입은 새 플레이어 세션" 주석. 개인 플레이엔 **세이브/이어하기·도감 영속·다회차(리플레이)
-  진행 영속**이 맞다. 어디서 리셋/유지할지 재설계(reset() 범위 포함).
+- **웹 개인 플레이 전환**: (1차 ✅ 적용) 부스 도감 리셋(`Title._ready` `seen_enemies.clear()`) 제거 →
+  도감·본 엔딩(`endings_seen`)·완주 카운트(`playthrough_count`) 영속(settings.cfg). **단일 자동저장
+  이어하기** — `user://run.cfg`에 RouteMap 진입마다 자동저장, 타이틀 "이어하기"로 RouteMap 복귀
+  (`save_run`/`load_run`/`has_run`/`clear_run`). 엔딩 도달 시 메타 적립 + run 삭제, 새 게임 시 run 삭제.
+  **남음**: 웹 빌드 실측(itch/GitHub Pages **도메인별 저장**·iframe 영속 확인) + 호스트 단일화 결정.
+  다회차 리플레이 대사 차별화(아래)는 별도 — 이제 `playthrough_count`/`endings_seen`이 신호로 준비됨.
 - **VEIL 시야 붕괴 onset**: (데모 ✅ 적용) 보스/탈출 직전 첫 전투 맵(일반 stage>=4 / 스토리 stage2~3)을
   **"진입부터 붕괴"**로 — `record_route_choice`가 onset에서 `veil_degraded`+`veil_reversal_pending`을 켜
   VeilSight가 시작부터 어둡고, 진입 시 역전 멘트 1회(`Stage._setup_veil_mistakes`). 중간 글리치·자막 겹침

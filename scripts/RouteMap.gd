@@ -30,6 +30,9 @@ func _ready() -> void:
 	# 자체 일시정지(ESC) 중에도 입력을 받아 ESC로 열고 닫기가 모두 되게 — RouteMap엔
 	# _process 게임로직이 없어 ALWAYS여도 안전(PAUSABLE이면 paused 중 ESC를 못 받아 못 닫힘).
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# 자동저장 — 스테이지 사이(다음 루트 선택 직전)의 깨끗한 스냅샷. 웹에서 닫아도 "이어하기"로 복귀.
+	# (이 시점 불변식: route_history.size() == current_stage)
+	GameState.save_run()
 	stage_label.text = "STAGE %d / %d  —  루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
 	subtitle_label.text = "● 위험도 / 보상   —   ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)

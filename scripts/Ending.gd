@@ -33,6 +33,8 @@ func _ready() -> void:
 	# 안전망: 이전 scene에서 paused가 carry되어 Ending이 freeze되는 패턴 차단.
 	get_tree().paused = false
 	ending_id = EndingResolver.resolve(GameState.followed_count, GameState.rec_count, GameState.aggression_score)
+	# 런 완주 1회 처리 — 본 엔딩 기록(엔딩 모으기/리플레이 토대) + 완주 카운트 + 진행 저장(run.cfg) 삭제.
+	GameState.record_ending(ending_id)
 	title_label.text = "MISSION COMPLETE"
 	sub_title_label.text = "결말  %s — %s" % [ending_id, EndingResolver.get_ending_title(ending_id)]
 	stats_label.text = "신뢰  %d   |   공격성  %d   |   사망  %d   |   스코어  %d" % [

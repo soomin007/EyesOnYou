@@ -25,9 +25,8 @@ var description_icon: ColorRect = null
 
 func _ready() -> void:
 	GameState.reset()
-	# 부스/QR 환경 가정 — 매 타이틀 진입은 새 플레이어 세션. 도감을 비워서 첫 조우 카드가
-	# 다시 뜨도록.
-	GameState.seen_enemies.clear()
+	# 웹 개인 플레이 — 도감(seen_enemies)·본 엔딩은 누적 영속. 부스 가정의 "매 진입=새 세션" 도감 리셋
+	# 제거(2026-06-23 방향 전환). 진행 이어하기는 별도 run.cfg가 담당(reset과 무관).
 	GameState.save_settings()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
 	# 메인 테마(Glass Protocol) — 타이틀/모드 선택/튜토리얼까지 동일 트랙 유지.
@@ -131,6 +130,11 @@ func _set_state(new_state: int) -> void:
 			var b_start := _make_button("게임 시작")
 			b_start.pressed.connect(_on_start_pressed)
 			buttons_box.add_child(b_start)
+			# 이어하기 — 저장된 진행(run.cfg)이 있을 때만. 웹에서 닫았다 와도 스테이지 사이부터 재개.
+			if GameState.has_run():
+				var b_continue := _make_button("이어하기")
+				b_continue.pressed.connect(_on_continue_pressed)
+				buttons_box.add_child(b_continue)
 			var b_settings := _make_button("설정")
 			b_settings.pressed.connect(_on_settings_pressed)
 			buttons_box.add_child(b_settings)
@@ -264,8 +268,14 @@ func _on_mode_pressed(story: bool) -> void:
 	GameState.story_mode = story
 	_set_state(STATE_TUTOR)
 
+func _on_continue_pressed() -> void:
+	# 이어하기 — 저장된 런을 GameState에 복원하고 루트 선택(스테이지 사이)으로 복귀.
+	if GameState.load_run():
+		SceneRouter.go(get_tree(), SceneRouter.ROUTE_MAP)
+
 func _on_tutor_pressed(want_tutorial: bool) -> void:
-	# 모드(story_mode)는 모드 선택에서 이미 GameState에 박혔다. 여기선 튜토리얼 분기만.
+	# 새 게임 시작 — 이전 진행 저장(run.cfg) 삭제(이어하기와 분리). 모드는 모드 선택에서 이미 박혔다.
+	GameState.clear_run()
 	if want_tutorial:
 		get_tree().change_scene_to_file(SceneRouter.TUTORIAL)
 	else:

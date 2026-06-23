@@ -12,6 +12,9 @@ var last_input_kind: String = "kb"  # "kb" | "pad"
 const TOTAL_STAGES: int = 7
 const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
+# 런 진행 저장(이어하기) — 설정과 분리한 별도 파일. 웹에선 user://가 브라우저 IndexedDB에 영속.
+const RUN_PATH: String = "user://run.cfg"
+const RUN_VERSION: int = 1
 # 플레이 피드백 설문(구글 폼). 타이틀·크레딧 끝 메뉴의 "피드백 보내기"가 연다.
 const FEEDBACK_URL: String = "https://forms.gle/byS8EABJitB9r6z88"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
@@ -116,6 +119,11 @@ var seen_enemies: Array = []
 var hidden_visit_count: int = 0
 # 이스터에그 방(ARCTURUS 아카이브) 방문 여부 — 1회만 트리거되도록 영속.
 var visited_arcturus: bool = false
+
+# 본 엔딩 목록(A/B/C/D) — settings.cfg에 영속. 다회차 "엔딩 모으기" + 리플레이 대사 차별화의 토대.
+var endings_seen: Array = []
+# 엔딩까지 도달한 완주 횟수 — settings.cfg에 영속.
+var playthrough_count: int = 0
 
 func _input(event: InputEvent) -> void:
 	# 입력 모드 자동 감지. autoload Node여서 모든 InputEvent를 받는다.
@@ -465,6 +473,106 @@ func mark_enemy_seen(id: String) -> bool:
 	save_settings()
 	return true
 
+# 엔딩 도달 1회 처리 — 본 엔딩 기록(중복 제외) + 완주 카운트 + 진행 저장 삭제. Ending._ready에서 호출(런당 1회).
+func record_ending(id: String) -> void:
+	if id != "" and not (id in endings_seen):
+		endings_seen.append(id)
+	playthrough_count += 1
+	save_settings()
+	clear_run()
+
+# --- 런 진행 저장(이어하기) — user://run.cfg. RouteMap 진입(스테이지 사이)마다 자동저장. ---
+func save_run() -> void:
+	var cf := ConfigFile.new()
+	cf.set_value("meta", "version", RUN_VERSION)
+	cf.set_value("run", "current_stage", current_stage)
+	cf.set_value("run", "death_count", death_count)
+	cf.set_value("run", "score", score)
+	cf.set_value("run", "trust_score", trust_score)
+	cf.set_value("run", "aggression_score", aggression_score)
+	cf.set_value("run", "shared_hardship", shared_hardship)
+	cf.set_value("run", "rec_count", rec_count)
+	cf.set_value("run", "followed_count", followed_count)
+	cf.set_value("run", "route_history", route_history)
+	cf.set_value("run", "last_veil_recommended_route", last_veil_recommended_route)
+	cf.set_value("run", "followed_veil_last_choice", followed_veil_last_choice)
+	cf.set_value("run", "skills", skills)
+	cf.set_value("run", "current_route_id", current_route_id)
+	cf.set_value("run", "current_route_tags", current_route_tags)
+	cf.set_value("run", "current_route_risk", current_route_risk)
+	cf.set_value("run", "current_route_reward", current_route_reward)
+	cf.set_value("run", "current_route_challenge", current_route_challenge)
+	cf.set_value("run", "current_route_hidden", current_route_hidden)
+	cf.set_value("run", "player_max_hp", player_max_hp)
+	cf.set_value("run", "player_hp", player_hp)
+	cf.set_value("run", "player_xp", player_xp)
+	cf.set_value("run", "player_level", player_level)
+	cf.set_value("run", "story_mode", story_mode)
+	cf.set_value("run", "veil_degraded", veil_degraded)
+	cf.set_value("run", "veil_reversal_pending", veil_reversal_pending)
+	cf.set_value("run", "replaying", replaying)
+	cf.set_value("run", "hits_taken", hits_taken)
+	cf.set_value("run", "recent_stage_hits", recent_stage_hits)
+	cf.set_value("run", "recent_stage_deaths", recent_stage_deaths)
+	cf.set_value("run", "last_stage_secs", last_stage_secs)
+	cf.save(RUN_PATH)
+
+func has_run() -> bool:
+	return FileAccess.file_exists(RUN_PATH)
+
+func clear_run() -> void:
+	var d := DirAccess.open("user://")
+	if d != null and d.file_exists("run.cfg"):
+		d.remove("run.cfg")
+
+# run.cfg를 GameState에 복원. 성공 시 true(이어하기 → ROUTE_MAP 복귀). 실패 시 false(상태 불변).
+func load_run() -> bool:
+	var cf := ConfigFile.new()
+	if cf.load(RUN_PATH) != OK:
+		return false
+	current_stage = int(cf.get_value("run", "current_stage", 0))
+	death_count = int(cf.get_value("run", "death_count", 0))
+	score = int(cf.get_value("run", "score", 0))
+	trust_score = int(cf.get_value("run", "trust_score", 0))
+	aggression_score = int(cf.get_value("run", "aggression_score", 0))
+	shared_hardship = int(cf.get_value("run", "shared_hardship", 0))
+	rec_count = int(cf.get_value("run", "rec_count", 0))
+	followed_count = int(cf.get_value("run", "followed_count", 0))
+	route_history = []
+	for v in cf.get_value("run", "route_history", []):
+		route_history.append(str(v))
+	last_veil_recommended_route = str(cf.get_value("run", "last_veil_recommended_route", ""))
+	followed_veil_last_choice = bool(cf.get_value("run", "followed_veil_last_choice", false))
+	var saved_skills: Dictionary = cf.get_value("run", "skills", {})
+	skills = {}
+	for k in saved_skills:
+		skills[str(k)] = int(saved_skills[k])
+	current_route_id = str(cf.get_value("run", "current_route_id", ""))
+	current_route_tags = []
+	for t in cf.get_value("run", "current_route_tags", []):
+		current_route_tags.append(str(t))
+	current_route_risk = int(cf.get_value("run", "current_route_risk", 1))
+	current_route_reward = int(cf.get_value("run", "current_route_reward", 1))
+	current_route_challenge = bool(cf.get_value("run", "current_route_challenge", false))
+	current_route_hidden = bool(cf.get_value("run", "current_route_hidden", false))
+	player_max_hp = int(cf.get_value("run", "player_max_hp", 3))
+	player_hp = int(cf.get_value("run", "player_hp", player_max_hp))
+	player_xp = int(cf.get_value("run", "player_xp", 0))
+	player_level = int(cf.get_value("run", "player_level", 1))
+	story_mode = bool(cf.get_value("run", "story_mode", false))
+	veil_degraded = bool(cf.get_value("run", "veil_degraded", false))
+	veil_reversal_pending = bool(cf.get_value("run", "veil_reversal_pending", false))
+	replaying = bool(cf.get_value("run", "replaying", false))
+	hits_taken = int(cf.get_value("run", "hits_taken", 0))
+	recent_stage_hits = []
+	for h in cf.get_value("run", "recent_stage_hits", []):
+		recent_stage_hits.append(int(h))
+	recent_stage_deaths = []
+	for dd in cf.get_value("run", "recent_stage_deaths", []):
+		recent_stage_deaths.append(int(dd))
+	last_stage_secs = float(cf.get_value("run", "last_stage_secs", 0.0))
+	return true
+
 # --- 설정 영속화 ---
 # v1: input.<action> = [physical_keycode, ...]  — 키보드 전용
 # v2: input.<action> = [{type, code/button}, ...]  — 키보드+마우스
@@ -487,6 +595,10 @@ func load_settings() -> void:
 		seen_enemies.append(str(v))
 	hidden_visit_count = int(cf.get_value("flags", "hidden_visit_count", 0))
 	visited_arcturus = bool(cf.get_value("flags", "visited_arcturus", false))
+	endings_seen = []
+	for ev in cf.get_value("flags", "endings_seen", []):
+		endings_seen.append(str(ev))
+	playthrough_count = int(cf.get_value("flags", "playthrough_count", 0))
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
@@ -531,6 +643,8 @@ func save_settings() -> void:
 	cf.set_value("flags", "seen_enemies", seen_enemies)
 	cf.set_value("flags", "hidden_visit_count", hidden_visit_count)
 	cf.set_value("flags", "visited_arcturus", visited_arcturus)
+	cf.set_value("flags", "endings_seen", endings_seen)
+	cf.set_value("flags", "playthrough_count", playthrough_count)
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
 	cf.set_value("display", "fullscreen", fullscreen)
