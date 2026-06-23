@@ -6,7 +6,7 @@ extends Control
 #   STATE_TUTOR : 튜토리얼부터 시작? 예 / 아니오 / 뒤로
 # 각 단계는 Buttons VBox를 비우고 다시 빌드. ESC/패드 B는 한 단계 뒤로.
 
-enum { STATE_MAIN, STATE_MODE, STATE_TUTOR }
+enum { STATE_MAIN, STATE_MODE, STATE_TUTOR, STATE_NEWGAME_CONFIRM }
 
 @onready var hint_label: Label = $Center/V/Hint
 @onready var buttons_box: VBoxContainer = $Center/V/Buttons
@@ -174,6 +174,25 @@ func _set_state(new_state: int) -> void:
 			b_back.pressed.connect(_on_back_pressed)
 			buttons_box.add_child(b_back)
 			b_yes.grab_focus.call_deferred()
+		STATE_NEWGAME_CONFIRM:
+			# 진행 저장 덮어쓰기 경고(사용자 제안). 실제 삭제는 _on_tutor_pressed에서 — 여기선 안내·확인만.
+			var warn := Label.new()
+			warn.text = "진행 중인 게임이 있어요. 새로 시작하면 그 진행이 사라져요."
+			warn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			warn.custom_minimum_size = Vector2(360, 0)
+			warn.add_theme_font_size_override("font_size", 18)
+			warn.add_theme_color_override("font_color", Color(0.95, 0.78, 0.5))
+			warn.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+			warn.add_theme_constant_override("outline_size", 4)
+			buttons_box.add_child(warn)
+			var b_new := _make_button("새로 시작")
+			b_new.pressed.connect(_set_state.bind(STATE_MODE))
+			buttons_box.add_child(b_new)
+			var b_cancel := _make_button("취소")
+			b_cancel.pressed.connect(_set_state.bind(STATE_MAIN))
+			buttons_box.add_child(b_cancel)
+			b_cancel.grab_focus.call_deferred()
 	SfxPlayer.wire_ui_buttons(buttons_box)
 	_refresh_hint()
 
@@ -244,7 +263,11 @@ func _show_debug_unlock_toast() -> void:
 	tw.tween_callback(toast.queue_free)
 
 func _on_start_pressed() -> void:
-	_set_state(STATE_MODE)
+	# 진행 중 저장이 있으면 새 게임이 그걸 덮어쓴다고 먼저 경고(사용자 제안). 없으면 바로 모드 선택.
+	if GameState.has_run():
+		_set_state(STATE_NEWGAME_CONFIRM)
+	else:
+		_set_state(STATE_MODE)
 
 func _on_mode_focused(which: String) -> void:
 	if description_title_label == null or description_text_label == null or description_icon == null:
@@ -288,6 +311,8 @@ func _on_back_pressed() -> void:
 			GameState.story_mode = false
 			_set_state(STATE_MODE)
 		STATE_MODE:
+			_set_state(STATE_MAIN)
+		STATE_NEWGAME_CONFIRM:
 			_set_state(STATE_MAIN)
 
 func _on_settings_pressed() -> void:
