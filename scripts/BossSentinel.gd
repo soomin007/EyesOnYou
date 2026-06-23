@@ -36,9 +36,9 @@ const TOUCH_COOLDOWN: float = 1.0
 const SPEED_P1: float = 77.0   # 일반 drone 110 × 0.7
 const SPEED_P2: float = 165.0  # × 1.5
 const SPEED_P3: float = 220.0
-const BOMB_INTERVAL_P1: float = 1.5
-const BOMB_INTERVAL_P2: float = 1.0
-const BOMB_INTERVAL_P3: float = 0.7
+const BOMB_INTERVAL_P1: float = 1.7  # 피드백: 보스 폭탄 빈도 완화 (전 페이즈 소폭 증가)
+const BOMB_INTERVAL_P2: float = 1.2
+const BOMB_INTERVAL_P3: float = 0.9  # difficulty_analysis.md 권고(0.8~0.9)와 정합
 const BOMB_TELEGRAPH: float = 0.5
 const MISSILE_INTERVAL_P2: float = 3.5
 const MISSILE_INTERVAL_P3: float = 2.5
@@ -90,15 +90,16 @@ func _ready() -> void:
 	story_simplified = GameState.story_mode
 	if story_simplified:
 		hp = HP_MAX_STORY
-	# 콜리전 — 32×24 드론의 2배 (64×48). 상단 발판 위로 올라가지 않도록 mask=1만.
+	# 콜리전 — 피격 면적 확대(피드백: 보스가 잘 안 맞음). 시각 2.5배와 같은 비율(56×40→70×50).
+	# 상단 발판 위로 올라가지 않도록 mask=1만.
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(56.0, 40.0)
+	shape.size = Vector2(70.0, 50.0)
 	col.shape = shape
 	add_child(col)
-	# Visual — 일반 drone 스프라이트 2배 스케일
+	# Visual — 일반 drone 스프라이트 2.5배 스케일 (피격 범위와 함께 확대)
 	visual = CharacterArt.build_drone(self)
-	visual.scale = Vector2(2.0, 2.0)
+	visual.scale = Vector2(2.5, 2.5)
 	# 텔레그래프용 빨간 점 (폭탄 발사 직전)
 	bomb_dot = ColorRect.new()
 	bomb_dot.color = Color(1.0, 0.20, 0.20, 0.0)
@@ -383,7 +384,7 @@ func _spawn_minion(kind: int, pos: Vector2, hp_value: int) -> CharacterBody2D:
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	if kind == 2:
-		shape.size = Vector2(32.0, 24.0)
+		shape.size = Vector2(42.0, 32.0)  # 일반 drone과 동일 (시각 1.3배는 Enemy.gd)
 		col.position = Vector2(0, 0)
 	else:
 		shape.size = Vector2(28.0, 40.0)

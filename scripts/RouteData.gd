@@ -20,7 +20,7 @@ const ALL_ROUTES: Array = [
 		"min_stage": 0, "max_stage": 1,
 		"tags": ["우회", "어두운_환경"],
 		"veil_comment": "여기로 가요. 경비도 약하고, 길도 단순해요.",
-		"entry_comment": "외곽으로 들어왔어요. 차분히 살펴봐요.",
+		"entry_comment": "외곽으로 들어왔어요. 깊숙한 안쪽이 목표예요. 다 싸울 필요는 없어요.",
 		"stage_color": Color(0.12, 0.12, 0.14),
 	},
 	{
@@ -34,7 +34,7 @@ const ALL_ROUTES: Array = [
 		"min_stage": 0, "max_stage": 1,
 		"tags": ["원거리", "노출", "이동"],
 		"veil_comment": "옥상으로 갈래요? 시야는 트이지만 그만큼 노출돼요.",
-		"entry_comment": "옥상이 출구예요. 멈추면 저격에 잡혀요. 계속 움직여요.",
+		"entry_comment": "옥상이 출구예요. 다 상대하지 않아도 돼요 — 멈추지 말고 빠져요.",
 		"stage_color": Color(0.10, 0.13, 0.20),
 	},
 	{

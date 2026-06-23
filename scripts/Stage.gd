@@ -2591,6 +2591,8 @@ func _spawn_boss(boss_meta: Dictionary) -> void:
 	boss.self_destruct_started.connect(_on_boss_self_destruct_started)
 	boss.self_destruct_disarmed.connect(_on_boss_self_destruct_disarmed)
 	_build_boss_hp_bar()
+	# 보스전 진입 1회성 전투 안내 (피드백: 사격법 혼란). _spawn_boss는 보스당 1회만 호출돼 자연히 1회성.
+	_show_boss_alert("빨간 불빛이 번뜩이면 그 자리를 비켜요. 신호가 멎은 틈에 쏘면 돼요.", Color(0.95, 0.55, 0.55), 4.0)
 
 func _build_boss_hp_bar() -> void:
 	# 화면 상단 중앙 — 보스 HP 게이지. 12칸 단위로 표시.
@@ -2721,9 +2723,9 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	# kind: 0=patrol, 1=sniper, 2=drone, 3=bomber, 4=shield
-	# 사용자: patrol/shield 크기 좀 키우기 (28×40 → 36×52, shield는 40×56).
+	# 사용자: patrol/shield/drone 크기 키우기 (drone 32×24 → 42×32, 시각 1.3배는 Enemy.gd).
 	if kind == 2:
-		shape.size = Vector2(32.0, 24.0)
+		shape.size = Vector2(42.0, 32.0)
 		col.position = Vector2(0, 0)
 	elif kind == 0:
 		shape.size = Vector2(36.0, 52.0)

@@ -156,6 +156,9 @@ func _ready() -> void:
 		EnemyType.DRONE:
 			hp = 1
 			visual = CharacterArt.build_drone(self)
+			# 사용자: drone 크기 키우기 — 콜리전과 함께 시각도 1.3배 (피드백: 드론이 잘 안 맞음).
+			if visual != null:
+				visual.scale = Vector2(1.3, 1.3)
 			_setup_drone_hover_audio()
 		EnemyType.BOMBER:
 			hp = 1

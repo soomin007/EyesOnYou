@@ -163,6 +163,14 @@
   spawn. 비밀 보상의 "도달 난이도"는 해저드 근접이 아니라 발견성(glow)·위치로 줄 것. back_alley·
   rooftops의 drop_platform 퍼즐은 동선·인과가 맞아 유지.
 
+- **적/보스의 시각(Visual)과 피격 판정(CollisionShape2D)은 분리돼 있다 — 크기를 바꿀 땐 반드시 둘 다.**
+  Enemy/보스는 CharacterBody2D + 자식 CollisionShape2D가 피격 판정이고, 시각은 별도 Node2D("Visual",
+  `CharacterArt.build_*`)다. `visual.scale`만 키우면 *보이는 크기만* 커지고 탄은 그대로라 "큰데 안 맞는"
+  착시가 생긴다. → 크기 조정 시 ⓐ `visual.scale`(Enemy.gd 적 분기 / BossSentinel `_ready`)과 ⓑ 콜리전
+  `shape.size`(Stage `_spawn_enemy` / BossSentinel `_ready`·`_spawn_minion`)를 같은 비율로 함께 바꾼다.
+  드론은 스폰 콜리전이 Stage(`_spawn_enemy`)·BossSentinel(`_spawn_minion`) 두 곳에 중복 정의돼 있어 둘 다
+  맞춰야 일관됨. patrol/shield가 이미 이 패턴. (2026-06-23 드론·보스 피격 범위 확대 — 피드백 반영.)
+
 ---
 
 ## 렌더링 / 레이아웃
