@@ -243,3 +243,12 @@
   main 씬(Main.gd)이 트리에 붙는 중에 같은 프레임에 씬을 교체하려 해 SceneTree가 충돌 경고를 낸다(codex 리뷰,
   2026-06-18 헤드리스 재현). 게임은 동작하나 콘솔에 에러. → `change_scene_to_file.call_deferred(path)`로
   한 프레임 미뤄 전환. `--quit-after 30` 헤드리스 부팅으로 경고 소멸 확인 가능.
+
+- **세션 플래그(`playground_active`)는 *해제처가 하나뿐*이면 누수된다 — 해제는 보편 초기화(`reset()`)에 둘 것.**
+  디버그 연습장 진입(`Settings._on_playground_pressed`)이 `playground_active=true`만 켜고, 해제는
+  연습장 오버레이 *종료 버튼*(`PlaygroundOverlay._on_exit`) 한 곳에만 있었다. ESC→타이틀 등 다른 경로로
+  연습장을 빠져나오면 플래그가 true로 남아, **다음 일반 모드에서 스테이지를 클리어해도** `_trigger_stage_clear`
+  가 연습장 분기(`_show_playground_clear_msg`)로 빠져 패널만 뜨고 다음 맵으로 안 넘어갔다(2026-06-23 치명
+  버그). → `paused` carry와 동형 함정: **모드/세션 플래그는 켜는 곳이 여럿이어도 해제는 "타이틀 복귀/새 런마다
+  반드시 지나는" `GameState.reset()`(+`start_main_game()`)에 둬 단일 누수 차단.** 일반 모드는 항상 Title을
+  거치고 `Title._ready`가 `reset()`을 부르므로, reset()에 해제를 넣으면 모든 경로가 막힌다. ([[project-runtime-safety]])

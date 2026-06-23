@@ -182,6 +182,10 @@ func reset() -> void:
 	player_level = 1
 	story_mode = false
 	veil_degraded = false
+	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
+	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
+	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
+	playground_active = false
 	_reset_perf_metrics()
 
 # 튜토리얼 종료 후 본편 시작 시 호출. 진행/스킬/XP 모두 초기화 — 튜토리얼은
@@ -211,6 +215,7 @@ func start_main_game() -> void:
 	player_level = 1
 	skills = STARTING_SKILLS.duplicate()
 	veil_degraded = false
+	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()
 
 func _reset_perf_metrics() -> void:
