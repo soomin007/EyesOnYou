@@ -78,6 +78,16 @@ const INTRO_VEIL: Array[String] = [
 	"심장부까지 들어가 데이터를 확보한 뒤, 살아서 빠져나오면 됩니다.\n모든 적과 싸울 필요는 없습니다 — 길만 열면 그 구역은 통과입니다.\n외곽부터, 천천히 진입합니다.",
 ]
 
+# --- 다회차(완주 1회 이상, playthrough_count>=1) 변형 — 오프닝이 1회차와 달라진다. ---
+# 톤: 작전명 PALIMPSEST(덮어쓰여도 흔적이 남는 문서) + 게임의 루프/리셋 테마. VEIL은 기록상 '처음'인데
+# 어쩐지 낯익어한다(4번째 벽 금지 — "플레이어가 전에 했다"가 아니라 VEIL의 흔적/기억으로 처리). trust 0=COLD.
+# 화면당 3줄 유지(우측 MissionVisual 겹침 회피). 어미는 1회차와 같은 격식체.
+const INTRO_SYSTEM_REPLAY: String = "침투 작전 — 보안 시설 SILO-7\n최종 목표: 시설 심장부 도달 → 데이터 회수 → 탈출\n이전 작전 기록: 덮어쓰기됨 (잔여 흔적 검출)\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
+const INTRO_VEIL_REPLAY: Array[String] = [
+	"...통신 연결됐습니다. 들립니까, 요원?\n기록상 우리는 처음입니다. 그런데 — 이상하네요.\n이 목소리도, 이 침묵도, 어쩐지 낯익습니다.",
+	"심장부까지 들어가 데이터를 확보한 뒤, 살아서 빠져나오면 됩니다.\n모든 적과 싸울 필요는 없습니다 — 길만 열면 그 구역은 통과입니다.\n이번엔 다른 길이 보일지도 모르겠습니다. 외곽부터, 천천히.",
+]
+
 # 레벨업 fallback — 특정 추천(★)이 없을 때. 그래서 카드에 ★가 안 붙으니, 멘트도 "딱 집어줄 게
 # 없다 / 요원 선택을 따른다"로 일관되게(위치 참조 금지 — "두 번째" 같은 건 ★ 앵커가 없어 혼란).
 const SKILL_GENERIC_COMMENTS: Array[String] = [
@@ -150,9 +160,14 @@ static func _resolve_band_cell(pools: Dictionary, band: String, stage_index: int
 	return []
 
 static func get_intro_system_text() -> String:
+	# 완주 1회 이상이면 다회차 변형(웹 개인 플레이 — 닫았다 와도 영속 신호). replaying(즉시 리플레이)도 포함.
+	if GameState.playthrough_count >= 1 or GameState.replaying:
+		return INTRO_SYSTEM_REPLAY
 	return INTRO_SYSTEM
 
 static func get_intro_veil_lines() -> Array[String]:
+	if GameState.playthrough_count >= 1 or GameState.replaying:
+		return INTRO_VEIL_REPLAY
 	return INTRO_VEIL
 
 static func get_levelup_advice(player_skills: Dictionary, route_tags: Array, route_id: String = "") -> Dictionary:
