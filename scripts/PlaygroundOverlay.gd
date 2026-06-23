@@ -83,10 +83,8 @@ func _open_panel() -> void:
 	v.add_child(_build_veil_row())
 
 	v.add_child(HSeparator.new())
-	v.add_child(_make_row_label("스킬 (티어 직접 지정)"))
-	for line in SKILL_LINES:
-		var d: Dictionary = line
-		v.add_child(_build_skill_row(str(d.get("id", "")), str(d.get("label", ""))))
+	v.add_child(_make_row_label("스킬 (3계열 · 티어 직접 지정)"))
+	v.add_child(_build_skill_families())
 	v.add_child(_build_baseline_row())
 	v.add_child(_build_skill_quick_row())
 
@@ -170,6 +168,35 @@ func _build_skill_row(line_id: String, label_text: String) -> HBoxContainer:
 		b.pressed.connect(_on_skill_set.bind(line_id, n))
 		hb.add_child(b)
 	return hb
+
+# 스킬을 스킬트리와 동일한 3계열(전투/이동/생존)로 묶어 세 열로 배치한다.
+# 8줄 세로 나열이 패널을 화면 밖으로 밀어 "연습장 종료" 버튼이 안 보이던 문제도 함께 해소(사용자 보고).
+# 계열 구분·색은 SkillTreeData(FAMILY_*/FAMILY_COLORS) 단일 소스를 참조 — 스킬트리 화면과 일관.
+func _build_skill_families() -> HBoxContainer:
+	# id → family 매핑(SkillTreeData 단일 소스).
+	var fam_of: Dictionary = {}
+	for line in SkillTreeData.LINES:
+		var ld: Dictionary = line
+		fam_of[str(ld.get("id", ""))] = str(ld.get("family", ""))
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 16)
+	for fam in [SkillTreeData.FAMILY_COMBAT, SkillTreeData.FAMILY_MOBILITY, SkillTreeData.FAMILY_SURVIVAL]:
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 6)
+		# 계열 헤더 — FAMILY_COLORS 색으로 스킬트리와 동일한 계열 식별.
+		var head := Label.new()
+		head.text = str(fam)
+		head.add_theme_font_size_override("font_size", 12)
+		var fc: Color = SkillTreeData.FAMILY_COLORS.get(fam, Color(0.8, 0.85, 0.95))
+		head.add_theme_color_override("font_color", fc)
+		col.add_child(head)
+		for line in SKILL_LINES:
+			var d: Dictionary = line
+			var sid: String = str(d.get("id", ""))
+			if str(fam_of.get(sid, "")) == str(fam):
+				col.add_child(_build_skill_row(sid, str(d.get("label", ""))))
+		cols.add_child(col)
+	return cols
 
 # 시야 붕괴(veil_degraded) 토글 — ACT3 진입 경고/붕괴 톤 대사·비네트를 연습장에서 테스트.
 func _build_veil_row() -> HBoxContainer:
