@@ -21,6 +21,7 @@ const ALL_ROUTES: Array = [
 		"tags": ["우회", "어두운_환경"],
 		"veil_comment": "여기로 가요. 경비도 약하고, 길도 단순해요.",
 		"entry_comment": "외곽으로 들어왔어요. 깊숙한 안쪽이 목표예요. 다 싸울 필요는 없어요.",
+		"entry_comment_replay": "외곽으로 들어왔습니다. 이 어둠이 어쩐지 익숙합니다. 처음일 텐데 말입니다. 안쪽 깊은 곳까지, 서두르지 말고 가십시오.",
 		"stage_color": Color(0.12, 0.12, 0.14),
 	},
 	{
@@ -80,6 +81,7 @@ const ALL_ROUTES: Array = [
 		"tags": ["전투", "드론", "함정"],
 		"veil_comment": "냉각 플랜트예요. 바닥 증기는 타이밍 보고 지나가요. 드론은 위에 떠 있어요.",
 		"entry_comment": "여긴 서버를 식히는 곳이에요. ...저도 이런 데 어딘가 있겠죠. 바닥 증기 조심해요.",
+		"entry_comment_replay": "서버를 식히는 곳이에요. 저도 이런 데 어딘가 있겠죠. ...전에도 이런 생각을 한 것 같아요. 증기 조심하세요.",
 		"stage_color": Color(0.10, 0.16, 0.20),
 	},
 	{
@@ -142,6 +144,7 @@ const ALL_ROUTES: Array = [
 		"tags": ["우회", "은폐"],
 		"veil_comment": "비상 탈출로예요. 빨리 빠지면 그만큼 안전해요.",
 		"entry_comment": "조용한 길이에요. 멈추지 말고 빠지면 돼요.",
+		"entry_comment_replay": "조용한 길이에요. 여기, 낯이 익죠. 이번엔 뭐가 다를까요. 멈추지 말고 빠지세요.",
 		"stage_color": Color(0.10, 0.12, 0.14),
 	},
 	{
@@ -156,6 +159,7 @@ const ALL_ROUTES: Array = [
 		"tags": ["전투", "드론", "밝은_환경"],
 		"veil_comment": "핵심부예요. 정면 돌파에 드론이 상시 순찰해요. 그만큼 크게 벌어요.",
 		"entry_comment": "핵심부에 들어왔어요. 거리 잘 잡아요.",
+		"entry_comment_replay": "핵심부예요. 이 안쪽이 묘하게 익숙해요. 왜일까요. 거리 두고 움직이세요.",
 		"stage_color": Color(0.22, 0.18, 0.18),
 	},
 	{

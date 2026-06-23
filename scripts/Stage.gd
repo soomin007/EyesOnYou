@@ -144,10 +144,15 @@ func _setup_veil_mistakes() -> void:
 		_show_veil_subtitle(_act3_vision_line(GameState.current_stage), 4.4, false, true)
 	else:
 		var entry: String = ""
+		var entry_rep: String = ""
 		for r in RouteData.ALL_ROUTES:
 			if r.get("id", "") == GameState.current_route_id:
 				entry = str(r.get("entry_comment", ""))
+				entry_rep = str(r.get("entry_comment_replay", ""))
 				break
+		# 다회차(완주 1회+/리플레이)면 그 맵의 진입 멘트 변형을 우선(있을 때만). 없으면 1회차 멘트.
+		if GameState.is_replay_run() and entry_rep != "":
+			entry = entry_rep
 		if entry != "":
 			# 맵 진입 첫 멘트 — 빠른 fade-in(0.12s) + 긴 표시(4.5s)로 진입 직후 바로/오래 인지되게.
 			_show_veil_subtitle(entry, 4.5, false, true)
@@ -2728,7 +2733,13 @@ func _on_boss_killed(at_position: Vector2) -> void:
 	# 스토리 모드는 escape 단계가 있어 "서버실 앞" 멘트가 어울리지 않음 → 별도 분기.
 	# 끝줄 "끝까지 같이 가요. 제가 보는 한." = 풀에서 뺀 안심 줄의 새 집(v3 §4). 엔딩에서
 	# 시야가 완전히 끊기며 이 다짐("제가 보는 한")이 회수된다.
-	if GameState.story_mode:
+	if GameState.is_replay_run():
+		# 다회차 — 클라이맥스에 설명 못 할 찜찜함(미래를 안다고 선언하지 않음). 상호 존대 유지.
+		if GameState.story_mode:
+			_show_veil_subtitle("처리됐어요.\n이상하게 마음이 놓이질 않아요. 이유는 모르겠어요.\n그래도 끝까지 같이 가요. 제가 보는 한.", 3.4)
+		else:
+			_show_veil_subtitle("처리됐어요.\n후련해야 하는데, 어쩐지 그렇지가 않네요.\n그래도 같이 가요. 제가 보는 한.", 3.4)
+	elif GameState.story_mode:
 		_show_veil_subtitle("처리됐어요, 요원.\n이제 빠져나가요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
 	else:
 		_show_veil_subtitle("처리됐어요, 요원.\n서버실이 바로 앞이에요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)

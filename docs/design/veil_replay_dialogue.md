@@ -41,6 +41,9 @@
 - **엔딩 수집 비트**: 3/4 봤으면 "아직 닿지 않은 결말이 하나 남았습니다...", 4/4면 "결말은 다 보셨습니다.
   그런데도 또 오셨군요..." (오프닝 끝에 한 화면 추가)
 - **??? 방 첫 단말기**: `replaying or hidden_visit_count >= 1`이면 추가 풀(이미 본 사람), 아니면 VEIL-1 reveal.
+- **인게임 비트 (배선 ✅ 2026-06-23)**: 채택 A1(back_alley)·B2(lab)·C(보스 처치)·D(escape)·E(cooling).
+  신호 `GameState.is_replay_run()`(완주 1회+ 또는 replaying). 맵 진입은 RouteData `entry_comment_replay`
+  키 → `Stage._setup_veil_mistakes`가 우선 사용, 보스 처치는 `Stage._on_boss_killed` 분기. **비트 F 드롭.**
 
 ---
 

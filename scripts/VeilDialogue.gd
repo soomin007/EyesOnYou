@@ -161,12 +161,12 @@ static func _resolve_band_cell(pools: Dictionary, band: String, stage_index: int
 
 static func get_intro_system_text() -> String:
 	# 완주 1회 이상이면 다회차 변형(웹 개인 플레이라 닫았다 와도 영속). replaying(즉시 리플레이)도 포함.
-	if GameState.playthrough_count >= 1 or GameState.replaying:
+	if GameState.is_replay_run():
 		return INTRO_SYSTEM_REPLAY
 	return INTRO_SYSTEM
 
 static func get_intro_veil_lines() -> Array[String]:
-	if not (GameState.playthrough_count >= 1 or GameState.replaying):
+	if not (GameState.is_replay_run()):
 		return INTRO_VEIL
 	# 다회차일 때 기본 변형에 엔딩 수집 비트를 덧붙인다. 4개(A/B/C/D) 다 봤으면 완수 인정, 3개면 남은 갈래 암시.
 	var out: Array[String] = []

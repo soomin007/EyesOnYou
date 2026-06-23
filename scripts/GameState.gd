@@ -481,6 +481,10 @@ func record_ending(id: String) -> void:
 	save_settings()
 	clear_run()
 
+# 다회차 — 완주 1회 이상(영속) 또는 즉시 리플레이(replaying). 오프닝/인게임 대사 변형의 단일 신호.
+func is_replay_run() -> bool:
+	return playthrough_count >= 1 or replaying
+
 # --- 런 진행 저장(이어하기) — user://run.cfg. RouteMap 진입(스테이지 사이)마다 자동저장. ---
 func save_run() -> void:
 	var cf := ConfigFile.new()
