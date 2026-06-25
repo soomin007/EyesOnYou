@@ -310,14 +310,16 @@ var rec_count: int = 0        # 추천 제시 수 (엔딩 수용률 분모)
 var followed_count: int = 0   # 그중 따른 수 (엔딩 수용률 분자)
 ```
 
-### 결말 분기 (신뢰축 = 추천 수용률 ≥ 50%, aggression 임계 4)
+### 결말 분기 (신뢰축 = 추천 수용률 ≥ 2/3, aggression 임계 4)
 ```
 # EndingResolver.resolve(followed_count, rec_count, aggression_score)
-수용률 ≥ 50%(followed*2 ≥ rec) AND aggression ≥ 4 → 결말 A 완벽한 도구
-수용률 ≥ 50%                   AND aggression < 4 → 결말 C 공생
-수용률 < 50%                   AND aggression ≥ 4 → 결말 B 혼자였던 사람
-수용률 < 50%                   AND aggression < 4 → 결말 D 유령 임무
+수용률 ≥ 2/3(followed*3 ≥ rec*2) AND aggression ≥ 4 → 결말 A 완벽한 도구
+수용률 ≥ 2/3                     AND aggression < 4 → 결말 C 공생
+수용률 < 2/3                     AND aggression ≥ 4 → 결말 B 혼자였던 사람
+수용률 < 2/3                     AND aggression < 4 → 결말 D 유령 임무
 ```
+※ 신뢰 임계는 0.5→2/3 상향(2026-06-25 피드백) — 루트가 대부분 2지선다라 무작위로 골라도
+   기대 수용률 50%여서, 옛 0.5 경계에선 "추천 안 따라도 신뢰 엔딩"이 떴다.
 ※ 어투 `trust_score`는 획득 인플레가 있어 엔딩은 *비율*로 분리. trust_score는 register 밴드
 (`veil_register_band` cold/thaw/warm)와 HUD 게이지·텍스트색에 쓰인다.
 
