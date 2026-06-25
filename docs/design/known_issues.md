@@ -51,6 +51,14 @@
   남아 있었다. → 스킬 정의의 단일 소스는 `SkillTreeData.gd`. 티어/효과를 바꾸면 README 스킬표·기믹표와
   MapData 주석을 같은 커밋에서 동기화하고, "실제 게이트=gate_orbs 채워진 맵"만 문서에 적는다.
 
+- **웹 데모는 GitHub Actions(`.github/workflows/deploy.yml`)로 main push마다 자동 배포된다 — "재배포 안 했다"는 착각 주의.**
+  push하면 "Deploy to GitHub Pages" 워크플로가 web export + Pages 배포까지 자동으로 한다(Pages `build_type=workflow`).
+  따라서 사용자가 웹에서 "고친 줄 알았던/옛날" 동작을 보고하면, *코드 회귀를 의심하기 전에* ① 브라우저 캐시
+  (옛 `.wasm`/`.pck`) ② IndexedDB에 남은 옛 `settings.cfg`를 먼저 의심한다. github Pages는 정적 파일 캐시라
+  같은 이름의 wasm/pck가 브라우저에 재사용돼 옛 빌드가 계속 보일 수 있다. → 강력 새로고침(Ctrl+Shift+R) 또는
+  캐시 비우기로 해소. (2026-06-25 "키 기본값 복원해도 안 먹힘" 보고 — 복원 코드는 헤드리스 save/load 라운드트립
+  PASS로 정상, 06-24 키 수정도 워크플로로 배포 완료돼 있었음. 즉 코드 버그가 아니라 캐시/옛 저장데이터.)
+
 ---
 
 ## 게임 설계 함정
