@@ -7,14 +7,11 @@ const ENDING_C: String = "C"  # 공생
 const ENDING_D: String = "D"  # 유령 임무
 
 # 엔딩 도덕 축(2026-06-13 재설계, veil_trust_arc.md §3.3):
-#  - 신뢰 = VEIL 추천을 2/3 이상 따랐는가(수용률). 어투 trust(climbing)와 분리해
+#  - 신뢰 = VEIL 추천을 절반 이상 따랐는가(수용률). 어투 trust(climbing)와 분리해
 #    획득량 인플레에 강건. rec_count=추천 제시 수, followed_count=그중 따른 수.
 #  - 공격성 = 전투/도전 맵 선택 누적(기존 유지).
-#  - 임계 0.5→2/3 상향(2026-06-25 피드백): 루트가 대부분 2지선다라 추천을 무작위로
-#    골라도 기대 수용률이 50%다. 옛 0.5 경계(*2 >=, 동률 포함)에선 "추천 안 따라도
-#    신뢰 엔딩(A/C)이 뜬다"는 보고가 나왔다 → 분자에 가중(*3)해 "대부분 따라야 신뢰"로 좁힘.
 static func resolve(followed_count: int, rec_count: int, aggression_score: int) -> String:
-	var trusts: bool = rec_count > 0 and followed_count * 3 >= rec_count * 2
+	var trusts: bool = rec_count > 0 and followed_count * 2 >= rec_count
 	var aggressive: bool = aggression_score >= GameState.SCORE_THRESHOLD
 	if trusts and aggressive:
 		return ENDING_A
